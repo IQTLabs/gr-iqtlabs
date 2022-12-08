@@ -23,3 +23,5 @@ inputs:
 outputs:
 - label: samples
   dtype: complex
+
+file_format: 1
