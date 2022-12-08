@@ -1,0 +1,25 @@
+id: iqtlabs_tuneable_test_source
+label: tuneable_test_source
+category: '[iqtlabs]'
+flags: [python, cpp]
+
+templates:
+  imports: from gnuradio import iqtlabs
+  make: iqtlabs.tuneable_test_source(${freq_divisor})
+
+cpp_templates:
+  includes: ['#include <gnuradio/iqtlabs/tuneable_test_source.h>']
+  declarations: 'iqtlabs::tuneable_test_source::sptr ${id};'
+  make: 'this->${id} = iqtlabs::tuneable_test_source::make(${freq_divisor});'
+
+inputs:
+- label: freq_divisor
+  dtype: real
+
+- label: cmd
+  domain: message
+  optional: true
+
+outputs:
+- label: samples
+  dtype: complex
