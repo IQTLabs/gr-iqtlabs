@@ -1,0 +1,15 @@
+name: test
+
+on: [push, pull_request]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+      with:
+        fetch-depth: 0
+    - name: build_test 
+      run: |
+        sudo apt-get -y update && sudo apt-get -yq install gnuradio-dev build-essential cmake python3-numpy && \
+        mkdir build && cd build && cmake .. && make && make test
