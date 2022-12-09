@@ -12,10 +12,13 @@ cpp_templates:
   declarations: 'iqtlabs::tuneable_test_source::sptr ${id};'
   make: 'this->${id} = iqtlabs::tuneable_test_source::make(${freq_divisor});'
 
-inputs:
-- label: freq_divisor
-  dtype: real
+parameters:
+- id: freq_divisor
+  label: freq_divisor
+  dtype: float
+  default: 1e9
 
+inputs:
 - label: cmd
   domain: message
   optional: true
