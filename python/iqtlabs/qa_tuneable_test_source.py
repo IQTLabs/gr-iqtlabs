@@ -226,6 +226,23 @@ class qa_tuneable_test_source(gr_unittest.TestCase):
     def tearDown(self):
         self.tb = None
 
+    def test_bad_msg(self):
+        freq_divisor = 1e9
+        delay = 500
+        source = tuneable_test_source(freq_divisor)
+        msg = pmt.to_pmt("TEST")
+        strobe = blocks.message_strobe(msg, delay)
+        samp_rate = 32e3
+        throttle = blocks.throttle(gr.sizeof_gr_complex*1, samp_rate, True)
+        sink = blocks.null_sink(gr.sizeof_gr_complex*1)
+        self.tb.msg_connect((strobe, 'strobe'), (source, 'cmd'))
+        self.tb.connect((source, 0), (throttle, 0))
+        self.tb.connect((throttle, 0), (sink, 0))
+        self.tb.start()
+        time.sleep(delay / 1e3 * 2)
+        self.tb.stop()
+        self.tb.wait()
+
     def test_source(self):
         with tempfile.TemporaryDirectory() as tmpdir:
             test_file = os.path.join(tmpdir, 'samples')
