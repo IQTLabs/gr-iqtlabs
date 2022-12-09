@@ -241,12 +241,15 @@ tuneable_test_source_impl::~tuneable_test_source_impl() {}
 void
 tuneable_test_source_impl::recv_cmd(pmt::pmt_t msg)
 {
-    pmt::print(msg);
     pmt::pmt_t list_of_items;
     if (pmt::is_dict(msg)) {
         list_of_items = pmt::dict_items(msg);
     } else if (pmt::is_pair(msg)) {
         list_of_items = pmt::list1(msg);
+    } else {
+        std::cerr << "unhandled message: " << std::endl;
+        pmt::print(msg);
+        return;
     }
     while (list_of_items != pmt::PMT_NIL) {
         auto item = pmt::car(list_of_items);
