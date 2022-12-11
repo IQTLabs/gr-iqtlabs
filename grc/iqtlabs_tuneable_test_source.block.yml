@@ -11,6 +11,7 @@ cpp_templates:
   includes: ['#include <gnuradio/iqtlabs/tuneable_test_source.h>']
   declarations: 'iqtlabs::tuneable_test_source::sptr ${id};'
   make: 'this->${id} = iqtlabs::tuneable_test_source::make(${freq_divisor});'
+  link: ['libgnuradio-iqtlabs.so']
 
 parameters:
 - id: freq_divisor

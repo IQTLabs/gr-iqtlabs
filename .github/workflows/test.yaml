@@ -12,4 +12,6 @@ jobs:
     - name: build_test 
       run: |
         sudo apt-get -y update && sudo apt-get -yq install gnuradio-dev build-essential cmake python3-numpy && \
-        mkdir build && cd build && cmake .. && make && make test && sudo make install && sudo ldconfig && cd .. && grcc test_flow_graphs/smoke_test_tuneable_test_source.grc
+        mkdir build && cd build && cmake .. && make && make test && sudo make install && sudo ldconfig && cd .. && \
+        cd test_flow_graphs && mkdir test && cd test && \
+        for g in ../*grc ; do grcc $g && sed -i 's/output_language: python/output_language: cpp/g' $g && grcc $g ; done
