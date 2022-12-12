@@ -36,3 +36,4 @@ add_custom_target(
           ${CMAKE_BINARY_DIR}/test_modules/gnuradio/iqtlabs/
 )
 GR_ADD_TEST(qa_tuneable_test_source ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/qa_tuneable_test_source.py)
+GR_ADD_TEST(qa_retune_fft ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/qa_retune_fft.py)

@@ -7,5 +7,6 @@
 ########################################################################
 install(FILES
     api.h
-    tuneable_test_source.h DESTINATION include/gnuradio/iqtlabs
+    tuneable_test_source.h
+    retune_fft.h DESTINATION include/gnuradio/iqtlabs
 )
