@@ -9,6 +9,7 @@ include(GrPlatform) #define LIB_SUFFIX
 
 list(APPEND iqtlabs_sources
     tuneable_test_source_impl.cc
+    retune_fft_impl.cc
 )
 
 set(iqtlabs_sources "${iqtlabs_sources}" PARENT_SCOPE)
@@ -52,6 +53,7 @@ include(GrTest)
 #include_directories()
 # List all files that contain Boost.UTF unit tests here
 list(APPEND test_iqtlabs_sources
+qa_retune_fft.cc
 qa_tuneable_test_source.cc
 )
 # Anything we need to link to for the unit tests go here

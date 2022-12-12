@@ -19,6 +19,7 @@ namespace py = pybind11;
 /**************************************/
 // BINDING_FUNCTION_PROTOTYPES(
     void bind_tuneable_test_source(py::module& m);
+    void bind_retune_fft(py::module& m);
 // ) END BINDING_FUNCTION_PROTOTYPES
 
 
@@ -48,5 +49,6 @@ PYBIND11_MODULE(iqtlabs_python, m)
     /**************************************/
     // BINDING_FUNCTION_CALLS(
     bind_tuneable_test_source(m);
+    bind_retune_fft(m);
     // ) END BINDING_FUNCTION_CALLS
 }

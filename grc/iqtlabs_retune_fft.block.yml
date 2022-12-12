@@ -1,0 +1,45 @@
+id: iqtlabs_retune_fft
+label: retune_fft
+category: '[iqtlabs]'
+flags: [python, cpp]
+
+templates:
+  imports: from gnuradio import iqtlabs
+  make: iqtlabs.retune_fft(${tag}, ${vlen}, ${samp_rate}, ${freq_start}, ${freq_end}, ${tune_step_hz}, ${tune_step_fft})
+
+cpp_templates:
+  includes: ['#include <gnuradio/iqtlabs/retune_fft.h>']
+  declarations: 'gr::iqtlabs::retune_fft::sptr ${id};'
+  make: 'this->${id} = gr::iqtlabs::retune_fft::make(${tag}, ${vlen}, ${samp_rate}, ${freq_start}, ${freq_end}, ${tune_step_hz}, ${tune_step_fft});'
+
+parameters:
+- id: tag
+  dtype: string
+- id: vlen
+  dtype: int
+- id: samp_rate
+  dtype: float
+- id: freq_start
+  dtype: float
+- id: freq_end
+  dtype: float
+- id: tune_step_hz
+  dtype: int
+- id: tune_step_fft
+  dtype: int
+
+inputs:
+- label: input
+  domain: stream
+  dtype: float
+  vlen: ${ vlen }
+
+outputs:
+- label: output
+  domain: stream
+  dtype: byte
+  vlen: 1
+- label: tune
+  domain: message
+
+file_format: 1

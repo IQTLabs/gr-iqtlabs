@@ -3,5 +3,6 @@
 #
 
 install(FILES
-    iqtlabs_tuneable_test_source.block.yml DESTINATION share/gnuradio/grc/blocks
+    iqtlabs_tuneable_test_source.block.yml
+    iqtlabs_retune_fft.block.yml DESTINATION share/gnuradio/grc/blocks
 )
