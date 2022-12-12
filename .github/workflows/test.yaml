@@ -13,5 +13,5 @@ jobs:
       run: |
         sudo apt-get -y update && sudo apt-get -yq install gnuradio-dev build-essential cmake python3-numpy && \
         mkdir build && cd build && cmake .. && make && make test && sudo make install && sudo ldconfig && cd .. && \
-        cd test_flow_graphs && mkdir test && cd test && \
-        for g in ../*grc ; do grcc $g && sed -i 's/output_language: python/output_language: cpp/g' $g && grcc $g ; done
+        cd test_flow_graphs && mkdir test && cd test && testdir=$(pwd) \
+        for g in ../*grc ; do cd $testdir && grcc $g && sed -i 's/output_language: python/output_language: cpp/g' $g && grcc -o test $g ; cd test/*/build && cmake .. && make ; done
