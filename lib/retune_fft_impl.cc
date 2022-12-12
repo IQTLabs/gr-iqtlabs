@@ -230,7 +230,7 @@ namespace gr {
         tune_step_hz_(tune_step_hz),
         tune_step_fft_(tune_step_fft),
         sample_sum_(vlen),
-	sample_count_(0),
+        sample_count_(0),
         tune_freq_(freq_start),
         fft_count_(0),
         tune_count_(0),
@@ -257,9 +257,9 @@ namespace gr {
         if (last_sweep_start_ == 0) {
             last_sweep_start_ = host_now;
         } else if (tune_freq_ > freq_end_) {
-	    last_sweep_start_ = host_now;
-	    tune_freq_ = freq_start_;
-	    tune_count_ = 0;
+            last_sweep_start_ = host_now;
+            tune_freq_ = freq_start_;
+            tune_count_ = 0;
         } else {
             tune_freq_ += tune_step_hz_;
         }
@@ -278,14 +278,14 @@ namespace gr {
             for (size_t j = 0; j < vlen_; ++j) {
                 sample_sum_[j] += *in++;
             }
-	    if (++fft_count_ == tune_step_fft_) {
-		fft_count_ = 0;
-		retune = true;
-	    }
+            if (++fft_count_ == tune_step_fft_) {
+                fft_count_ = 0;
+                retune = true;
+            }
         }
         sample_count_ += c;
         consume_each(c);
-	return retune;
+        return retune;
     }
 
     int
