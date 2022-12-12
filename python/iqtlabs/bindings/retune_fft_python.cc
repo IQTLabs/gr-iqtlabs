@@ -1,9 +1,6 @@
 /*
- * Copyright 2022 Free Software Foundation, Inc.
  *
- * This file is part of GNU Radio
- *
- * SPDX-License-Identifier: GPL-3.0-or-later
+ * SPDX-License-Identifier: Apache-2.0
  *
  */
 
@@ -14,7 +11,7 @@
 /* BINDTOOL_GEN_AUTOMATIC(0)                                                       */
 /* BINDTOOL_USE_PYGCCXML(0)                                                        */
 /* BINDTOOL_HEADER_FILE(retune_fft.h)                                        */
-/* BINDTOOL_HEADER_FILE_HASH(d08ff2ab045ca9f15ed009e468ffb729)                     */
+/* BINDTOOL_HEADER_FILE_HASH(f82ed95c13de57ab048e8d680572961d)                     */
 /***********************************************************************************/
 
 #include <pybind11/complex.h>
@@ -30,13 +27,20 @@ namespace py = pybind11;
 void bind_retune_fft(py::module& m)
 {
 
-    using retune_fft    = gr::iqtlabs::retune_fft;
+    using retune_fft    = ::gr::iqtlabs::retune_fft;
 
 
-    py::class_<retune_fft, gr::sync_block, gr::block, gr::basic_block,
+    py::class_<retune_fft, gr::block, gr::basic_block,
         std::shared_ptr<retune_fft>>(m, "retune_fft", D(retune_fft))
 
         .def(py::init(&retune_fft::make),
+           py::arg("tag"),
+           py::arg("vlen"),
+           py::arg("samp_rate"),
+           py::arg("freq_start"),
+           py::arg("freq_end"),
+           py::arg("tune_step_hz"),
+           py::arg("tune_step_fft"),
            D(retune_fft,make)
         )
         

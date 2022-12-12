@@ -11,7 +11,8 @@ jobs:
         fetch-depth: 0
     - name: build_test 
       run: |
-        sudo apt-get -y update && sudo apt-get -yq install gnuradio-dev build-essential cmake python3-numpy libsndfile-dev libsoapysdr-dev && \
+        sudo apt-get -y update && sudo apt-get -yq install gnuradio-dev build-essential cmake python3-numpy python3-pandas libsndfile-dev libsoapysdr-dev cppcheck && \
+        cppcheck --verbose --language=c++ lib/* && \
         mkdir build && cd build && cmake .. && make && make test && sudo make install && sudo ldconfig && cd .. && \
         cd test_flow_graphs && mkdir test && cd test && testdir=$(pwd) && \
         for g in ../*grc ; do cd $testdir && grcc $g && sed -i 's/output_language: python/output_language: cpp/g' $g && grcc -o test $g ; cd test/*/build && cmake .. && make ; done
