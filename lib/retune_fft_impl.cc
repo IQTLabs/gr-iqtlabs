@@ -215,13 +215,13 @@ namespace gr {
     static const double MAX_PW = 1e4;
 
     retune_fft::sptr
-    retune_fft::make(const std::string &tag, int vlen, float samp_rate, float freq_start, float freq_end, int tune_step_hz, int tune_step_fft)
+    retune_fft::make(const std::string &tag, int vlen, int samp_rate, uint64_t freq_start, uint64_t freq_end, int tune_step_hz, int tune_step_fft)
     {
       return gnuradio::make_block_sptr<retune_fft_impl>(
         tag, vlen, samp_rate, freq_start, freq_end, tune_step_hz, tune_step_fft);
     }
 
-    retune_fft_impl::retune_fft_impl(const std::string &tag, int vlen, float samp_rate, float freq_start, float freq_end, int tune_step_hz, int tune_step_fft)
+    retune_fft_impl::retune_fft_impl(const std::string &tag, int vlen, int samp_rate, uint64_t freq_start, uint64_t freq_end, int tune_step_hz, int tune_step_fft)
       : gr::block("retune_fft",
               gr::io_signature::make(1 /* min inputs */, 1 /* max inputs */, vlen * sizeof(input_type)),
               gr::io_signature::make(1 /* min outputs */, 1 /*max outputs */, sizeof(output_type))),
