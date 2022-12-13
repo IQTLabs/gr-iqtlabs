@@ -247,7 +247,7 @@ tuneable_test_source_impl::recv_cmd(pmt::pmt_t msg)
     } else if (pmt::is_pair(msg)) {
         list_of_items = pmt::list1(msg);
     } else {
-        std::cerr << "unhandled message: " << std::endl;
+	d_logger->debug("unhandled PMT message (not dict or pair)");
         pmt::print(msg);
         return;
     }
@@ -260,8 +260,9 @@ tuneable_test_source_impl::recv_cmd(pmt::pmt_t msg)
                 last_freq = pmt::to_double(val);
                 last_sample = gr_complex(last_freq / d_freq_divisor, last_freq / d_freq_divisor);
                 tag_now = true;
+		d_logger->debug("tag now with frequency {}", last_freq);
             }
-        }
+	}
         list_of_items = pmt::cdr(list_of_items);
     }
 }
@@ -279,7 +280,7 @@ int tuneable_test_source_impl::work(int noutput_items,
         std::time_t time_now = std::time(nullptr);
         pmt::pmt_t val = pmt::make_tuple(pmt::from_uint64(time_now), pmt::from_double(0));
         this->add_item_tag(0, nitems_written(0), TIME_KEY, val, _id);
-        this->add_item_tag(0, nitems_written(0), FREQ_KEY, pmt::from_double(last_freq), _id);
+        this->add_item_tag(0, nitems_written(0), RX_FREQ_KEY, pmt::from_double(last_freq), _id);
         tag_now = false;
     }
     std::fill_n(out, noutput_items, last_sample);

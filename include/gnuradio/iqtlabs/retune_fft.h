@@ -216,7 +216,7 @@ namespace gr {
      * \ingroup iqtlabs
      *
      */
-    class IQTLABS_API retune_fft : virtual public gr::sync_block
+    class IQTLABS_API retune_fft : virtual public gr::block
     {
      public:
       typedef std::shared_ptr<retune_fft> sptr;
@@ -229,7 +229,7 @@ namespace gr {
        * class. iqtlabs::retune_fft::make is the public interface for
        * creating new instances.
        */
-      static sptr make(std::string tag, int vlen, float samp_rate, float freq_start, float freq_end, int tune_step_hz, int tune_step_fft);
+      static sptr make(const std::string &tag, int vlen, float samp_rate, float freq_start, float freq_end, int tune_step_hz, int tune_step_fft);
     };
 
   } // namespace iqtlabs

@@ -202,17 +202,27 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
 #
-
+import os
+import time
+import tempfile
+import pandas as pd
 from gnuradio import gr, gr_unittest
-# from gnuradio import blocks
+from gnuradio import blocks
+from gnuradio import blocks
+from gnuradio import fft
+from gnuradio.fft import window
+from gnuradio import gr
+from gnuradio.filter import firdes
+
 try:
-  from gnuradio.iqtlabs import retune_fft
+  from gnuradio.iqtlabs import retune_fft, tuneable_test_source
 except ImportError:
     import os
     import sys
     dirname, filename = os.path.split(os.path.abspath(__file__))
     sys.path.append(os.path.join(dirname, "bindings"))
-    from gnuradio.iqtlabs import retune_fft
+    from gnuradio.iqtlabs import retune_fft, tuneable_test_source
+
 
 class qa_retune_fft(gr_unittest.TestCase):
 
@@ -222,8 +232,44 @@ class qa_retune_fft(gr_unittest.TestCase):
     def tearDown(self):
         self.tb = None
 
-    def test_instance(self):
-        instance = retune_fft("rx_freq", 1024, 8e6, 1e9, 2e9, int(4e6), 32)
+    def test_retune_fft(self):
+        freq_divisor = 1e9
+        freq_start = 1e9
+        freq_end = 2e9
+        points = int(1024)
+        samp_rate = points * points
+        with tempfile.TemporaryDirectory() as tmpdir:
+            test_file = os.path.join(tmpdir, "samples.csv")
+            source = tuneable_test_source(freq_divisor)
+
+            iqtlabs_tuneable_test_source_0 = tuneable_test_source(freq_end)
+            iqtlabs_retune_fft_0 = retune_fft("rx_freq", points, samp_rate, freq_start, freq_end, int(1e6), 16)
+            fft_vxx_0 = fft.fft_vcc(points, True, window.blackmanharris(points), True, 1)
+            blocks_throttle_0 = blocks.throttle(gr.sizeof_gr_complex*1, samp_rate,True)
+            blocks_stream_to_vector_0 = blocks.stream_to_vector(gr.sizeof_gr_complex*1, points)
+            blocks_file_sink_0 = blocks.file_sink(gr.sizeof_char*1, test_file, False)
+            blocks_file_sink_0.set_unbuffered(False)
+            blocks_complex_to_mag_0 = blocks.complex_to_mag(points)
+
+            self.tb.msg_connect((iqtlabs_retune_fft_0, 'tune'), (iqtlabs_tuneable_test_source_0, 'cmd'))
+            self.tb.connect((blocks_complex_to_mag_0, 0), (iqtlabs_retune_fft_0, 0))
+            self.tb.connect((blocks_stream_to_vector_0, 0), (fft_vxx_0, 0))
+            self.tb.connect((blocks_throttle_0, 0), (blocks_stream_to_vector_0, 0))
+            self.tb.connect((fft_vxx_0, 0), (blocks_complex_to_mag_0, 0))
+            self.tb.connect((iqtlabs_retune_fft_0, 0), (blocks_file_sink_0, 0))
+            self.tb.connect((iqtlabs_tuneable_test_source_0, 0), (blocks_throttle_0, 0))
+
+            self.tb.start()
+            time.sleep(45)
+            self.tb.stop()
+            self.tb.wait()
+
+            # Since test source generates the same samples for the same frequency value,
+            # the same frequency must have the same power for repeated observations.
+            df = pd.read_csv(test_file, sep=" ", names=["ts", "f", "v"])[["f", "v"]]
+            df["v"] = df["v"].round(4)
+            unique_v = df.groupby("f")["v"].nunique()
+            self.assertEqual(1, unique_v.max())
 
 
 if __name__ == '__main__':
