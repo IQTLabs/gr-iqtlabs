@@ -18,11 +18,11 @@ parameters:
 - id: vlen
   dtype: int
 - id: samp_rate
-  dtype: float
+  dtype: int
 - id: freq_start
-  dtype: float
+  dtype: raw
 - id: freq_end
-  dtype: float
+  dtype: raw
 - id: tune_step_hz
   dtype: int
 - id: tune_step_fft

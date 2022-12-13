@@ -237,7 +237,7 @@ namespace gr {
       uint64_t last_sweep_start_;
 
      public:
-      retune_fft_impl(const std::string &tag, int vlen, float samp_rate, float freq_start, float freq_end, int tune_step_hz, int tune_step_fft);
+      retune_fft_impl(const std::string &tag, int vlen, int samp_rate, uint64_t freq_start, uint64_t freq_end, int tune_step_hz, int tune_step_fft);
       ~retune_fft_impl();
       void forecast(int noutput_items, gr_vector_int& ninput_items_required);
       int general_work(int noutput_items, gr_vector_int& ninput_items, gr_vector_const_void_star& input_items, gr_vector_void_star& output_items);
