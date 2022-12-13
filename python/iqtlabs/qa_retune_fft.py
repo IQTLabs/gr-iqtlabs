@@ -243,7 +243,7 @@ class qa_retune_fft(gr_unittest.TestCase):
             source = tuneable_test_source(freq_divisor)
 
             iqtlabs_tuneable_test_source_0 = tuneable_test_source(freq_end)
-            iqtlabs_retune_fft_0 = retune_fft("rx_freq", points, int(samp_rate), int(freq_start), int(freq_end), int(1e6), 16)
+            iqtlabs_retune_fft_0 = retune_fft("rx_freq", points, int(samp_rate), int(freq_start), int(freq_end), int(samp_rate), 16)
             fft_vxx_0 = fft.fft_vcc(points, True, window.blackmanharris(points), True, 1)
             blocks_throttle_0 = blocks.throttle(gr.sizeof_gr_complex*1, samp_rate,True)
             blocks_stream_to_vector_0 = blocks.stream_to_vector(gr.sizeof_gr_complex*1, points)
