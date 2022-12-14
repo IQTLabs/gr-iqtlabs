@@ -234,10 +234,11 @@ class qa_retune_fft(gr_unittest.TestCase):
 
     def test_retune_fft(self):
         freq_divisor = 1e9
-        freq_start = 1e9
-        freq_end = 2e9
         points = int(1024)
         samp_rate = points * points
+        freq_start = int(1e9 / samp_rate) * samp_rate
+        freq_end = int(2e9 / samp_rate) * samp_rate
+
         with tempfile.TemporaryDirectory() as tmpdir:
             test_file = os.path.join(tmpdir, "samples.csv")
             source = tuneable_test_source(freq_divisor)
