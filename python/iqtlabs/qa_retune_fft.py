@@ -269,7 +269,7 @@ class qa_retune_fft(gr_unittest.TestCase):
             df = pd.read_csv(test_file, sep=" ", names=["ts", "f", "v"])[["f", "v"]]
             df["v"] = df["v"].round(3)
             unique_v = df.groupby("f")["v"].nunique()
-            self.assertEqual(1, unique_v.max())
+            self.assertEqual(1, unique_v.max(), unique_v[unique_v > 1])
 
 
 if __name__ == '__main__':
