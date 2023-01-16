@@ -258,22 +258,21 @@ namespace gr {
     {
         const uint64_t host_now = host_now_();
 
-        if (last_sweep_start_ == 0) {
-            last_sweep_start_ = host_now;
-        } else if (tune_freq_ > freq_end_) {
-            last_sweep_start_ = host_now;
-            tune_freq_ = freq_start_;
-            tune_count_ = 0;
-        } else {
-            tune_freq_ += tune_step_hz_;
-        }
-
         d_logger->debug("retuning to {}", tune_freq_);
         ++tune_count_;
         pmt::pmt_t tune_rx = pmt::make_dict();
         tune_rx = pmt::dict_add(tune_rx, pmt::mp("freq"), pmt::from_long(tune_freq_));
         tune_rx = pmt::dict_add(tune_rx, pmt::mp("tag"), pmt::mp("now"));
         message_port_pub(TUNE, tune_rx);
+
+	tune_freq_ += tune_step_hz_;
+	if (last_sweep_start_ == 0) {
+            last_sweep_start_ = host_now;
+        } else if (tune_freq_ > freq_end_) {
+            last_sweep_start_ = host_now;
+            tune_freq_ = freq_start_;
+            tune_count_ = 0;
+        }
     }
 
     bool retune_fft_impl::sum_samples_(size_t c, const input_type* &in)
