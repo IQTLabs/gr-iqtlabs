@@ -11,7 +11,7 @@
 /* BINDTOOL_GEN_AUTOMATIC(0)                                                       */
 /* BINDTOOL_USE_PYGCCXML(0)                                                        */
 /* BINDTOOL_HEADER_FILE(retune_fft.h)                                        */
-/* BINDTOOL_HEADER_FILE_HASH(ae0854748b5fd95622bd05fb169d2098)                     */
+/* BINDTOOL_HEADER_FILE_HASH(d45e3aee87ac02825dba9984b1b3776d)                     */
 /***********************************************************************************/
 
 #include <pybind11/complex.h>
@@ -36,6 +36,7 @@ void bind_retune_fft(py::module& m)
         .def(py::init(&retune_fft::make),
            py::arg("tag"),
            py::arg("vlen"),
+           py::arg("nfft"),
            py::arg("samp_rate"),
            py::arg("freq_start"),
            py::arg("freq_end"),
