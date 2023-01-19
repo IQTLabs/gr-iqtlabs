@@ -210,7 +210,7 @@ namespace gr {
   namespace iqtlabs {
 
     static const pmt::pmt_t TUNE = pmt::mp("tune");
-    static const size_t OUT_BUF_MAX = 1024 * 1024 * 8;
+    static const size_t OUT_BUF_MAX = 1024 * 1024 * 64;
     static const double MIN_PW = 1e-4;
     static const double MAX_PW = 1e4;
 
@@ -233,7 +233,7 @@ namespace gr {
         freq_end_(freq_end),
         tune_step_hz_(tune_step_hz),
         tune_step_fft_(tune_step_fft),
-        sample_(vlen),
+        sample_(nfft),
         sample_count_(0),
         tune_freq_(freq_start),
         last_rx_freq_(0),
@@ -280,15 +280,17 @@ namespace gr {
     {
         bool retune = false;
         for (size_t i = 0; i < c; ++i) {
-            for (size_t j = 0; j < vlen_; ++j) {
-                sample_[j] += *in++;
-            }
-            if (++fft_count_ == tune_step_fft_) {
-                fft_count_ = 0;
-                retune = true;
+            for (size_t j = 0; j < (vlen_ / nfft_); ++j) {
+                for (size_t k = 0; k < nfft_; ++k) {
+                    sample_[k] += *in++;
+		}
+		if (++fft_count_ == tune_step_fft_) {
+                    fft_count_ = 0;
+                    retune = true;
+		}
+		++sample_count_;
             }
         }
-        sample_count_ += c;
         consume_each(c);
         return retune;
     }
