@@ -12,7 +12,6 @@ jobs:
     - name: Install Nix
       uses: cachix/install-nix-action@v18
       with:
-        nix_path: nixpkgs=channel:nixos-stable
         extra_nix_config: |
           access-tokens = github.com=${{ secrets.GITHUB_TOKEN }}
     - name: Create Shell Env
