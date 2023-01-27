@@ -10,7 +10,7 @@ jobs:
       with:
         fetch-depth: 0
     - name: Install Nix
-      uses: cachix/install-nix-action@v17
+      uses: cachix/install-nix-action@v18
       with:
         nix_path: nixpkgs=channel:nixos-stable
         extra_nix_config: |
