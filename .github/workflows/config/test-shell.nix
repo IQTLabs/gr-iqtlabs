@@ -1,4 +1,9 @@
-with (import <nixpkgs> {});
+with (import (builtins.fetchGit {
+  name = "nixpkgs-01-27-2023";
+  url = "https://github.com/nixos/nixpkgs/";
+  ref = "refs/tags/22.11";
+  rev = "bd15cafc53d0aecd90398dd3ffc83a908bceb734";
+}) {} );
 let
   test-py-packages = python-packages: with python-packages; [
     pandas
