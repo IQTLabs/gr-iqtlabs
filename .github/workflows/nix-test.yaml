@@ -15,7 +15,8 @@ jobs:
         extra_nix_config: |
           access-tokens = github.com=${{ secrets.GITHUB_TOKEN }}
     - name: run test in nix-shell
-      run: nix-shell ${GITHUB_WORKSPACE}/.github/workflows/config/test-shell.nix \
+      run: |
+        nix-shell ${GITHUB_WORKSPACE}/.github/workflows/config/test-shell.nix \
         --command "cppcheck --verbose --language=c++ lib/* && \
         mkdir build && cd build && cmake .. && make && ARGS=--output-on-failure make test && sudo make install && sudo ldconfig && cd .. && \
         cd test_flow_graphs && mkdir test && cd test && testdir=$(pwd) && \
