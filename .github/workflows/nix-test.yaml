@@ -1,4 +1,4 @@
-name: test
+name: nix-test
 
 on: [push, pull_request]
 
@@ -14,11 +14,9 @@ jobs:
       with:
         extra_nix_config: |
           access-tokens = github.com=${{ secrets.GITHUB_TOKEN }}
-    - name: Create Shell Env
-      run: nix-shell ${GITHUB_WORKSPACE}/.github/workflows/config/test-shell.nix
-    - name: build_test 
-      run: |
-        cppcheck --verbose --language=c++ lib/* && \
+    - name: run test in nix-shell
+      run: nix-shell ${GITHUB_WORKSPACE}/.github/workflows/config/test-shell.nix \
+        --command "cppcheck --verbose --language=c++ lib/* && \
         mkdir build && cd build && cmake .. && make && ARGS=--output-on-failure make test && sudo make install && sudo ldconfig && cd .. && \
         cd test_flow_graphs && mkdir test && cd test && testdir=$(pwd) && \
-        for g in ../*grc ; do cd $testdir && grcc $g && sed -i 's/output_language: python/output_language: cpp/g' $g && grcc -o test $g ; cd test/*/build && cmake .. && make ; done
+        for g in ../*grc ; do cd $testdir && grcc $g && sed -i 's/output_language: python/output_language: cpp/g' $g && grcc -o test $g ; cd test/*/build && cmake .. && make ; done"
