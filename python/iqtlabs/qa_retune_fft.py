@@ -237,16 +237,16 @@ class qa_retune_fft(gr_unittest.TestCase):
         points = int(1024)
         samp_rate = points * points
         freq_start = int(1e9 / samp_rate) * samp_rate
-        freq_end = int(2e9 / samp_rate) * samp_rate
+        freq_end = int(1.1e9 / samp_rate) * samp_rate
 
         with tempfile.TemporaryDirectory() as tmpdir:
             test_file = os.path.join(tmpdir, "samples.csv")
             source = tuneable_test_source(freq_divisor)
 
             iqtlabs_tuneable_test_source_0 = tuneable_test_source(freq_end)
-            iqtlabs_retune_fft_0 = retune_fft("rx_freq", points, points, int(samp_rate), int(freq_start), int(freq_end), int(samp_rate), 16)
+            iqtlabs_retune_fft_0 = retune_fft("rx_freq", points, points, int(samp_rate), int(freq_start), int(freq_end), int(samp_rate), 64)
             fft_vxx_0 = fft.fft_vcc(points, True, window.blackmanharris(points), True, 1)
-            blocks_throttle_0 = blocks.throttle(gr.sizeof_gr_complex*1, samp_rate,True)
+            blocks_throttle_0 = blocks.throttle(gr.sizeof_gr_complex*1, samp_rate, True)
             blocks_stream_to_vector_0 = blocks.stream_to_vector(gr.sizeof_gr_complex*1, points)
             blocks_file_sink_0 = blocks.file_sink(gr.sizeof_char*1, test_file, False)
             blocks_file_sink_0.set_unbuffered(False)
@@ -261,7 +261,7 @@ class qa_retune_fft(gr_unittest.TestCase):
             self.tb.connect((iqtlabs_tuneable_test_source_0, 0), (blocks_throttle_0, 0))
 
             self.tb.start()
-            time.sleep(45)
+            time.sleep(90)
             self.tb.stop()
             self.tb.wait()
 
@@ -271,7 +271,11 @@ class qa_retune_fft(gr_unittest.TestCase):
             df["v"] = df["v"].round(2)
             df["u"] = df.groupby("f")["v"].transform('nunique')
             non_unique_v = df[df["u"] != 1]
-            self.assertTrue(non_unique_v.empty, non_unique_v)
+            f_count = df.groupby("f").count()
+            pd.set_option('display.max_rows', None)
+            f_count_min = f_count["u"].min()
+            self.assertGreater(f_count_min, 1)
+            self.assertTrue(non_unique_v.empty, (non_unique_v, df))
 
 
 if __name__ == '__main__':
