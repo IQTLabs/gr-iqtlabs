@@ -20,5 +20,5 @@ jobs:
         --command "cppcheck --verbose --language=c++ lib/* && \
         mkdir build && cd build && cmake .. && make && ARGS=--output-on-failure make test && sudo make install && sudo ldconfig && cd .. && \
         cd test_flow_graphs && mkdir test && cd test && testdir=\$(pwd) && \
-        export GRC_BLOCKS_PATH=/var/empty/local/share/gnuradio/grc/blocks/ && export LD_LIBRARY_PATH=\$LD_LIBRARY_PATH:/var/empty/local/include/ && \
+        export GRC_BLOCKS_PATH=/var/empty/local/share/gnuradio/grc/blocks/ && && ln -s /var/empty/local/include/gnuradio/iqtlabs /usr/local/include/gnuradio/iqtlabs && \
         for g in ../*grc ; do cd \$testdir && grcc \$g && sed -i 's/output_language: python/output_language: cpp/g' \$g && grcc -o test \$g ; cd test/*/build && cmake .. && make ; done"
