@@ -24,5 +24,5 @@ jobs:
         for g in ../*grc ; do cd \$testdir && grcc \$g && sed -i 's/output_language: python/output_language: cpp/g' \$g && grcc -o test \$g ; \
         cd test/*/build && \
         cmake -DCMAKE_BUILD_TYPE=\"Release\" \
-        -DCMAKE_CXX_FLAGS_RELEASE=\"-I /var/empty/local/include/ -L /var/empty/local/lib/libgnuradio-iqtlabs.so\" .. && \
+        -DCMAKE_CXX_FLAGS_RELEASE=\"-I /var/empty/local/include/ -L /var/empty/local/lib/\" .. && \
         make VERBOSE=1 ; done"
