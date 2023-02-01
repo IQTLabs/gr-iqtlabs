@@ -261,7 +261,8 @@ class qa_retune_fft(gr_unittest.TestCase):
             self.tb.connect((iqtlabs_tuneable_test_source_0, 0), (blocks_throttle_0, 0))
 
             self.tb.start()
-            time.sleep(90)
+            sleep_time = 90
+            time.sleep(sleep_time)
             self.tb.stop()
             self.tb.wait()
 
