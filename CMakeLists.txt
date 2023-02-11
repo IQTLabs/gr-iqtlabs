@@ -42,13 +42,13 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 # Minimum Version Requirements
 ########################################################################
 
-include(GrMinReq)
+# include(GrMinReq)
 
 ########################################################################
 # Compiler settings
 ########################################################################
 
-include(GrCompilerSettings)
+# include(GrCompilerSettings)
 
 ########################################################################
 # Install directories
