@@ -244,7 +244,7 @@ class qa_retune_fft(gr_unittest.TestCase):
             source = tuneable_test_source(freq_divisor)
 
             iqtlabs_tuneable_test_source_0 = tuneable_test_source(freq_end)
-            iqtlabs_retune_fft_0 = retune_fft("rx_freq", points, points, int(samp_rate), int(freq_start), int(freq_end), int(samp_rate), 64)
+            iqtlabs_retune_fft_0 = retune_fft("rx_freq", points, points, int(samp_rate), int(freq_start), int(freq_end), int(samp_rate), 64, 2)
             fft_vxx_0 = fft.fft_vcc(points, True, window.blackmanharris(points), True, 1)
             blocks_throttle_0 = blocks.throttle(gr.sizeof_gr_complex*1, samp_rate, True)
             blocks_stream_to_vector_0 = blocks.stream_to_vector(gr.sizeof_gr_complex*1, points)
@@ -270,6 +270,7 @@ class qa_retune_fft(gr_unittest.TestCase):
             # the same frequency must have the same power for repeated observations.
             df = pd.read_csv(test_file, sep=" ", names=["ts", "f", "v"])[["f", "v"]]
             df["v"] = df["v"].round(2)
+            self.assertGreater(df["v"].max(), 100)
             df["u"] = df.groupby("f")["v"].transform('nunique')
             non_unique_v = df[df["u"] != 1]
             f_count = df.groupby("f").count()

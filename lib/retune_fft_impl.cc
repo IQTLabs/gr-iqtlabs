@@ -215,33 +215,35 @@ namespace gr {
     static const double MAX_PW = 1e4;
 
     retune_fft::sptr
-    retune_fft::make(const std::string &tag, int vlen, int nfft, int samp_rate, uint64_t freq_start, uint64_t freq_end, int tune_step_hz, int tune_step_fft)
+    retune_fft::make(const std::string &tag, int vlen, int nfft, int samp_rate, uint64_t freq_start, uint64_t freq_end, int tune_step_hz, int tune_step_fft, int skip_tune_step_fft)
     {
       return gnuradio::make_block_sptr<retune_fft_impl>(
-        tag, vlen, nfft, samp_rate, freq_start, freq_end, tune_step_hz, tune_step_fft);
+	tag, vlen, nfft, samp_rate, freq_start, freq_end, tune_step_hz, tune_step_fft, skip_tune_step_fft);
     }
 
-    retune_fft_impl::retune_fft_impl(const std::string &tag, int vlen, int nfft, int samp_rate, uint64_t freq_start, uint64_t freq_end, int tune_step_hz, int tune_step_fft)
+    retune_fft_impl::retune_fft_impl(const std::string &tag, int vlen, int nfft, int samp_rate, uint64_t freq_start, uint64_t freq_end, int tune_step_hz, int tune_step_fft, int skip_tune_step_fft)
       : gr::block("retune_fft",
-              gr::io_signature::make(1 /* min inputs */, 1 /* max inputs */, vlen * sizeof(input_type)),
-              gr::io_signature::make(1 /* min outputs */, 1 /*max outputs */, sizeof(output_type))),
-        tag_(pmt::intern(tag)),
-        vlen_(vlen),
-        nfft_(nfft),
-        samp_rate_(samp_rate),
-        freq_start_(freq_start),
-        freq_end_(freq_end),
-        tune_step_hz_(tune_step_hz),
-        tune_step_fft_(tune_step_fft),
-        sample_(nfft),
-        sample_count_(0),
-        tune_freq_(freq_start),
-        last_rx_freq_(0),
-        fft_count_(0),
-        tune_count_(0),
-        last_sweep_start_(0)
+	      gr::io_signature::make(1 /* min inputs */, 1 /* max inputs */, vlen * sizeof(input_type)),
+	      gr::io_signature::make(1 /* min outputs */, 1 /*max outputs */, sizeof(output_type))),
+	tag_(pmt::intern(tag)),
+	vlen_(vlen),
+	nfft_(nfft),
+	samp_rate_(samp_rate),
+	freq_start_(freq_start),
+	freq_end_(freq_end),
+	tune_step_hz_(tune_step_hz),
+	tune_step_fft_(tune_step_fft),
+	skip_tune_step_fft_(skip_tune_step_fft),
+	skip_fft_count_(skip_tune_step_fft),
+	sample_(nfft),
+	sample_count_(0),
+	tune_freq_(freq_start),
+	last_rx_freq_(0),
+	fft_count_(0),
+	tune_count_(0),
+	last_sweep_start_(0)
     {
-        message_port_register_out(TUNE);
+	message_port_register_out(TUNE);
     }
 
     retune_fft_impl::~retune_fft_impl()
@@ -250,129 +252,137 @@ namespace gr {
 
     uint64_t retune_fft_impl::host_now_()
     {
-        const std::chrono::seconds sec(1);
-        const auto now = std::chrono::system_clock::now();
-        return now.time_since_epoch() / sec;
+	const std::chrono::seconds sec(1);
+	const auto now = std::chrono::system_clock::now();
+	return now.time_since_epoch() / sec;
     }
 
     void retune_fft_impl::retune_now_()
     {
-        const uint64_t host_now = host_now_();
+	const uint64_t host_now = host_now_();
 
-        d_logger->debug("retuning to {}", tune_freq_);
-        ++tune_count_;
-        pmt::pmt_t tune_rx = pmt::make_dict();
-        tune_rx = pmt::dict_add(tune_rx, pmt::mp("freq"), pmt::from_long(tune_freq_));
-        tune_rx = pmt::dict_add(tune_rx, pmt::mp("tag"), pmt::mp("now"));
-        message_port_pub(TUNE, tune_rx);
+	d_logger->debug("retuning to {}", tune_freq_);
+	++tune_count_;
+	pmt::pmt_t tune_rx = pmt::make_dict();
+	tune_rx = pmt::dict_add(tune_rx, pmt::mp("freq"), pmt::from_long(tune_freq_));
+	tune_rx = pmt::dict_add(tune_rx, pmt::mp("tag"), pmt::mp("now"));
+	message_port_pub(TUNE, tune_rx);
 
 	tune_freq_ += tune_step_hz_;
 	if (last_sweep_start_ == 0) {
-            last_sweep_start_ = host_now;
-        } else if (tune_freq_ > freq_end_) {
-            last_sweep_start_ = host_now;
-            tune_freq_ = freq_start_;
-            tune_count_ = 0;
-        }
+	    last_sweep_start_ = host_now;
+	} else if (tune_freq_ > freq_end_) {
+	    last_sweep_start_ = host_now;
+	    tune_freq_ = freq_start_;
+	    tune_count_ = 0;
+	}
     }
 
     bool retune_fft_impl::sum_samples_(size_t c, const input_type* &in)
     {
-        bool retune = false;
-        for (size_t i = 0; i < c; ++i) {
-            for (size_t j = 0; j < (vlen_ / nfft_); ++j) {
-                for (size_t k = 0; k < nfft_; ++k) {
-                    sample_[k] += *in++;
+	bool retune = false;
+	for (size_t i = 0; i < c; ++i) {
+	    for (size_t j = 0; j < (vlen_ / nfft_); ++j) {
+		if (skip_fft_count_) {
+		    for (size_t k = 0; k < nfft_; ++k) {
+			*in++;
+		    }
+		    --skip_fft_count_;
+		    continue;
+		}
+		for (size_t k = 0; k < nfft_; ++k) {
+		    sample_[k] += *in++;
 		}
 		if (++fft_count_ == tune_step_fft_) {
-                    fft_count_ = 0;
-                    retune = true;
+		    fft_count_ = 0;
+		    skip_fft_count_ = skip_tune_step_fft_;
+		    retune = true;
 		}
 		++sample_count_;
-            }
-        }
-        consume_each(c);
-        return retune;
+	    }
+	}
+	consume_each(c);
+	return retune;
     }
 
     void retune_fft_impl::forecast(int noutput_items, gr_vector_int& ninput_items_required)
     {
-        ninput_items_required[0] = 1;
+	ninput_items_required[0] = 1;
     }
 
     int retune_fft_impl::general_work(int noutput_items,
-                                      gr_vector_int& ninput_items,
-                                      gr_vector_const_void_star& input_items,
-                                      gr_vector_void_star& output_items)
+				      gr_vector_int& ninput_items,
+				      gr_vector_const_void_star& input_items,
+				      gr_vector_void_star& output_items)
     {
-        auto in = static_cast<const input_type*>(input_items[0]);
-        auto out = static_cast<output_type*>(output_items[0]);
-        const size_t in_count = ninput_items[0];
-        const size_t in_first = nitems_read(0);
+	auto in = static_cast<const input_type*>(input_items[0]);
+	auto out = static_cast<output_type*>(output_items[0]);
+	const size_t in_count = ninput_items[0];
+	const size_t in_first = nitems_read(0);
 
-        if (!out_buf_.empty()) {
-            const size_t leftover = std::min(out_buf_.size(), (size_t)noutput_items);
-            auto from = out_buf_.begin();
-            auto to = from + leftover;
-            std::copy(from, to, out);
-            out_buf_.erase(from, to);
-            return leftover;
-        }
+	if (!out_buf_.empty()) {
+	    const size_t leftover = std::min(out_buf_.size(), (size_t)noutput_items);
+	    auto from = out_buf_.begin();
+	    auto to = from + leftover;
+	    std::copy(from, to, out);
+	    out_buf_.erase(from, to);
+	    return leftover;
+	}
 
-        if (out_buf_.size() > OUT_BUF_MAX) {
-            d_logger->error("output buffer full");
-            return 0;
-        }
+	if (out_buf_.size() > OUT_BUF_MAX) {
+	    d_logger->error("output buffer full");
+	    return 0;
+	}
 
-        std::vector<tag_t> tags;
-        get_tags_in_window(tags, 0, 0, in_count, tag_);
+	std::vector<tag_t> tags;
+	get_tags_in_window(tags, 0, 0, in_count, tag_);
 
-        if (tags.empty()) {
-            if (sum_samples_(in_count, in)) {
-                retune_now_();
-            }
-            return 0;
-        }
+	if (tags.empty()) {
+	    if (sum_samples_(in_count, in)) {
+		retune_now_();
+	    }
+	    return 0;
+	}
 
-        const auto& tag = tags[0];
-        const auto rel = tag.offset - in_first;
+	const auto& tag = tags[0];
+	const auto rel = tag.offset - in_first;
 
-        if (rel > 0) {
-            if (sum_samples_(rel, in)) {
-                 retune_now_();
-            }
-        }
+	if (rel > 0) {
+	    if (sum_samples_(rel, in)) {
+		 retune_now_();
+	    }
+	}
 
-        const uint64_t rx_freq = (uint64_t)pmt::to_double(tag.value);
-        d_logger->debug("rx_freq: {}", rx_freq);
+	const uint64_t rx_freq = (uint64_t)pmt::to_double(tag.value);
+	d_logger->debug("rx_freq: {}", rx_freq);
 
-        if (rx_freq != last_rx_freq_) {
-            d_logger->debug("new rx_freq tag: {}, last {}", rx_freq, last_rx_freq_);
-            const uint64_t host_now = host_now_();
-            const float bucket_size = samp_rate_ / vlen_;
-            if (last_rx_freq_ && sample_count_) {
-                std::transform(sample_.begin(), sample_.end(), sample_.begin(), [=](double &c){ return std::max(MIN_PW, std::min(c / sample_count_, MAX_PW)); });
-                for (size_t i = 0; i < vlen_; ++i) {
-                    const int bucket = i - (vlen_ / 2);
-                    const auto bucket_freq = tune_freq_ + bucket_size * bucket;
-                    if (bucket_freq < freq_start_ || bucket_freq > freq_end_) {
-                        continue;
-                    }
-                    std::stringstream ss;
-                    ss << host_now << " " << static_cast<uint64_t>(bucket_freq) << " " << sample_[i] << std::endl;
-                    const std::string s = ss.str();
-                    out_buf_.insert(out_buf_.end(), s.begin(), s.end());
-                }
-            }
-            std::transform(sample_.begin(), sample_.end(), sample_.begin(), [](double &c){ return 0; });
-            sample_count_ = 0;
-            last_rx_freq_ = rx_freq;
-        }
+	if (rx_freq != last_rx_freq_) {
+	    d_logger->debug("new rx_freq tag: {}, last {}", rx_freq, last_rx_freq_);
+	    const uint64_t host_now = host_now_();
+	    const float bucket_size = samp_rate_ / vlen_;
+	    if (last_rx_freq_ && sample_count_) {
+		std::transform(sample_.begin(), sample_.end(), sample_.begin(), [=](double &c){ return std::max(MIN_PW, std::min(c / sample_count_, MAX_PW)); });
+		for (size_t i = 0; i < vlen_; ++i) {
+		    const int bucket = i - (vlen_ / 2);
+		    const auto bucket_freq = tune_freq_ + bucket_size * bucket;
+		    if (bucket_freq < freq_start_ || bucket_freq > freq_end_) {
+			continue;
+		    }
+		    std::stringstream ss;
+		    ss << host_now << " " << static_cast<uint64_t>(bucket_freq) << " " << sample_[i] << std::endl;
+		    const std::string s = ss.str();
+		    out_buf_.insert(out_buf_.end(), s.begin(), s.end());
+		}
+	    }
+	    std::transform(sample_.begin(), sample_.end(), sample_.begin(), [](double &c){ return 0; });
+	    sample_count_ = 0;
+	    last_rx_freq_ = rx_freq;
+	}
 
-        if (sum_samples_(1, in)) {
-            retune_now_();
-        }
-        return 0;
+	if (sum_samples_(1, in)) {
+	    retune_now_();
+	}
+	return 0;
     }
 
   } /* namespace iqtlabs */
