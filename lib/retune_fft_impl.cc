@@ -215,13 +215,13 @@ namespace gr {
     static const double MAX_PW = 1e4;
 
     retune_fft::sptr
-    retune_fft::make(const std::string &tag, int vlen, int nfft, int samp_rate, uint64_t freq_start, uint64_t freq_end, int tune_step_hz, int tune_step_fft, int skip_tune_step_fft)
+    retune_fft::make(const std::string &tag, int vlen, int nfft, int samp_rate, uint64_t freq_start, uint64_t freq_end, int tune_step_hz, int tune_step_fft, int skip_tune_step_fft, bool fft_roll)
     {
       return gnuradio::make_block_sptr<retune_fft_impl>(
-	tag, vlen, nfft, samp_rate, freq_start, freq_end, tune_step_hz, tune_step_fft, skip_tune_step_fft);
+	tag, vlen, nfft, samp_rate, freq_start, freq_end, tune_step_hz, tune_step_fft, skip_tune_step_fft, fft_roll);
     }
 
-    retune_fft_impl::retune_fft_impl(const std::string &tag, int vlen, int nfft, int samp_rate, uint64_t freq_start, uint64_t freq_end, int tune_step_hz, int tune_step_fft, int skip_tune_step_fft)
+    retune_fft_impl::retune_fft_impl(const std::string &tag, int vlen, int nfft, int samp_rate, uint64_t freq_start, uint64_t freq_end, int tune_step_hz, int tune_step_fft, int skip_tune_step_fft, bool fft_roll)
       : gr::block("retune_fft",
 	      gr::io_signature::make(1 /* min inputs */, 1 /* max inputs */, vlen * sizeof(input_type)),
 	      gr::io_signature::make(1 /* min outputs */, 1 /*max outputs */, sizeof(output_type))),
@@ -235,6 +235,7 @@ namespace gr {
 	tune_step_fft_(tune_step_fft),
 	skip_tune_step_fft_(skip_tune_step_fft),
 	skip_fft_count_(skip_tune_step_fft),
+	fft_roll_(fft_roll),
 	sample_(nfft),
 	sample_count_(0),
 	tune_freq_(freq_start),
@@ -370,7 +371,16 @@ namespace gr {
 		if (last_rx_freq_ && sample_count_) {
 		    std::transform(sample_.begin(), sample_.end(), sample_.begin(), [=](double &c){ return std::max(MIN_PW, std::min(c / sample_count_, MAX_PW)); });
 		    for (size_t i = 0; i < vlen_; ++i) {
-			auto bucket_freq = bucket_start_freq + (bucket_size * i);
+			double bucket_freq = bucket_size * i;
+			if (fft_roll_) {
+                            bucket_freq += last_rx_freq_ + (samp_rate_ / 2);
+                            if (bucket_freq > last_rx_freq_ + samp_rate_) {
+                                bucket_freq -= samp_rate_;
+                            }
+                            bucket_freq -= samp_rate_ / 2;
+                        } else {
+                            bucket_freq += last_rx_freq_ - (samp_rate_ / 2);
+			}
 			if (bucket_freq < freq_start_ || bucket_freq > freq_end_) {
 			    continue;
 			}
