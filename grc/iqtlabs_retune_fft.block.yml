@@ -5,12 +5,12 @@ flags: [python, cpp]
 
 templates:
   imports: from gnuradio import iqtlabs
-  make: iqtlabs.retune_fft(${tag}, ${vlen}, ${nfft}, ${samp_rate}, ${freq_start}, ${freq_end}, ${tune_step_hz}, ${tune_step_fft}, ${skip_tune_step_fft})
+  make: iqtlabs.retune_fft(${tag}, ${vlen}, ${nfft}, ${samp_rate}, ${freq_start}, ${freq_end}, ${tune_step_hz}, ${tune_step_fft}, ${skip_tune_step_fft}, ${fft_roll})
 
 cpp_templates:
   includes: ['#include <gnuradio/iqtlabs/retune_fft.h>']
   declarations: 'gr::iqtlabs::retune_fft::sptr ${id};'
-  make: 'this->${id} = gr::iqtlabs::retune_fft::make(${tag}, ${vlen}, ${nfft}, ${samp_rate}, ${freq_start}, ${freq_end}, ${tune_step_hz}, ${tune_step_fft}, ${skip_tune_step_fft});'
+  make: 'this->${id} = gr::iqtlabs::retune_fft::make(${tag}, ${vlen}, ${nfft}, ${samp_rate}, ${freq_start}, ${freq_end}, ${tune_step_hz}, ${tune_step_fft}, ${skip_tune_step_fft}, ${fft_roll});'
 
 parameters:
 - id: tag
@@ -31,6 +31,8 @@ parameters:
   dtype: int
 - id: skip_tune_step_fft
   dtype: int
+- id: fft_roll
+  dtype: bool
 
 inputs:
 - label: input

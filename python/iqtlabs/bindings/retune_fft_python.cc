@@ -43,6 +43,7 @@ void bind_retune_fft(py::module& m)
            py::arg("tune_step_hz"),
            py::arg("tune_step_fft"),
            py::arg("skip_tune_step_fft"),
+           py::arg("roll_fft"),
            D(retune_fft,make)
         )
         
