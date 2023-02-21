@@ -238,6 +238,8 @@ namespace gr {
       uint64_t tune_count_;
       uint64_t last_sweep_start_;
       uint64_t skip_fft_count_;
+      uint64_t total_tune_count_;
+      uint64_t pending_retune_;
 
      public:
       retune_fft_impl(const std::string &tag, int vlen, int nfft, int samp_rate, uint64_t freq_start, uint64_t freq_end, int tune_step_hz, int tune_step_fft, int skip_tune_step_fft);
