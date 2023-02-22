@@ -367,7 +367,6 @@ namespace gr {
 		--pending_retune_;
 		const uint64_t host_now = host_now_();
 		const double bucket_size = samp_rate_ / vlen_;
-		const double bucket_start_freq = last_rx_freq_ - (samp_rate_ / 2);
 		if (last_rx_freq_ && sample_count_) {
 		    std::transform(sample_.begin(), sample_.end(), sample_.begin(), [=](double &c){ return std::max(MIN_PW, std::min(c / sample_count_, MAX_PW)); });
 		    for (size_t i = 0; i < vlen_; ++i) {
