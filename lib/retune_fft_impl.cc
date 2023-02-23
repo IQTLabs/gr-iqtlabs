@@ -283,9 +283,8 @@ namespace gr {
 	}
     }
 
-    bool retune_fft_impl::sum_samples_(size_t c, const input_type* &in)
+    void retune_fft_impl::sum_samples_(size_t c, const input_type* &in)
     {
-	bool retune = false;
 	for (size_t i = 0; i < c; ++i) {
 	    for (size_t j = 0; j < (vlen_ / nfft_); ++j) {
 		if (skip_fft_count_) {
@@ -301,13 +300,12 @@ namespace gr {
 		if (++fft_count_ >= tune_step_fft_ && (pending_retune_ == 0 || total_tune_count_ == 0)) {
 		    fft_count_ = 0;
 		    skip_fft_count_ = skip_tune_step_fft_;
-		    retune = true;
+		    retune_now_();
 		}
 		++sample_count_;
 	    }
 	}
 	consume_each(c);
-	return retune;
     }
 
     void retune_fft_impl::forecast(int noutput_items, gr_vector_int& ninput_items_required)
@@ -343,9 +341,7 @@ namespace gr {
 	get_tags_in_window(tags, 0, 0, in_count, tag_);
 
 	if (tags.empty()) {
-	    if (sum_samples_(in_count, in)) {
-		retune_now_();
-	    }
+	    sum_samples_(in_count, in);
 	    return 0;
 	}
 
@@ -355,9 +351,7 @@ namespace gr {
 	    in_first += rel;
 
 	    if (rel > 0) {
-		if (sum_samples_(rel, in)) {
-		    retune_now_();
-		}
+		sum_samples_(rel, in);
 	    }
 
 	    const uint64_t rx_freq = (uint64_t)pmt::to_double(tag.value);
@@ -395,9 +389,7 @@ namespace gr {
 	    }
 	}
 
-	if (sum_samples_(1, in)) {
-	    retune_now_();
-	}
+	sum_samples_(1, in);
 	return 0;
     }
 
