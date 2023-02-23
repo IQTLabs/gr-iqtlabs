@@ -217,7 +217,7 @@ namespace gr {
      private:
       uint64_t host_now_();
       void retune_now_();
-      bool sum_samples_(size_t c, const input_type* &in);
+      void sum_samples_(size_t c, const input_type* &in);
 
       pmt::pmt_t tag_;
       size_t vlen_;
