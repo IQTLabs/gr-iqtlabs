@@ -211,17 +211,15 @@ namespace gr {
 
     static const pmt::pmt_t TUNE = pmt::mp("tune");
     static const size_t OUT_BUF_MAX = 1024 * 1024 * 64;
-    static const double MIN_PW = 1e-4;
-    static const double MAX_PW = 1e4;
 
     retune_fft::sptr
-    retune_fft::make(const std::string &tag, int vlen, int nfft, int samp_rate, uint64_t freq_start, uint64_t freq_end, int tune_step_hz, int tune_step_fft, int skip_tune_step_fft, bool fft_roll)
+    retune_fft::make(const std::string &tag, int vlen, int nfft, int samp_rate, uint64_t freq_start, uint64_t freq_end, int tune_step_hz, int tune_step_fft, int skip_tune_step_fft, bool fft_roll, double fft_min, double fft_max)
     {
       return gnuradio::make_block_sptr<retune_fft_impl>(
-	tag, vlen, nfft, samp_rate, freq_start, freq_end, tune_step_hz, tune_step_fft, skip_tune_step_fft, fft_roll);
+	tag, vlen, nfft, samp_rate, freq_start, freq_end, tune_step_hz, tune_step_fft, skip_tune_step_fft, fft_roll, fft_min, fft_max);
     }
 
-    retune_fft_impl::retune_fft_impl(const std::string &tag, int vlen, int nfft, int samp_rate, uint64_t freq_start, uint64_t freq_end, int tune_step_hz, int tune_step_fft, int skip_tune_step_fft, bool fft_roll)
+    retune_fft_impl::retune_fft_impl(const std::string &tag, int vlen, int nfft, int samp_rate, uint64_t freq_start, uint64_t freq_end, int tune_step_hz, int tune_step_fft, int skip_tune_step_fft, bool fft_roll, double fft_min, double fft_max)
       : gr::block("retune_fft",
 	      gr::io_signature::make(1 /* min inputs */, 1 /* max inputs */, vlen * sizeof(input_type)),
 	      gr::io_signature::make(1 /* min outputs */, 1 /*max outputs */, sizeof(output_type))),
@@ -236,6 +234,8 @@ namespace gr {
 	skip_tune_step_fft_(skip_tune_step_fft),
 	skip_fft_count_(skip_tune_step_fft),
 	fft_roll_(fft_roll),
+	fft_min_(fft_min),
+	fft_max_(fft_max),
 	sample_(nfft),
 	sample_count_(0),
 	tune_freq_(freq_start),
@@ -362,7 +362,7 @@ namespace gr {
 		const uint64_t host_now = host_now_();
 		const double bucket_size = samp_rate_ / vlen_;
 		if (last_rx_freq_ && sample_count_) {
-		    std::transform(sample_.begin(), sample_.end(), sample_.begin(), [=](double &c){ return std::max(MIN_PW, std::min(c / sample_count_, MAX_PW)); });
+		    std::transform(sample_.begin(), sample_.end(), sample_.begin(), [=](double &c){ return std::max(fft_min_, std::min(c / sample_count_, fft_max_)); });
 		    for (size_t i = 0; i < vlen_; ++i) {
 			double bucket_freq = bucket_size * i;
 			if (fft_roll_) {
