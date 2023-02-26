@@ -270,6 +270,11 @@ class qa_retune_fft(gr_unittest.TestCase):
                     line = line.strip()
                     record = json.loads(line)
                     ts = float(record['ts'])
+                    config = record['config']
+                    self.assertEqual(config['freq_start'], freq_start)
+                    self.assertEqual(config['freq_end'], freq_end)
+                    self.assertEqual(config['sample_rate'], samp_rate)
+                    self.assertEqual(config['nfft'], points)
                     buckets = record['buckets']
                     records.extend([{'ts': ts, 'f': float(freq), 'v': float(value)}
                         for freq, value in buckets.items()])
