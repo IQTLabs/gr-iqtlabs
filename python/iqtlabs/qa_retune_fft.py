@@ -202,6 +202,7 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
 #
+import json
 import os
 import time
 import tempfile
@@ -212,12 +213,10 @@ from gnuradio import blocks
 from gnuradio import fft
 from gnuradio.fft import window
 from gnuradio import gr
-from gnuradio.filter import firdes
 
 try:
-  from gnuradio.iqtlabs import retune_fft, tuneable_test_source
+    from gnuradio.iqtlabs import retune_fft, tuneable_test_source
 except ImportError:
-    import os
     import sys
     dirname, filename = os.path.split(os.path.abspath(__file__))
     sys.path.append(os.path.join(dirname, "bindings"))
@@ -233,7 +232,6 @@ class qa_retune_fft(gr_unittest.TestCase):
         self.tb = None
 
     def test_retune_fft(self):
-        freq_divisor = 1e9
         points = int(1024)
         samp_rate = points * points
         freq_start = int(1e9 / samp_rate) * samp_rate
@@ -241,8 +239,6 @@ class qa_retune_fft(gr_unittest.TestCase):
 
         with tempfile.TemporaryDirectory() as tmpdir:
             test_file = os.path.join(tmpdir, "samples.csv")
-            source = tuneable_test_source(freq_divisor)
-
             iqtlabs_tuneable_test_source_0 = tuneable_test_source(freq_end)
             iqtlabs_retune_fft_0 = retune_fft("rx_freq", points, points, int(samp_rate), int(freq_start), int(freq_end), int(samp_rate), 64, 2, False, 1e-4, 1e4)
             fft_vxx_0 = fft.fft_vcc(points, True, window.blackmanharris(points), True, 1)
@@ -268,7 +264,16 @@ class qa_retune_fft(gr_unittest.TestCase):
 
             # Since test source generates the same samples for the same frequency value,
             # the same frequency must have the same power for repeated observations.
-            df = pd.read_csv(test_file, sep=" ", names=["ts", "f", "v"])[["f", "v"]]
+            records = []
+            with open(test_file) as f:
+                for line in f.readlines():
+                    line = line.strip()
+                    record = json.loads(line)
+                    ts = float(record['ts'])
+                    buckets = record['buckets']
+                    records.extend([{'ts': ts, 'f': float(freq), 'v': float(value)}
+                        for freq, value in buckets.items()])
+            df = pd.DataFrame(records)[["f", "v"]]
             df["v"] = df["v"].round(2)
             self.assertGreater(df["v"].max(), 100)
             df["u"] = df.groupby("f")["v"].transform('nunique')

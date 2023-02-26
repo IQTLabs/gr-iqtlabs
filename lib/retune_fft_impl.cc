@@ -203,6 +203,8 @@
  */
 
 #include <chrono>
+#include <ios>
+#include <sstream>
 #include <gnuradio/io_signature.h>
 #include "retune_fft_impl.h"
 
@@ -359,29 +361,35 @@ namespace gr {
 	    if (rx_freq != last_rx_freq_) {
 		d_logger->debug("new rx_freq tag: {}, last {}", rx_freq, last_rx_freq_);
 		--pending_retune_;
-		const uint64_t host_now = host_now_();
-		const double bucket_size = samp_rate_ / vlen_;
 		if (last_rx_freq_ && sample_count_) {
+		    const uint64_t host_now = host_now_();
+		    const double bucket_size = samp_rate_ / vlen_;
+		    std::stringstream ss("", std::ios_base::app | std::ios_base::out);
+		    ss << "{\"ts\": " << host_now << ", \"buckets\": {";
+		    size_t bucket_count = 0;
 		    std::transform(sample_.begin(), sample_.end(), sample_.begin(), [=](double &c){ return std::max(fft_min_, std::min(c / sample_count_, fft_max_)); });
 		    for (size_t i = 0; i < vlen_; ++i) {
 			double bucket_freq = bucket_size * i;
 			if (fft_roll_) {
-                            bucket_freq += last_rx_freq_ + (samp_rate_ / 2);
-                            if (bucket_freq > last_rx_freq_ + samp_rate_) {
-                                bucket_freq -= samp_rate_;
-                            }
-                            bucket_freq -= samp_rate_ / 2;
-                        } else {
-                            bucket_freq += last_rx_freq_ - (samp_rate_ / 2);
+			    bucket_freq += last_rx_freq_ + (samp_rate_ / 2);
+			    if (bucket_freq > last_rx_freq_ + samp_rate_) {
+				bucket_freq -= samp_rate_;
+			    }
+			    bucket_freq -= samp_rate_ / 2;
+			} else {
+			    bucket_freq += last_rx_freq_ - (samp_rate_ / 2);
 			}
 			if (bucket_freq < freq_start_ || bucket_freq > freq_end_) {
 			    continue;
 			}
-			std::stringstream ss;
-			ss << host_now << " " << static_cast<uint64_t>(bucket_freq) << " " << sample_[i] << std::endl;
-			const std::string s = ss.str();
-			out_buf_.insert(out_buf_.end(), s.begin(), s.end());
+			if (++bucket_count > 1) {
+			    ss << ", ";
+			}
+			ss << "\"" << bucket_freq << "\": " << sample_[i];
 		    }
+		    ss << "}}" << std::endl;
+		    const std::string s = ss.str();
+		    out_buf_.insert(out_buf_.end(), s.begin(), s.end());
 		}
 		std::transform(sample_.begin(), sample_.end(), sample_.begin(), [](double &c){ return 0; });
 		sample_count_ = 0;
