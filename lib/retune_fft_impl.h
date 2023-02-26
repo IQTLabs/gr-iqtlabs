@@ -222,7 +222,7 @@ namespace gr {
       pmt::pmt_t tag_;
       size_t vlen_;
       size_t nfft_;
-      float samp_rate_;
+      uint64_t samp_rate_;
       uint64_t freq_start_;
       uint64_t freq_end_;
       uint64_t tune_step_hz_;
@@ -245,7 +245,7 @@ namespace gr {
       uint64_t pending_retune_;
 
      public:
-      retune_fft_impl(const std::string &tag, int vlen, int nfft, int samp_rate, uint64_t freq_start, uint64_t freq_end, int tune_step_hz, int tune_step_fft, int skip_tune_step_fft, bool fft_roll, double fft_min, double fft_max);
+      retune_fft_impl(const std::string &tag, int vlen, int nfft, uint64_t samp_rate, uint64_t freq_start, uint64_t freq_end, int tune_step_hz, int tune_step_fft, int skip_tune_step_fft, bool fft_roll, double fft_min, double fft_max);
       ~retune_fft_impl();
       void forecast(int noutput_items, gr_vector_int& ninput_items_required);
       int general_work(int noutput_items, gr_vector_int& ninput_items, gr_vector_const_void_star& input_items, gr_vector_void_star& output_items);

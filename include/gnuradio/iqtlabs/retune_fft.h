@@ -229,7 +229,7 @@ namespace gr {
        * class. iqtlabs::retune_fft::make is the public interface for
        * creating new instances.
        */
-      static sptr make(const std::string &tag, int vlen, int nfft, int samp_rate, uint64_t freq_start, uint64_t freq_end, int tune_step_hz, int tune_step_fft, int skip_tune_step_fft, bool fft_tune, double fft_min, double fft_max);
+      static sptr make(const std::string &tag, int vlen, int nfft, uint64_t samp_rate, uint64_t freq_start, uint64_t freq_end, int tune_step_hz, int tune_step_fft, int skip_tune_step_fft, bool fft_tune, double fft_min, double fft_max);
     };
 
   } // namespace iqtlabs
