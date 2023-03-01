@@ -2,6 +2,19 @@ id: iqtlabs_tuneable_test_source
 label: tuneable_test_source
 category: '[iqtlabs]'
 flags: [python, cpp]
+documentation: |-
+  This block simulates a tuneable radio source, that emits samples
+  that are constant based on requested frequency, and tagged with
+  that frequency (generally, for testing blocks that require interactively
+  retuning a source).
+
+  inputs:
+    cmd: accepts PMT tuning commands (same format as Soapy sources, "rx_freq").
+  output:
+    complex samples proportional to frequency.
+
+  parameters:
+    freq_divisor: value to divide requested frequency by, to produce samples.
 
 templates:
   imports: from gnuradio import iqtlabs
