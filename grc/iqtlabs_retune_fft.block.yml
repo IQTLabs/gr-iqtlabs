@@ -2,6 +2,37 @@ id: iqtlabs_retune_fft
 label: retune_fft
 category: '[iqtlabs]'
 flags: [python, cpp]
+documentation: |-
+  This block commands a radio source block to scan across a frequency range,
+  while annotating the output of a FFT block, outputing JSON objects
+  (see https://github.com/iqtlabs/gamutRF for an example use case). Scanning
+  is driven by counting FFT samples to decide when to retune by configurable
+  increments.
+
+  input:
+    vector of floats, representing FFT bucket values, tagged with center frequency.
+  output:
+    JSON scan summaries, one per line, containing "bucket" keys (with frequency: mean values), and "config" keys (representing block config).
+  tune:
+    connect to radio command port, generally "cmd".
+
+  parameters:
+    tag: expected PMT tag containing center frequency (generally "rx_freq" for Soapy or UHD sources).
+    vlen: length of FFT vector (generally same as number of FFT points - can be different when receiving multiple vectors at once).
+    nfft: number of FFT points.
+    samp_rate: sample rate.
+    freq_start: frequency to start scan at in Hz.
+    freq_end: frequency to end scan at in Hz.
+    tune_step_hz: increment frequency by this value each retuning step.
+    tune_step_fft: count at least this many FFT vectors between retuning steps.
+    skip_tune_step_fft: discard this many FFT vectors before counting (to allow for radio to stabilize after retuning)
+    fft_roll: if True, the consider the center of the FFT window to be at the beginning of the FFT vector.
+    fft_min: clip FFT values to this minimum.
+    fft_max: clip FFT values to this maximum.
+
+  example JSON output:
+    { "ts": <epoch time>, "config": { "freq_start": 10e6, "freq_end": 20e6, ... }, "buckets": { "10e6": 1, "10.1e6", ... } }
+
 
 templates:
   imports: from gnuradio import iqtlabs
