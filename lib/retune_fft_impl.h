@@ -218,6 +218,7 @@ namespace gr {
       uint64_t host_now_();
       void retune_now_();
       void sum_samples_(size_t c, const input_type* &in);
+      void output_buckets_(const std::string &name, const std::list<std::pair<double, double>> &buckets, std::stringstream &ss);
 
       pmt::pmt_t tag_;
       size_t vlen_;
@@ -234,6 +235,7 @@ namespace gr {
 
       std::deque<output_type> out_buf_;
       std::vector<double> sample_;
+      std::vector<double> last_sample_;
       size_t sample_count_;
       uint64_t tune_freq_;
       uint64_t last_rx_freq_;

@@ -275,6 +275,8 @@ class qa_retune_fft(gr_unittest.TestCase):
                     self.assertEqual(config['freq_end'], freq_end)
                     self.assertEqual(config['sample_rate'], samp_rate)
                     self.assertEqual(config['nfft'], points)
+                    self.assertEqual(
+                        sorted(record['last_buckets'].keys()), sorted(record['buckets'].keys()))
                     buckets = record['buckets']
                     records.extend([{'ts': ts, 'f': float(freq), 'v': float(value)}
                         for freq, value in buckets.items()])
