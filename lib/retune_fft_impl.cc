@@ -204,7 +204,11 @@
 
 #include <chrono>
 #include <ios>
+#include <iostream>
 #include <sstream>
+#include <boost/filesystem.hpp>
+#include <boost/iostreams/filter/zstd.hpp>
+
 #include <gnuradio/io_signature.h>
 #include "retune_fft_impl.h"
 
