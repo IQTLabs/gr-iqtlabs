@@ -36,12 +36,12 @@ documentation: |-
 
 templates:
   imports: from gnuradio import iqtlabs
-  make: iqtlabs.retune_fft(${tag}, ${vlen}, ${nfft}, ${samp_rate}, ${freq_start}, ${freq_end}, ${tune_step_hz}, ${tune_step_fft}, ${skip_tune_step_fft}, ${fft_roll}, ${fft_min}, ${fft_max})
+  make: iqtlabs.retune_fft(${tag}, ${vlen}, ${nfft}, ${samp_rate}, ${freq_start}, ${freq_end}, ${tune_step_hz}, ${tune_step_fft}, ${skip_tune_step_fft}, ${fft_roll}, ${fft_min}, ${fft_max}, ${sdir}, ${write_step_fft})
 
 cpp_templates:
   includes: ['#include <gnuradio/iqtlabs/retune_fft.h>']
   declarations: 'gr::iqtlabs::retune_fft::sptr ${id};'
-  make: 'this->${id} = gr::iqtlabs::retune_fft::make(${tag}, ${vlen}, ${nfft}, ${samp_rate}, ${freq_start}, ${freq_end}, ${tune_step_hz}, ${tune_step_fft}, ${skip_tune_step_fft}, ${fft_roll} ${fft_min}, ${fft_max});'
+  make: 'this->${id} = gr::iqtlabs::retune_fft::make(${tag}, ${vlen}, ${nfft}, ${samp_rate}, ${freq_start}, ${freq_end}, ${tune_step_hz}, ${tune_step_fft}, ${skip_tune_step_fft}, ${fft_roll} ${fft_min}, ${fft_max}, ${sdir}, ${write_step_fft});'
 
 parameters:
 - id: tag
@@ -68,6 +68,10 @@ parameters:
   dtype: raw
 - id: fft_max
   dtype: raw
+- id: sdir
+  dtype: string
+- id: write_step_fft
+  dtype: int
 
 inputs:
 - label: input

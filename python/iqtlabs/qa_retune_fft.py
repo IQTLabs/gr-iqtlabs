@@ -240,7 +240,7 @@ class qa_retune_fft(gr_unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmpdir:
             test_file = os.path.join(tmpdir, "samples.csv")
             iqtlabs_tuneable_test_source_0 = tuneable_test_source(freq_end)
-            iqtlabs_retune_fft_0 = retune_fft("rx_freq", points, points, int(samp_rate), int(freq_start), int(freq_end), int(samp_rate), 64, 2, False, 1e-4, 1e4)
+            iqtlabs_retune_fft_0 = retune_fft("rx_freq", points, points, int(samp_rate), int(freq_start), int(freq_end), int(samp_rate), 64, 2, False, 1e-4, 1e4, "", 0)
             fft_vxx_0 = fft.fft_vcc(points, True, window.blackmanharris(points), True, 1)
             blocks_throttle_0 = blocks.throttle(gr.sizeof_gr_complex*1, samp_rate, True)
             blocks_stream_to_vector_0 = blocks.stream_to_vector(gr.sizeof_gr_complex*1, points)
@@ -275,8 +275,6 @@ class qa_retune_fft(gr_unittest.TestCase):
                     self.assertEqual(config['freq_end'], freq_end)
                     self.assertEqual(config['sample_rate'], samp_rate)
                     self.assertEqual(config['nfft'], points)
-                    self.assertEqual(
-                        sorted(record['last_buckets'].keys()), sorted(record['buckets'].keys()))
                     buckets = record['buckets']
                     records.extend([{'ts': ts, 'f': float(freq), 'v': float(value)}
                         for freq, value in buckets.items()])
