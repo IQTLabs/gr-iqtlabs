@@ -29,6 +29,8 @@ documentation: |-
     fft_roll: if True, the consider the center of the FFT window to be at the beginning of the FFT vector.
     fft_min: clip FFT values to this minimum.
     fft_max: clip FFT values to this maximum.
+    sdir: directory to write raw FFT points to.
+    write_step_fft: if > 0, write N vectors of FFT points at each retune step.
 
   example JSON output:
     { "ts": <epoch time>, "config": { "freq_start": 10e6, "freq_end": 20e6, ... }, "buckets": { "10e6": 1, "10.1e6", ... } }
