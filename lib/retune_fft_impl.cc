@@ -239,7 +239,6 @@ namespace gr {
               fft_min_(fft_min),
               fft_max_(fft_max),
               sample_(nfft),
-              last_sample_(nfft),
               sample_count_(0),
               tune_freq_(freq_start),
               last_rx_freq_(0),
@@ -299,7 +298,6 @@ namespace gr {
                     }
                     for (size_t k = 0; k < nfft_; ++k) {
                         double s = *in++;
-                        last_sample_[k] = s;
                         sample_[k] += s;
                     }
                     if (++fft_count_ >= tune_step_fft_ && (pending_retune_ == 0 || total_tune_count_ == 0)) {
@@ -393,7 +391,6 @@ namespace gr {
                             "}, ";
                         std::transform(sample_.begin(), sample_.end(), sample_.begin(), [=](double &c){ return std::max(fft_min_, std::min(c / sample_count_, fft_max_)); });
                         std::list<std::pair<double, double>> buckets;
-                        std::list<std::pair<double, double>> last_buckets;
                         for (size_t i = 0; i < vlen_; ++i) {
                             double bucket_freq = bucket_size * i;
                             if (fft_roll_) {
@@ -409,11 +406,8 @@ namespace gr {
                                 continue;
                             }
                             buckets.push_back(std::pair(bucket_freq, sample_[i]));
-                            last_buckets.push_back(std::pair(bucket_freq, last_sample_[i]));
                         }
                         output_buckets_("buckets", buckets, ss);
-                        ss << ", ";
-                        output_buckets_("last_buckets", last_buckets, ss);
                         ss << "}" << std::endl;
                         const std::string s = ss.str();
                         out_buf_.insert(out_buf_.end(), s.begin(), s.end());

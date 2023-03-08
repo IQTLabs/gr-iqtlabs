@@ -235,7 +235,6 @@ namespace gr {
 
       std::deque<output_type> out_buf_;
       std::vector<double> sample_;
-      std::vector<double> last_sample_;
       size_t sample_count_;
       uint64_t tune_freq_;
       uint64_t last_rx_freq_;
