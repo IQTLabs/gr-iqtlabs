@@ -27,6 +27,8 @@ list(INSERT CMAKE_MODULE_PATH 0 ${CMAKE_SOURCE_DIR}/cmake/Modules)
 # Find gnuradio to get access to the cmake modules
 find_package(Gnuradio "3.9" REQUIRED)
 
+find_package(Boost ${Boost_Version} COMPONENTS filesystem iostreams REQUIRED)
+
 # Set the version information here
 set(VERSION_MAJOR 1)
 set(VERSION_API   0)

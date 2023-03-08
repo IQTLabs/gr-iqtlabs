@@ -204,7 +204,11 @@
 
 #include <chrono>
 #include <ios>
+#include <iostream>
 #include <sstream>
+#include <boost/filesystem.hpp>
+#include <boost/iostreams/filter/zstd.hpp>
+
 #include <gnuradio/io_signature.h>
 #include "retune_fft_impl.h"
 
@@ -215,13 +219,13 @@ namespace gr {
         static const size_t OUT_BUF_MAX = 1024 * 1024 * 64;
 
         retune_fft::sptr
-        retune_fft::make(const std::string &tag, int vlen, int nfft, uint64_t samp_rate, uint64_t freq_start, uint64_t freq_end, int tune_step_hz, int tune_step_fft, int skip_tune_step_fft, bool fft_roll, double fft_min, double fft_max)
+        retune_fft::make(const std::string &tag, int vlen, int nfft, uint64_t samp_rate, uint64_t freq_start, uint64_t freq_end, int tune_step_hz, int tune_step_fft, int skip_tune_step_fft, bool fft_roll, double fft_min, double fft_max, const std::string &sdir, uint64_t write_step_fft)
         {
             return gnuradio::make_block_sptr<retune_fft_impl>(
-                                                              tag, vlen, nfft, samp_rate, freq_start, freq_end, tune_step_hz, tune_step_fft, skip_tune_step_fft, fft_roll, fft_min, fft_max);
+                                                              tag, vlen, nfft, samp_rate, freq_start, freq_end, tune_step_hz, tune_step_fft, skip_tune_step_fft, fft_roll, fft_min, fft_max, sdir, write_step_fft);
         }
 
-        retune_fft_impl::retune_fft_impl(const std::string &tag, int vlen, int nfft, uint64_t samp_rate, uint64_t freq_start, uint64_t freq_end, int tune_step_hz, int tune_step_fft, int skip_tune_step_fft, bool fft_roll, double fft_min, double fft_max)
+        retune_fft_impl::retune_fft_impl(const std::string &tag, int vlen, int nfft, uint64_t samp_rate, uint64_t freq_start, uint64_t freq_end, int tune_step_hz, int tune_step_fft, int skip_tune_step_fft, bool fft_roll, double fft_min, double fft_max, const std::string &sdir, uint64_t write_step_fft)
             : gr::block("retune_fft",
                         gr::io_signature::make(1 /* min inputs */, 1 /* max inputs */, vlen * sizeof(input_type)),
                         gr::io_signature::make(1 /* min outputs */, 1 /*max outputs */, sizeof(output_type))),
@@ -239,7 +243,6 @@ namespace gr {
               fft_min_(fft_min),
               fft_max_(fft_max),
               sample_(nfft),
-              last_sample_(nfft),
               sample_count_(0),
               tune_freq_(freq_start),
               last_rx_freq_(0),
@@ -247,7 +250,9 @@ namespace gr {
               tune_count_(0),
               last_sweep_start_(0),
               pending_retune_(0),
-              total_tune_count_(0)
+              total_tune_count_(0),
+              sdir_(sdir),
+              write_step_fft_(write_step_fft)
         {
             message_port_register_out(TUNE);
         }
@@ -299,7 +304,6 @@ namespace gr {
                     }
                     for (size_t k = 0; k < nfft_; ++k) {
                         double s = *in++;
-                        last_sample_[k] = s;
                         sample_[k] += s;
                     }
                     if (++fft_count_ >= tune_step_fft_ && (pending_retune_ == 0 || total_tune_count_ == 0)) {
@@ -393,7 +397,6 @@ namespace gr {
                             "}, ";
                         std::transform(sample_.begin(), sample_.end(), sample_.begin(), [=](double &c){ return std::max(fft_min_, std::min(c / sample_count_, fft_max_)); });
                         std::list<std::pair<double, double>> buckets;
-                        std::list<std::pair<double, double>> last_buckets;
                         for (size_t i = 0; i < vlen_; ++i) {
                             double bucket_freq = bucket_size * i;
                             if (fft_roll_) {
@@ -409,11 +412,8 @@ namespace gr {
                                 continue;
                             }
                             buckets.push_back(std::pair(bucket_freq, sample_[i]));
-                            last_buckets.push_back(std::pair(bucket_freq, last_sample_[i]));
                         }
                         output_buckets_("buckets", buckets, ss);
-                        ss << ", ";
-                        output_buckets_("last_buckets", last_buckets, ss);
                         ss << "}" << std::endl;
                         const std::string s = ss.str();
                         out_buf_.insert(out_buf_.end(), s.begin(), s.end());
