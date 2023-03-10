@@ -412,7 +412,7 @@ namespace gr {
                             if (bucket_freq < freq_start_ || bucket_freq > freq_end_) {
                                 continue;
                             }
-                            buckets.push_back(std::pair(bucket_freq, sample_[i]));
+                            buckets.push_back(std::pair<double, double>(bucket_freq, sample_[i]));
                         }
                         output_buckets_("buckets", buckets, ss);
                         ss << "}" << std::endl;
