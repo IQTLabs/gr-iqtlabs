@@ -387,6 +387,7 @@ namespace gr {
                         std::stringstream ss("", std::ios_base::app | std::ios_base::out);
                         ss << "{" <<
                             "\"ts\": " << host_now <<
+                            ", \"sweep_start\": " << last_sweep_start_ <<
                             ", \"config\": {" <<
                             "\"freq_start\": " << freq_start_ <<
                             ", \"freq_end\": " << freq_end_ <<
