@@ -205,7 +205,13 @@
 #ifndef INCLUDED_IQTLABS_RETUNE_FFT_IMPL_H
 #define INCLUDED_IQTLABS_RETUNE_FFT_IMPL_H
 
+#include <boost/filesystem.hpp>
+#include <boost/iostreams/device/file.hpp>
+#include <boost/iostreams/filtering_stream.hpp>
+#include <boost/iostreams/filter/zstd.hpp>
+#include <boost/scoped_ptr.hpp>
 #include <gnuradio/iqtlabs/retune_fft.h>
+
 
 namespace gr {
   namespace iqtlabs {
@@ -219,6 +225,11 @@ namespace gr {
       void retune_now_();
       void sum_samples_(size_t c, const input_type* &in);
       void output_buckets_(const std::string &name, const std::list<std::pair<double, double>> &buckets, std::stringstream &ss);
+      std::string get_prefix_file_(const std::string &file, const std::string &prefix);
+      std::string get_dotfile_(const std::string &file);
+      void write_(const char *data, size_t len);
+      void open_(const std::string &file, size_t zlevel);
+      void close_();
 
       pmt::pmt_t tag_;
       size_t vlen_;
@@ -229,6 +240,9 @@ namespace gr {
       uint64_t tune_step_hz_;
       uint64_t tune_step_fft_;
       uint64_t skip_tune_step_fft_;
+      uint64_t write_step_fft_;
+      std::string sdir_;
+
       bool fft_roll_;
       double fft_min_;
       double fft_max_;
@@ -244,8 +258,11 @@ namespace gr {
       uint64_t skip_fft_count_;
       uint64_t total_tune_count_;
       uint64_t pending_retune_;
-      uint64_t write_step_fft_;
-      std::string sdir_;
+      uint64_t write_step_fft_count_;
+
+      boost::scoped_ptr<boost::iostreams::filtering_ostream> outbuf_p;
+      std::string file_;
+      std::string dotfile_;
 
      public:
       retune_fft_impl(const std::string &tag, int vlen, int nfft, uint64_t samp_rate, uint64_t freq_start, uint64_t freq_end, int tune_step_hz, int tune_step_fft, int skip_tune_step_fft, bool fft_roll, double fft_min, double fft_max, const std::string &sdir, uint64_t write_step_fft);

@@ -202,8 +202,10 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
 #
+import glob
 import json
 import os
+import subprocess
 import time
 import tempfile
 import pandas as pd
@@ -236,11 +238,12 @@ class qa_retune_fft(gr_unittest.TestCase):
         samp_rate = points * points
         freq_start = int(1e9 / samp_rate) * samp_rate
         freq_end = int(1.1e9 / samp_rate) * samp_rate
+        fft_write_count = 2
 
         with tempfile.TemporaryDirectory() as tmpdir:
             test_file = os.path.join(tmpdir, "samples.csv")
             iqtlabs_tuneable_test_source_0 = tuneable_test_source(freq_end)
-            iqtlabs_retune_fft_0 = retune_fft("rx_freq", points, points, int(samp_rate), int(freq_start), int(freq_end), int(samp_rate), 64, 2, False, 1e-4, 1e4, "", 0)
+            iqtlabs_retune_fft_0 = retune_fft("rx_freq", points, points, int(samp_rate), int(freq_start), int(freq_end), int(samp_rate), 64, 2, False, 1e-4, 1e4, tmpdir, fft_write_count)
             fft_vxx_0 = fft.fft_vcc(points, True, window.blackmanharris(points), True, 1)
             blocks_throttle_0 = blocks.throttle(gr.sizeof_gr_complex*1, samp_rate, True)
             blocks_stream_to_vector_0 = blocks.stream_to_vector(gr.sizeof_gr_complex*1, points)
@@ -288,6 +291,14 @@ class qa_retune_fft(gr_unittest.TestCase):
             f_count_min = f_count["u"].min()
             self.assertGreater(f_count_min, 1)
             self.assertTrue(non_unique_v.empty, (non_unique_v, df))
+
+            zst_fft_files = sorted(glob.glob(os.path.join(tmpdir, '*.zst')))[:10]
+            self.assertTrue(zst_fft_files)
+            output = subprocess.check_output(['zstd', '-tv'] + zst_fft_files).decode("utf8")
+            bytes_match = '%u bytes' % fft_write_count * 4
+            for file in output.splitlines():
+                # points output correct size (floats)
+                self.assertIn(bytes_match, file, file)
 
 
 if __name__ == '__main__':
