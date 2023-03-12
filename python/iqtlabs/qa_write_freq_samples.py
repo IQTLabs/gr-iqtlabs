@@ -203,16 +203,20 @@
 #    limitations under the License.
 #
 
+import tempfile
+import time
 from gnuradio import gr, gr_unittest
 # from gnuradio import blocks
 try:
-  from gnuradio.iqtlabs import write_freq_samples
+  from gnuradio import blocks
+  from gnuradio.iqtlabs import tuneable_test_source, write_freq_samples
 except ImportError:
     import os
     import sys
     dirname, filename = os.path.split(os.path.abspath(__file__))
     sys.path.append(os.path.join(dirname, "bindings"))
-    from gnuradio.iqtlabs import write_freq_samples
+    from gnuradio import blocks
+    from gnuradio.iqtlabs import tuneable_test_source, write_freq_samples
 
 class qa_write_freq_samples(gr_unittest.TestCase):
 
@@ -222,11 +226,29 @@ class qa_write_freq_samples(gr_unittest.TestCase):
     def tearDown(self):
         self.tb = None
 
-    def test_instance(self):
-        instance = write_freq_samples("rx_freq", 1024, "/tmp", 0, 0)
+    def test_write_freq_samples(self):
+        points = int(1024)
+        samp_rate = points * points
+        freq = int(1.1e9 / samp_rate) * samp_rate
+        fft_write_count = 2
 
-    def test_001_descriptive_test_name(self):
-        self.tb.run()
+        with tempfile.TemporaryDirectory() as tmpdir:
+            iqtlabs_tuneable_test_source_0 = tuneable_test_source(freq)
+            write_freq_samples_0 = write_freq_samples("rx_freq", points, tmpdir, fft_write_count, fft_write_count)
+            blocks_throttle_0 = blocks.throttle(gr.sizeof_gr_complex*1, samp_rate, True)
+            blocks_stream_to_vector_0 = blocks.stream_to_vector(gr.sizeof_gr_complex*1, points)
+
+            self.tb.connect((iqtlabs_tuneable_test_source_0, 0), (blocks_throttle_0, 0))
+            self.tb.connect((blocks_throttle_0, 0), (blocks_stream_to_vector_0, 0))
+            self.tb.connect((blocks_stream_to_vector_0, 0), (write_freq_samples_0, 0))
+
+            self.tb.start()
+            sleep_time = 10
+            time.sleep(sleep_time)
+            self.tb.stop()
+            self.tb.wait()
+
+            # TODO: send pmt tuning message, ensure output.
 
 
 if __name__ == '__main__':

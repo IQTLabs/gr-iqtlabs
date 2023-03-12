@@ -44,6 +44,7 @@ cpp_templates:
   includes: ['#include <gnuradio/iqtlabs/retune_fft.h>']
   declarations: 'gr::iqtlabs::retune_fft::sptr ${id};'
   make: 'this->${id} = gr::iqtlabs::retune_fft::make(${tag}, ${vlen}, ${nfft}, ${samp_rate}, ${freq_start}, ${freq_end}, ${tune_step_hz}, ${tune_step_fft}, ${skip_tune_step_fft}, ${fft_roll} ${fft_min}, ${fft_max}, ${sdir}, ${write_step_fft});'
+  link: ['libgnuradio-iqtlabs.so']
 
 parameters:
 - id: tag

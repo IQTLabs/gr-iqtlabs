@@ -10,7 +10,8 @@ templates:
 cpp_templates:
   includes: ['#include <gnuradio/iqtlabs/write_freq_samples.h>']
   declarations: 'gr::iqtlabs::write_freq_samples::sptr ${id};'
-  make: 'this->${id} = gr::iqtlabs::write_freq_samples::make(${tag}, ${vlen}, ${sdir}, ${write_step_samples}, ${skip_tune_step_samples};'
+  make: 'this->${id} = gr::iqtlabs::write_freq_samples::make(${tag}, ${vlen}, ${sdir}, ${write_step_samples}, ${skip_tune_step_samples});'
+  link: ['libgnuradio-iqtlabs.so']
 
 parameters:
 - id: tag
@@ -29,7 +30,5 @@ inputs:
   domain: stream
   dtype: complex
   vlen: ${ vlen }
-
-outputs:
 
 file_format: 1

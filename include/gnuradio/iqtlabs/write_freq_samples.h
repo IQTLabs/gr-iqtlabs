@@ -211,12 +211,12 @@
 namespace gr {
 namespace iqtlabs {
 
-class IQTLABS_API write_freq_samples : virtual public gr::sync_block
+class IQTLABS_API write_freq_samples : virtual public gr::block
 {
 public:
     typedef std::shared_ptr<write_freq_samples> sptr;
 
-    static sptr make(const std::string&, uint64_t, const std::string&, uint64_t, uint64_t);
+    static sptr make(const std::string &tag, uint64_t vlen, const std::string &sdir, uint64_t write_step_samples, uint64_t skip_tune_step_samples);
 };
 
 } // namespace iqtlabs
