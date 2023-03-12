@@ -213,24 +213,38 @@
 namespace gr {
 namespace iqtlabs {
 
-using input_type = gr_complex;
-write_freq_samples::sptr write_freq_samples::make(const std::string &tag, uint64_t vlen, const std::string &sdir, uint64_t write_step_samples)
+write_freq_samples::sptr write_freq_samples::make(const std::string &tag, uint64_t vlen, const std::string &sdir, uint64_t write_step_samples, uint64_t skip_tune_step_samples)
 {
-    return gnuradio::make_block_sptr<write_freq_samples_impl>(tag, vlen, sdir, write_step_samples);
+    return gnuradio::make_block_sptr<write_freq_samples_impl>(tag, vlen, sdir, write_step_samples, skip_tune_step_samples);
 }
 
 
-write_freq_samples_impl::write_freq_samples_impl(const std::string &tag, uint64_t vlen, const std::string &sdir, uint64_t write_step_samples)
+write_freq_samples_impl::write_freq_samples_impl(const std::string &tag, uint64_t vlen, const std::string &sdir, uint64_t write_step_samples, uint64_t skip_tune_step_samples)
     : gr::sync_block("write_freq_samples",
                      gr::io_signature::make(
                          1 /* min inputs */, 1 /* max inputs */, sizeof(input_type)),
-                     gr::io_signature::make(0, 0, 0))
+                     gr::io_signature::make(0, 0, 0)),
+                     tag_(pmt::intern(tag)),
+                     vlen_(vlen),
+                     sdir_(sdir),
+                     write_step_samples_(write_step_samples),
+                     skip_tune_step_samples_(skip_tune_step_samples),
+                     write_step_samples_count_(0),
+                     skip_tune_step_samples_count_(0),
+                     last_rx_freq_(0)
 {
     outbuf_p.reset(new boost::iostreams::filtering_ostream());
 }
 
 write_freq_samples_impl::~write_freq_samples_impl() {
     close_();
+}
+
+uint64_t write_freq_samples_impl::host_now_()
+{
+    const std::chrono::seconds sec(1);
+    const auto now = std::chrono::system_clock::now();
+    return now.time_since_epoch() / sec;
 }
 
 std::string write_freq_samples_impl::get_prefix_file_(const std::string &file, const std::string &prefix) {

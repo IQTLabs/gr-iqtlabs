@@ -215,27 +215,34 @@
 
 namespace gr {
 namespace iqtlabs {
+using input_type = gr_complex;
 
 class write_freq_samples_impl : public write_freq_samples
 {
 private:
+    uint64_t host_now_();
     std::string get_prefix_file_(const std::string &file, const std::string &prefix);
     std::string get_dotfile_(const std::string &file);
     void write_(const char *data, size_t len);
     void open_(const std::string &file, size_t zlevel);
     void close_();
 
-    std::string tag_;
+    pmt::pmt_t tag_;
     uint64_t vlen_;
     std::string sdir_;
     uint64_t write_step_samples_;
+    uint64_t skip_tune_step_samples_;
+
+    uint64_t write_step_samples_count_;
+    uint64_t skip_tune_step_samples_count_;
+    uint64_t last_rx_freq_;
 
     boost::scoped_ptr<boost::iostreams::filtering_ostream> outbuf_p;
     std::string file_;
     std::string dotfile_;
 
 public:
-    write_freq_samples_impl(const std::string &tag, uint64_t vlen, const std::string &sdir, uint64_t write_step_samples);
+    write_freq_samples_impl(const std::string &tag, uint64_t vlen, const std::string &sdir, uint64_t write_step_samples, uint64_t skip_tune_step_samples);
     ~write_freq_samples_impl();
 
     int work(int noutput_items,

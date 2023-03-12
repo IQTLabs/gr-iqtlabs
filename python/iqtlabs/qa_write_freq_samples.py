@@ -223,7 +223,7 @@ class qa_write_freq_samples(gr_unittest.TestCase):
         self.tb = None
 
     def test_instance(self):
-        instance = write_freq_samples("rx_freq", 1024, "/tmp", 0)
+        instance = write_freq_samples("rx_freq", 1024, "/tmp", 0, 0)
 
     def test_001_descriptive_test_name(self):
         self.tb.run()
