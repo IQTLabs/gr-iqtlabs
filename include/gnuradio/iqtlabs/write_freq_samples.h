@@ -202,37 +202,24 @@
  *    limitations under the License.
  */
 
-#ifndef INCLUDED_IQTLABS_RETUNE_FFT_H
-#define INCLUDED_IQTLABS_RETUNE_FFT_H
+#ifndef INCLUDED_IQTLABS_WRITE_FREQ_SAMPLES_H
+#define INCLUDED_IQTLABS_WRITE_FREQ_SAMPLES_H
 
 #include <gnuradio/iqtlabs/api.h>
 #include <gnuradio/sync_block.h>
 
 namespace gr {
-  namespace iqtlabs {
+namespace iqtlabs {
 
-    /*!
-     * \brief <+description of block+>
-     * \ingroup iqtlabs
-     *
-     */
-    class IQTLABS_API retune_fft : virtual public gr::block
-    {
-     public:
-      typedef std::shared_ptr<retune_fft> sptr;
+class IQTLABS_API write_freq_samples : virtual public gr::sync_block
+{
+public:
+    typedef std::shared_ptr<write_freq_samples> sptr;
 
-      /*!
-       * \brief Return a shared_ptr to a new instance of iqtlabs::retune_fft.
-       *
-       * To avoid accidental use of raw pointers, iqtlabs::retune_fft's
-       * constructor is in a private implementation
-       * class. iqtlabs::retune_fft::make is the public interface for
-       * creating new instances.
-       */
-      static sptr make(const std::string &tag, int vlen, int nfft, uint64_t samp_rate, uint64_t freq_start, uint64_t freq_end, int tune_step_hz, int tune_step_fft, int skip_tune_step_fft, bool fft_roll, double fft_min, double fft_max, const std::string &sdir, uint64_t write_step_fft);
-    };
+    static sptr make(const std::string&, uint64_t, const std::string&, uint64_t);
+};
 
-  } // namespace iqtlabs
+} // namespace iqtlabs
 } // namespace gr
 
-#endif /* INCLUDED_IQTLABS_RETUNE_FFT_H */
+#endif /* INCLUDED_IQTLABS_WRITE_FREQ_SAMPLES_H */

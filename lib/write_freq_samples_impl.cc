@@ -202,37 +202,76 @@
  *    limitations under the License.
  */
 
-#ifndef INCLUDED_IQTLABS_RETUNE_FFT_H
-#define INCLUDED_IQTLABS_RETUNE_FFT_H
+#include <fstream>
+#include <ios>
+#include <iostream>
+#include <sstream>
 
-#include <gnuradio/iqtlabs/api.h>
-#include <gnuradio/sync_block.h>
+#include "write_freq_samples_impl.h"
+#include <gnuradio/io_signature.h>
 
 namespace gr {
-  namespace iqtlabs {
+namespace iqtlabs {
 
-    /*!
-     * \brief <+description of block+>
-     * \ingroup iqtlabs
-     *
-     */
-    class IQTLABS_API retune_fft : virtual public gr::block
-    {
-     public:
-      typedef std::shared_ptr<retune_fft> sptr;
+using input_type = gr_complex;
+write_freq_samples::sptr write_freq_samples::make(const std::string &tag, uint64_t vlen, const std::string &sdir, uint64_t write_step_samples)
+{
+    return gnuradio::make_block_sptr<write_freq_samples_impl>(tag, vlen, sdir, write_step_samples);
+}
 
-      /*!
-       * \brief Return a shared_ptr to a new instance of iqtlabs::retune_fft.
-       *
-       * To avoid accidental use of raw pointers, iqtlabs::retune_fft's
-       * constructor is in a private implementation
-       * class. iqtlabs::retune_fft::make is the public interface for
-       * creating new instances.
-       */
-      static sptr make(const std::string &tag, int vlen, int nfft, uint64_t samp_rate, uint64_t freq_start, uint64_t freq_end, int tune_step_hz, int tune_step_fft, int skip_tune_step_fft, bool fft_roll, double fft_min, double fft_max, const std::string &sdir, uint64_t write_step_fft);
-    };
 
-  } // namespace iqtlabs
-} // namespace gr
+write_freq_samples_impl::write_freq_samples_impl(const std::string &tag, uint64_t vlen, const std::string &sdir, uint64_t write_step_samples)
+    : gr::sync_block("write_freq_samples",
+                     gr::io_signature::make(
+                         1 /* min inputs */, 1 /* max inputs */, sizeof(input_type)),
+                     gr::io_signature::make(0, 0, 0))
+{
+    outbuf_p.reset(new boost::iostreams::filtering_ostream());
+}
 
-#endif /* INCLUDED_IQTLABS_RETUNE_FFT_H */
+write_freq_samples_impl::~write_freq_samples_impl() {
+    close_();
+}
+
+std::string write_freq_samples_impl::get_prefix_file_(const std::string &file, const std::string &prefix) {
+    boost::filesystem::path orig_path(file);
+    std::string basename(orig_path.filename().c_str());
+    std::string dirname(boost::filesystem::canonical(orig_path.parent_path()).c_str());
+    return dirname + "/" + prefix + basename;
+}
+
+std::string write_freq_samples_impl::get_dotfile_(const std::string &file) {
+    return get_prefix_file_(file, ".");
+}
+
+void write_freq_samples_impl::write_(const char *data, size_t len) {
+    if (!outbuf_p->empty()) {
+        outbuf_p->write(data, len);
+    }
+}
+
+void write_freq_samples_impl::open_(const std::string &file, size_t zlevel) {
+    close_();
+    file_ = file;
+    dotfile_ = get_dotfile_(file_);
+    outbuf_p->push(boost::iostreams::zstd_compressor(boost::iostreams::zstd_params(zlevel)));
+    outbuf_p->push(boost::iostreams::file_sink(file_));
+}
+
+void write_freq_samples_impl::close_() {
+    if (!outbuf_p->empty()) {
+        outbuf_p->reset();
+        rename(dotfile_.c_str(), file_.c_str());
+    }
+}
+
+int write_freq_samples_impl::work(int noutput_items,
+                                  gr_vector_const_void_star& input_items,
+                                  gr_vector_void_star& output_items)
+{
+    auto in = static_cast<const input_type*>(input_items[0]);
+    return noutput_items;
+}
+
+} /* namespace iqtlabs */
+} /* namespace gr */

@@ -202,37 +202,48 @@
  *    limitations under the License.
  */
 
-#ifndef INCLUDED_IQTLABS_RETUNE_FFT_H
-#define INCLUDED_IQTLABS_RETUNE_FFT_H
+#ifndef INCLUDED_IQTLABS_WRITE_FREQ_SAMPLES_IMPL_H
+#define INCLUDED_IQTLABS_WRITE_FREQ_SAMPLES_IMPL_H
 
-#include <gnuradio/iqtlabs/api.h>
-#include <gnuradio/sync_block.h>
+#include <boost/filesystem.hpp>
+#include <boost/iostreams/device/file.hpp>
+#include <boost/iostreams/filtering_stream.hpp>
+#include <boost/iostreams/filter/zstd.hpp>
+#include <boost/scoped_ptr.hpp>
+
+#include <gnuradio/iqtlabs/write_freq_samples.h>
 
 namespace gr {
-  namespace iqtlabs {
+namespace iqtlabs {
 
-    /*!
-     * \brief <+description of block+>
-     * \ingroup iqtlabs
-     *
-     */
-    class IQTLABS_API retune_fft : virtual public gr::block
-    {
-     public:
-      typedef std::shared_ptr<retune_fft> sptr;
+class write_freq_samples_impl : public write_freq_samples
+{
+private:
+    std::string get_prefix_file_(const std::string &file, const std::string &prefix);
+    std::string get_dotfile_(const std::string &file);
+    void write_(const char *data, size_t len);
+    void open_(const std::string &file, size_t zlevel);
+    void close_();
 
-      /*!
-       * \brief Return a shared_ptr to a new instance of iqtlabs::retune_fft.
-       *
-       * To avoid accidental use of raw pointers, iqtlabs::retune_fft's
-       * constructor is in a private implementation
-       * class. iqtlabs::retune_fft::make is the public interface for
-       * creating new instances.
-       */
-      static sptr make(const std::string &tag, int vlen, int nfft, uint64_t samp_rate, uint64_t freq_start, uint64_t freq_end, int tune_step_hz, int tune_step_fft, int skip_tune_step_fft, bool fft_roll, double fft_min, double fft_max, const std::string &sdir, uint64_t write_step_fft);
-    };
+    std::string tag_;
+    uint64_t vlen_;
+    std::string sdir_;
+    uint64_t write_step_samples_;
 
-  } // namespace iqtlabs
+    boost::scoped_ptr<boost::iostreams::filtering_ostream> outbuf_p;
+    std::string file_;
+    std::string dotfile_;
+
+public:
+    write_freq_samples_impl(const std::string &tag, uint64_t vlen, const std::string &sdir, uint64_t write_step_samples);
+    ~write_freq_samples_impl();
+
+    int work(int noutput_items,
+             gr_vector_const_void_star& input_items,
+             gr_vector_void_star& output_items);
+};
+
+} // namespace iqtlabs
 } // namespace gr
 
-#endif /* INCLUDED_IQTLABS_RETUNE_FFT_H */
+#endif /* INCLUDED_IQTLABS_WRITE_FREQ_SAMPLES_IMPL_H */
