@@ -202,6 +202,11 @@
  *    limitations under the License.
  */
 
+#include <fstream>
+#include <ios>
+#include <iostream>
+#include <sstream>
+
 #include "write_freq_samples_impl.h"
 #include <gnuradio/io_signature.h>
 
@@ -221,9 +226,44 @@ write_freq_samples_impl::write_freq_samples_impl(const std::string &tag, uint64_
                          1 /* min inputs */, 1 /* max inputs */, sizeof(input_type)),
                      gr::io_signature::make(0, 0, 0))
 {
+    outbuf_p.reset(new boost::iostreams::filtering_ostream());
 }
 
-write_freq_samples_impl::~write_freq_samples_impl() {}
+write_freq_samples_impl::~write_freq_samples_impl() {
+    close_();
+}
+
+std::string write_freq_samples_impl::get_prefix_file_(const std::string &file, const std::string &prefix) {
+    boost::filesystem::path orig_path(file);
+    std::string basename(orig_path.filename().c_str());
+    std::string dirname(boost::filesystem::canonical(orig_path.parent_path()).c_str());
+    return dirname + "/" + prefix + basename;
+}
+
+std::string write_freq_samples_impl::get_dotfile_(const std::string &file) {
+    return get_prefix_file_(file, ".");
+}
+
+void write_freq_samples_impl::write_(const char *data, size_t len) {
+    if (!outbuf_p->empty()) {
+        outbuf_p->write(data, len);
+    }
+}
+
+void write_freq_samples_impl::open_(const std::string &file, size_t zlevel) {
+    close_();
+    file_ = file;
+    dotfile_ = get_dotfile_(file_);
+    outbuf_p->push(boost::iostreams::zstd_compressor(boost::iostreams::zstd_params(zlevel)));
+    outbuf_p->push(boost::iostreams::file_sink(file_));
+}
+
+void write_freq_samples_impl::close_() {
+    if (!outbuf_p->empty()) {
+        outbuf_p->reset();
+        rename(dotfile_.c_str(), file_.c_str());
+    }
+}
 
 int write_freq_samples_impl::work(int noutput_items,
                                   gr_vector_const_void_star& input_items,

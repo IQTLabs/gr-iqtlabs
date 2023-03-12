@@ -205,6 +205,12 @@
 #ifndef INCLUDED_IQTLABS_WRITE_FREQ_SAMPLES_IMPL_H
 #define INCLUDED_IQTLABS_WRITE_FREQ_SAMPLES_IMPL_H
 
+#include <boost/filesystem.hpp>
+#include <boost/iostreams/device/file.hpp>
+#include <boost/iostreams/filtering_stream.hpp>
+#include <boost/iostreams/filter/zstd.hpp>
+#include <boost/scoped_ptr.hpp>
+
 #include <gnuradio/iqtlabs/write_freq_samples.h>
 
 namespace gr {
@@ -213,6 +219,20 @@ namespace iqtlabs {
 class write_freq_samples_impl : public write_freq_samples
 {
 private:
+    std::string get_prefix_file_(const std::string &file, const std::string &prefix);
+    std::string get_dotfile_(const std::string &file);
+    void write_(const char *data, size_t len);
+    void open_(const std::string &file, size_t zlevel);
+    void close_();
+
+    std::string tag_;
+    uint64_t vlen_;
+    std::string sdir_;
+    uint64_t write_step_samples_;
+
+    boost::scoped_ptr<boost::iostreams::filtering_ostream> outbuf_p;
+    std::string file_;
+    std::string dotfile_;
 
 public:
     write_freq_samples_impl(const std::string &tag, uint64_t vlen, const std::string &sdir, uint64_t write_step_samples);
