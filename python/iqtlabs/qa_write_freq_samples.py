@@ -223,13 +223,10 @@ class qa_write_freq_samples(gr_unittest.TestCase):
         self.tb = None
 
     def test_instance(self):
-        # FIXME: Test will fail until you pass sensible arguments to the constructor
-        instance = write_freq_samples()
+        instance = write_freq_samples("rx_freq", 1024, "/tmp", 0)
 
     def test_001_descriptive_test_name(self):
-        # set up fg
         self.tb.run()
-        # check data
 
 
 if __name__ == '__main__':
