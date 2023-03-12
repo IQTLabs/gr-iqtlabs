@@ -11,7 +11,7 @@
 /* BINDTOOL_GEN_AUTOMATIC(0)                                                       */
 /* BINDTOOL_USE_PYGCCXML(0)                                                        */
 /* BINDTOOL_HEADER_FILE(write_freq_samples.h)                                        */
-/* BINDTOOL_HEADER_FILE_HASH(a9dc3ccc50dc86370179c21d837cc53e)                     */
+/* BINDTOOL_HEADER_FILE_HASH(f4ebffa6ffea470d2799dc9a9e609d3e)                     */
 /***********************************************************************************/
 
 #include <pybind11/complex.h>
@@ -34,10 +34,11 @@ void bind_write_freq_samples(py::module& m)
         std::shared_ptr<write_freq_samples>>(m, "write_freq_samples", D(write_freq_samples))
 
         .def(py::init(&write_freq_samples::make),
-           py::arg("arg0"),
-           py::arg("arg1"),
-           py::arg("arg2"),
-           py::arg("arg3"),
+           py::arg("tag"),
+           py::arg("vlen"),
+           py::arg("sdir"),
+           py::arg("write_step_samples"),
+           py::arg("skip_tune_step_samples"),
            D(write_freq_samples,make)
         )
         
