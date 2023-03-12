@@ -10,6 +10,7 @@ include(GrPlatform) #define LIB_SUFFIX
 list(APPEND iqtlabs_sources
     tuneable_test_source_impl.cc
     retune_fft_impl.cc
+    write_freq_samples_impl.cc
 )
 
 set(iqtlabs_sources "${iqtlabs_sources}" PARENT_SCOPE)
