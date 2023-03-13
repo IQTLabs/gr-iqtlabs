@@ -2,6 +2,19 @@ id: iqtlabs_write_freq_samples
 label: write_freq_samples
 category: '[iqtlabs]'
 flags: [python, cpp]
+documentation: |-
+  This block writes N vectors of complex samples from a source to disk as a zst,
+  after receiving an rx_freq tag.
+
+  input:
+    vector of gr_complex, samples.
+
+  parameters:
+    tag: expected PMT tag containing center frequency (generally "rx_freq" for Soapy or UHD sources).
+    vlen: length of sample vector.
+    sdir: directory to write samples to.
+    write_step_samples: number of vectors to write after receiving a new tag.
+    skip_tune_step_samples: skip N vectors after first receiving a new tag.
 
 templates:
   imports: from gnuradio import iqtlabs
