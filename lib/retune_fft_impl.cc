@@ -330,9 +330,7 @@ namespace gr {
             for (size_t i = 0; i < c; ++i) {
                 for (size_t j = 0; j < (vlen_ / nfft_); ++j) {
                     if (skip_fft_count_) {
-                        for (size_t k = 0; k < nfft_; ++k) {
-                            *in++;
-                        }
+                        in += nfft_;
                         --skip_fft_count_;
                         continue;
                     }

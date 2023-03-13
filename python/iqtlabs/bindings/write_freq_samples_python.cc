@@ -11,7 +11,7 @@
 /* BINDTOOL_GEN_AUTOMATIC(0)                                                       */
 /* BINDTOOL_USE_PYGCCXML(0)                                                        */
 /* BINDTOOL_HEADER_FILE(write_freq_samples.h)                                        */
-/* BINDTOOL_HEADER_FILE_HASH(f4ebffa6ffea470d2799dc9a9e609d3e)                     */
+/* BINDTOOL_HEADER_FILE_HASH(7bc4ccf10d6e6ab8e1b98601c7579a7a)                     */
 /***********************************************************************************/
 
 #include <pybind11/complex.h>
@@ -30,7 +30,7 @@ void bind_write_freq_samples(py::module& m)
     using write_freq_samples    = ::gr::iqtlabs::write_freq_samples;
 
 
-    py::class_<write_freq_samples, gr::sync_block, gr::block, gr::basic_block,
+    py::class_<write_freq_samples, gr::block, gr::basic_block,
         std::shared_ptr<write_freq_samples>>(m, "write_freq_samples", D(write_freq_samples))
 
         .def(py::init(&write_freq_samples::make),

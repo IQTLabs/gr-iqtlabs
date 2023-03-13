@@ -35,5 +35,6 @@ mkShell {
     libsndfile
     soapysdr
     cppcheck
+    uhd
   ];
 }

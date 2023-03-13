@@ -221,9 +221,9 @@ write_freq_samples::sptr write_freq_samples::make(const std::string &tag, uint64
 
 
 write_freq_samples_impl::write_freq_samples_impl(const std::string &tag, uint64_t vlen, const std::string &sdir, uint64_t write_step_samples, uint64_t skip_tune_step_samples)
-    : gr::sync_block("write_freq_samples",
+    : gr::block("write_freq_samples",
                      gr::io_signature::make(
-                         1 /* min inputs */, 1 /* max inputs */, sizeof(input_type)),
+                         1 /* min inputs */, 1 /* max inputs */, vlen * sizeof(input_type)),
                      gr::io_signature::make(0, 0, 0)),
                      tag_(pmt::intern(tag)),
                      vlen_(vlen),
@@ -280,12 +280,64 @@ void write_freq_samples_impl::close_() {
     }
 }
 
-int write_freq_samples_impl::work(int noutput_items,
+void write_freq_samples_impl::write_samples_(size_t c, const input_type* &in) {
+    for (size_t i = 0; i < c; ++i) {
+        if (skip_tune_step_samples_count_) {
+            in += vlen_;
+            --skip_tune_step_samples_count_;
+            continue;
+        }
+        if (write_step_samples_count_) {
+            write_((const char*)in, sizeof(input_type) * vlen_);
+            if (!--write_step_samples_count_) {
+                close_();
+            }
+        }
+        in += vlen_;
+    }
+    consume_each(c);
+}
+
+int write_freq_samples_impl::general_work(int noutput_items,
+                                  gr_vector_int& ninput_items,
                                   gr_vector_const_void_star& input_items,
                                   gr_vector_void_star& output_items)
 {
     auto in = static_cast<const input_type*>(input_items[0]);
-    return noutput_items;
+    const size_t in_count = ninput_items[0];
+    size_t in_first = nitems_read(0);
+
+    std::vector<tag_t> tags;
+    get_tags_in_window(tags, 0, 0, in_count, tag_);
+
+    if (tags.empty()) {
+        write_samples_(in_count, in);
+        return 0;
+    }
+
+    for (size_t t = 0; t < tags.size(); ++t) {
+        const auto& tag = tags[t];
+        const auto rel = tag.offset - in_first;
+        in_first += rel;
+
+        if (rel > 0) {
+            write_samples_(rel, in);
+        }
+
+        const uint64_t rx_freq = (uint64_t)pmt::to_double(tag.value);
+
+        if (rx_freq != last_rx_freq_) {
+            d_logger->debug("new rx_freq tag: {}, last {}", rx_freq, last_rx_freq_);
+            std::string samples_path = sdir_ + "/samples_" + std::to_string(host_now_()) + "_" + std::to_string(uint64_t(rx_freq)) + "Hz.zst";
+            open_(samples_path, 1);
+            last_rx_freq_ = rx_freq;
+            skip_tune_step_samples_count_ = skip_tune_step_samples_;
+            write_step_samples_count_ = write_step_samples_;
+        }
+    }
+
+    write_samples_(1, in);
+    return 0;
 }
 
 } /* namespace iqtlabs */
