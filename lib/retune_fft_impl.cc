@@ -335,11 +335,30 @@ namespace gr {
                         continue;
                     }
                     if (write_step_fft_count_) {
-                        write_((const char*)in, sizeof(input_type) * nfft_);
+                        if (fft_roll_) {
+                            const size_t fft_half_window_size = (sizeof(input_type) * nfft_) / 2;
+                            write_((const char*)in + fft_half_window_size, fft_half_window_size);
+                            write_((const char*)in, fft_half_window_size);
+                        } else {
+                            write_((const char*)in, sizeof(input_type) * nfft_);
+                        }
                         --write_step_fft_count_;
                     }
-                    for (size_t k = 0; k < nfft_; ++k) {
-                        sample_[k] += *in++;
+                    if (fft_roll_) {
+                        const size_t fft_half_window_size = nfft_ / 2;
+                        const input_type* lower_in = in + fft_half_window_size;
+                        const input_type* upper_in = in;
+                        for (size_t k = 0; k < fft_half_window_size; ++k) {
+                            sample_[k] += *lower_in++;
+                        }
+                        for (size_t k = 0; k < fft_half_window_size; ++k) {
+                            sample_[k] += *upper_in++;
+                        }
+                        in += nfft_;
+                    } else {
+                        for (size_t k = 0; k < nfft_; ++k) {
+                            sample_[k] += *in++;
+                        }
                     }
                     if (++fft_count_ >= tune_step_fft_ && (pending_retune_ == 0 || total_tune_count_ == 0)) {
                         fft_count_ = 0;
@@ -421,7 +440,6 @@ namespace gr {
                         const uint64_t host_now = host_now_();
                         std::string bucket_path = sdir_ + "/fft_" + std::to_string(host_now) + "_" + std::to_string(uint64_t(rx_freq)) + "Hz.zst";
                         open_(bucket_path, 1);
-                        const double bucket_size = samp_rate_ / vlen_;
                         std::stringstream ss("", std::ios_base::app | std::ios_base::out);
                         ss << "{" <<
                             "\"ts\": " << host_now <<
@@ -436,17 +454,10 @@ namespace gr {
                             "}, ";
                         std::transform(sample_.begin(), sample_.end(), sample_.begin(), [=](double &c){ return std::max(fft_min_, std::min(c / sample_count_, fft_max_)); });
                         std::list<std::pair<double, double>> buckets;
+                        const double bucket_size = samp_rate_ / vlen_;
+                        double bucket_freq = last_rx_freq_ - (samp_rate_ / 2);
                         for (size_t i = 0; i < vlen_; ++i) {
-                            double bucket_freq = bucket_size * i;
-                            if (fft_roll_) {
-                                bucket_freq += last_rx_freq_ + (samp_rate_ / 2);
-                                if (bucket_freq > last_rx_freq_ + samp_rate_) {
-                                    bucket_freq -= samp_rate_;
-                                }
-                                bucket_freq -= samp_rate_ / 2;
-                            } else {
-                                bucket_freq += last_rx_freq_ - (samp_rate_ / 2);
-                            }
+                            bucket_freq += bucket_size;
                             if (bucket_freq < freq_start_ || bucket_freq > freq_end_) {
                                 continue;
                             }
