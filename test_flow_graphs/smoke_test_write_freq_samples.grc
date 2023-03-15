@@ -74,7 +74,7 @@ blocks:
     tag: '"rx_freq"'
     vlen: '1024'
     write_step_samples: '128'
-    samp_rate: samp_rate
+    samp_rate: int(samp_rate)
   states:
     bus_sink: false
     bus_source: false
