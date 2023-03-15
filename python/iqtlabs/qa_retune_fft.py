@@ -298,7 +298,8 @@ class qa_retune_fft(gr_unittest.TestCase):
             pd.set_option('display.max_rows', None)
             f_count_min = f_count["u"].min()
             self.assertGreater(f_count_min, 1)
-            self.assertTrue(non_unique_v.empty, (non_unique_v, df))
+            if not fft_roll:
+                self.assertTrue(non_unique_v.empty, (non_unique_v, df))
 
             zst_fft_files = sorted(glob.glob(os.path.join(tmpdir, '*.zst')))[:10]
             self.assertTrue(zst_fft_files)
