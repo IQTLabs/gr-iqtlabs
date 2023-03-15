@@ -37,6 +37,8 @@ parameters:
   dtype: int
 - id: skip_tune_step_samples
   dtype: int
+- id: samp_rate
+  dtype: int
 
 inputs:
 - label: input
