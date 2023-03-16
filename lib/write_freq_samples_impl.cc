@@ -329,8 +329,10 @@ int write_freq_samples_impl::general_work(int noutput_items,
 
         if (rx_freq != last_rx_freq_) {
             d_logger->debug("new rx_freq tag: {}, last {}", rx_freq, last_rx_freq_);
-            std::string samples_path = sdir_ + "/samples_" + std::to_string(host_now_()) + "_" +
-                std::to_string(uint64_t(rx_freq)) + "Hz_" + std::to_string(uint64_t(samp_rate_)) + "sps.raw.zst";
+            std::string samples_path = sdir_ + "/samples_" +
+                std::to_string(host_now_()) + "_" +
+                std::to_string(uint64_t(rx_freq)) + "Hz_" +
+                std::to_string(uint64_t(samp_rate_)) + "sps.raw.zst";
             open_(samples_path, 1);
             last_rx_freq_ = rx_freq;
             skip_tune_step_samples_count_ = skip_tune_step_samples_;

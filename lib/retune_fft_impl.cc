@@ -438,8 +438,11 @@ namespace gr {
                     --pending_retune_;
                     if (last_rx_freq_ && sample_count_) {
                         const uint64_t host_now = host_now_();
-                        std::string bucket_path = sdir_ + "/fft_" + std::to_string(host_now) + "_" +
-                            std::to_string(uint64_t(rx_freq)) + "Hz_" + std::to_string(uint64_t(samp_rate_)) + "sps.raw.zst";
+                        std::string bucket_path = sdir_ + "/fft_" +
+                            std::to_string(host_now) + "_" +
+                            std::to_string(uint64_t(nfft_)) + "points_" +
+                            std::to_string(uint64_t(rx_freq)) + "Hz_" +
+                            std::to_string(uint64_t(samp_rate_)) + "sps.raw.zst";
                         open_(bucket_path, 1);
                         std::stringstream ss("", std::ios_base::app | std::ios_base::out);
                         ss << "{" <<
