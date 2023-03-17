@@ -360,7 +360,7 @@ namespace gr {
                             sample_[k] += *in++;
                         }
                     }
-                    if (++fft_count_ >= tune_step_fft_ && (pending_retune_ == 0 || total_tune_count_ == 0)) {
+                    if ((pending_retune_ == 0 || total_tune_count_ == 0) && ++fft_count_ >= tune_step_fft_) {
                         fft_count_ = 0;
                         skip_fft_count_ = skip_tune_step_fft_;
                         write_step_fft_count_ = write_step_fft_;
