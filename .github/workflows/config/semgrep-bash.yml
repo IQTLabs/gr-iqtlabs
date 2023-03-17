@@ -1,0 +1,127 @@
+rules:
+- id: ifs-tampering
+  languages:
+  - bash
+  message: The special variable IFS affects how splitting takes place when expanding
+    unquoted variables. Don't set it globally. Prefer a dedicated utility such as
+    'cut' or 'awk' if you need to split input data. If you must use 'read', set IFS
+    locally using e.g. 'IFS="," read -a my_array'.
+  metadata:
+    category: security
+    confidence: LOW
+    cwe:
+    - 'CWE-20: Improper Input Validation'
+    cwe2021-top25: true
+    cwe2022-top25: true
+    impact: LOW
+    likelihood: LOW
+    owasp:
+    - A03:2021 - Injection
+    references:
+    - https://owasp.org/Top10/A03_2021-Injection
+    subcategory:
+    - audit
+    technology:
+    - bash
+  pattern: IFS=...
+  severity: WARNING
+- id: unquoted-variable-expansion-in-command
+  languages:
+  - bash
+  message: Variable expansions must be double-quoted so as to prevent being split
+    into multiple pieces according to whitespace or whichever separator is specified
+    by the IFS variable. If you really wish to split the variable's contents, you
+    may use a variable that starts with an underscore e.g. $_X instead of $X, and
+    semgrep will ignore it. If what you need is an array, consider using a proper
+    bash array.
+  metadata:
+    category: correctness
+    technology:
+    - bash
+  patterns:
+  - pattern-either:
+    - pattern: "... ${$VAR} ...\n"
+    - pattern: "... ...${$VAR}... ...\n"
+  - metavariable-regex:
+      metavariable: $VAR
+      regex: '[*@0-9]|[A-Za-z].*'
+  severity: INFO
+- id: unquoted-command-substitution-in-command
+  languages:
+  - bash
+  message: The result of command substitution $(...) or `...`, if unquoted, is split
+    on whitespace or other separators specified by the IFS variable. You should surround
+    it with double quotes to avoid splitting the result.
+  metadata:
+    category: correctness
+    technology:
+    - bash
+  patterns:
+  - pattern-either:
+    - pattern: "... $(...) ...\n"
+    - pattern: "... ...$(...)... ...\n"
+  severity: INFO
+- id: curl-pipe-bash
+  languages:
+  - bash
+  message: Data is being piped into `bash` from a `curl` command. An attacker with
+    control of the server in the `curl` command could inject malicious code into the
+    pipe, resulting in a system compromise. Avoid piping untrusted data into `bash`
+    or any other shell if you can. If you must do this, consider checking the SHA
+    sum of the content returned by the server to verify its integrity.
+  metadata:
+    category: security
+    confidence: LOW
+    cwe:
+    - "CWE-95: Improper Neutralization of Directives in Dynamically Evaluated Code\
+      \ ('Eval Injection')"
+    impact: LOW
+    likelihood: LOW
+    owasp:
+    - A03:2021 - Injection
+    references:
+    - https://owasp.org/Top10/A03_2021-Injection
+    subcategory:
+    - audit
+    technology:
+    - bash
+    - curl
+  patterns:
+  - pattern-either:
+    - pattern: curl ... | bash ...
+    - pattern: curl ... | /bin/bash ...
+    - pattern: bash <(curl ...)
+    - pattern: /bin/bash <(curl ...)
+  severity: WARNING
+- id: curl-eval
+  languages:
+  - bash
+  message: Data is being eval'd from a `curl` command. An attacker with control of
+    the server in the `curl` command could inject malicious code into the `eval`,
+    resulting in a system comrpomise. Avoid eval'ing untrusted data if you can. If
+    you must do this, consider checking the SHA sum of the content returned by the
+    server to verify its integrity.
+  metadata:
+    category: security
+    confidence: MEDIUM
+    cwe:
+    - "CWE-95: Improper Neutralization of Directives in Dynamically Evaluated Code\
+      \ ('Eval Injection')"
+    impact: MEDIUM
+    likelihood: MEDIUM
+    owasp:
+    - A03:2021 - Injection
+    references:
+    - https://owasp.org/Top10/A03_2021-Injection
+    subcategory:
+    - vuln
+    technology:
+    - bash
+    - curl
+  mode: taint
+  pattern-sinks:
+  - pattern: eval ...
+  pattern-sources:
+  - pattern: "$(curl ...)\n"
+  - pattern: "`curl ...`\n"
+  severity: WARNING
