@@ -360,10 +360,7 @@ namespace gr {
                             sample_[k] += *in++;
                         }
                     }
-                    if (++fft_count_ >= tune_step_fft_ && (pending_retune_ == 0 || total_tune_count_ == 0)) {
-                        fft_count_ = 0;
-                        skip_fft_count_ = skip_tune_step_fft_;
-                        write_step_fft_count_ = write_step_fft_;
+                    if ((pending_retune_ == 0 || total_tune_count_ == 0) && ++fft_count_ >= tune_step_fft_) {
                         retune_now_();
                     }
                     ++sample_count_;
@@ -435,7 +432,6 @@ namespace gr {
 
                 if (rx_freq != last_rx_freq_) {
                     d_logger->debug("new rx_freq tag: {}, last {}", rx_freq, last_rx_freq_);
-                    --pending_retune_;
                     if (last_rx_freq_ && sample_count_) {
                         const uint64_t host_now = host_now_();
                         std::string bucket_path = sdir_ + "/fft_" +
@@ -473,7 +469,11 @@ namespace gr {
                         out_buf_.insert(out_buf_.end(), s.begin(), s.end());
                     }
                     std::transform(sample_.begin(), sample_.end(), sample_.begin(), [](double &c){ return 0; });
+                    --pending_retune_;
                     sample_count_ = 0;
+                    fft_count_ = 0;
+                    skip_fft_count_ = skip_tune_step_fft_;
+                    write_step_fft_count_ = write_step_fft_;
                     last_rx_freq_ = rx_freq;
                 }
             }
