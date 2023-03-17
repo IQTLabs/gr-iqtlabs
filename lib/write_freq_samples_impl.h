@@ -233,6 +233,7 @@ private:
     std::string sdir_;
     uint64_t write_step_samples_;
     uint64_t skip_tune_step_samples_;
+    uint64_t samp_rate_;
 
     uint64_t write_step_samples_count_;
     uint64_t skip_tune_step_samples_count_;
@@ -243,7 +244,7 @@ private:
     std::string dotfile_;
 
 public:
-    write_freq_samples_impl(const std::string &tag, uint64_t vlen, const std::string &sdir, uint64_t write_step_samples, uint64_t skip_tune_step_samples);
+    write_freq_samples_impl(const std::string &tag, uint64_t vlen, const std::string &sdir, uint64_t write_step_samples, uint64_t skip_tune_step_samples, uint64_t samp_rate);
     ~write_freq_samples_impl();
     int general_work(int noutput_items, gr_vector_int& ninput_items, gr_vector_const_void_star& input_items, gr_vector_void_star& output_items);
 };

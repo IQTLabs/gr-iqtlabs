@@ -233,7 +233,13 @@ class qa_retune_fft(gr_unittest.TestCase):
     def tearDown(self):
         self.tb = None
 
-    def test_retune_fft(self):
+    def test_retune_fft_no_roll(self):
+        self.retune_fft(False)
+
+    def test_retune_fft_roll(self):
+        self.retune_fft(True)
+
+    def retune_fft(self, fft_roll):
         points = int(1024)
         samp_rate = points * points
         freq_start = int(1e9 / samp_rate) * samp_rate
@@ -243,7 +249,9 @@ class qa_retune_fft(gr_unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmpdir:
             test_file = os.path.join(tmpdir, "samples.csv")
             iqtlabs_tuneable_test_source_0 = tuneable_test_source(freq_end)
-            iqtlabs_retune_fft_0 = retune_fft("rx_freq", points, points, int(samp_rate), int(freq_start), int(freq_end), int(samp_rate), 64, 2, False, 1e-4, 1e4, tmpdir, fft_write_count)
+            iqtlabs_retune_fft_0 = retune_fft(
+                "rx_freq", points, points, int(samp_rate), int(freq_start), int(freq_end), int(samp_rate),
+                64, 2, fft_roll, 1e-4, 1e4, tmpdir, fft_write_count)
             fft_vxx_0 = fft.fft_vcc(points, True, window.blackmanharris(points), True, 1)
             blocks_throttle_0 = blocks.throttle(gr.sizeof_gr_complex*1, samp_rate, True)
             blocks_stream_to_vector_0 = blocks.stream_to_vector(gr.sizeof_gr_complex*1, points)
@@ -290,7 +298,8 @@ class qa_retune_fft(gr_unittest.TestCase):
             pd.set_option('display.max_rows', None)
             f_count_min = f_count["u"].min()
             self.assertGreater(f_count_min, 1)
-            self.assertTrue(non_unique_v.empty, (non_unique_v, df))
+            if not fft_roll:
+                self.assertTrue(non_unique_v.empty, (non_unique_v, df))
 
             zst_fft_files = sorted(glob.glob(os.path.join(tmpdir, '*.zst')))[:10]
             self.assertTrue(zst_fft_files)
