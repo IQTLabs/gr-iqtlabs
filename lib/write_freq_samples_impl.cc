@@ -281,15 +281,15 @@ void write_freq_samples_impl::close_() {
     }
 }
 
-void write_freq_samples_impl::write_samples_(size_t c, const input_type* &in) {
+void write_freq_samples_impl::write_samples_(size_t c, const char* &in) {
     for (size_t i = 0; i < c; ++i) {
         if (skip_tune_step_samples_count_) {
-            in += vlen_;
+            in += sizeof(input_type) * vlen_;
             --skip_tune_step_samples_count_;
             continue;
         }
         if (write_step_samples_count_) {
-            write_((const char*)in, sizeof(input_type) * vlen_);
+            write_(in, sizeof(input_type) * vlen_);
             if (!--write_step_samples_count_) {
                 close_();
             }
@@ -304,7 +304,7 @@ int write_freq_samples_impl::general_work(int noutput_items,
                                   gr_vector_const_void_star& input_items,
                                   gr_vector_void_star& output_items)
 {
-    auto in = static_cast<const input_type*>(input_items[0]);
+    auto in = static_cast<const char*>(input_items[0]);
     const size_t in_count = ninput_items[0];
     size_t in_first = nitems_read(0);
 
