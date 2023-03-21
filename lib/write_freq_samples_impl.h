@@ -226,7 +226,7 @@ private:
     void write_(const char *data, size_t len);
     void open_(const std::string &file, size_t zlevel);
     void close_();
-    void write_samples_(size_t c, const input_type* &in);
+    void write_samples_(size_t c, const char* &in);
 
     pmt::pmt_t tag_;
     uint64_t vlen_;
