@@ -214,20 +214,22 @@
 namespace gr {
 namespace iqtlabs {
 
-write_freq_samples::sptr write_freq_samples::make(const std::string &tag, uint64_t vlen, const std::string &sdir, uint64_t write_step_samples, uint64_t skip_tune_step_samples, uint64_t samp_rate)
+write_freq_samples::sptr write_freq_samples::make(const std::string &tag, uint64_t itemsize, uint64_t vlen, const std::string &sdir, const std::string &prefix, uint64_t write_step_samples, uint64_t skip_tune_step_samples, uint64_t samp_rate)
 {
-    return gnuradio::make_block_sptr<write_freq_samples_impl>(tag, vlen, sdir, write_step_samples, skip_tune_step_samples, samp_rate);
+    return gnuradio::make_block_sptr<write_freq_samples_impl>(tag, itemsize, vlen, sdir, prefix, write_step_samples, skip_tune_step_samples, samp_rate);
 }
 
 
-write_freq_samples_impl::write_freq_samples_impl(const std::string &tag, uint64_t vlen, const std::string &sdir, uint64_t write_step_samples, uint64_t skip_tune_step_samples, uint64_t samp_rate)
+write_freq_samples_impl::write_freq_samples_impl(const std::string &tag, uint64_t itemsize, uint64_t vlen, const std::string &sdir, const std::string &prefix, uint64_t write_step_samples, uint64_t skip_tune_step_samples, uint64_t samp_rate)
     : gr::block("write_freq_samples",
                      gr::io_signature::make(
-                         1 /* min inputs */, 1 /* max inputs */, vlen * sizeof(input_type)),
+                         1 /* min inputs */, 1 /* max inputs */, vlen * itemsize),
                      gr::io_signature::make(0, 0, 0)),
                      tag_(pmt::intern(tag)),
+                     itemsize_(itemsize),
                      vlen_(vlen),
                      sdir_(sdir),
+                     prefix_(prefix),
                      write_step_samples_(write_step_samples),
                      skip_tune_step_samples_(skip_tune_step_samples),
                      samp_rate_(samp_rate),
@@ -281,15 +283,15 @@ void write_freq_samples_impl::close_() {
     }
 }
 
-void write_freq_samples_impl::write_samples_(size_t c, const input_type* &in) {
+void write_freq_samples_impl::write_samples_(size_t c, const char* &in) {
     for (size_t i = 0; i < c; ++i) {
         if (skip_tune_step_samples_count_) {
-            in += vlen_;
+            in += itemsize_ * vlen_;
             --skip_tune_step_samples_count_;
             continue;
         }
         if (write_step_samples_count_) {
-            write_((const char*)in, sizeof(input_type) * vlen_);
+            write_(in, itemsize_ * vlen_);
             if (!--write_step_samples_count_) {
                 close_();
             }
@@ -304,7 +306,7 @@ int write_freq_samples_impl::general_work(int noutput_items,
                                   gr_vector_const_void_star& input_items,
                                   gr_vector_void_star& output_items)
 {
-    auto in = static_cast<const input_type*>(input_items[0]);
+    auto in = static_cast<const char*>(input_items[0]);
     const size_t in_count = ninput_items[0];
     size_t in_first = nitems_read(0);
 
@@ -329,7 +331,8 @@ int write_freq_samples_impl::general_work(int noutput_items,
 
         if (rx_freq != last_rx_freq_) {
             d_logger->debug("new rx_freq tag: {}, last {}", rx_freq, last_rx_freq_);
-            std::string samples_path = sdir_ + "/samples_" +
+            std::string samples_path = sdir_ + "/" +
+                prefix_ + "_" +
                 std::to_string(host_now_()) + "_" +
                 std::to_string(uint64_t(rx_freq)) + "Hz_" +
                 std::to_string(uint64_t(samp_rate_)) + "sps.raw.zst";

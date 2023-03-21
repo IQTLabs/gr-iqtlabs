@@ -11,27 +11,38 @@ documentation: |-
 
   parameters:
     tag: expected PMT tag containing center frequency (generally "rx_freq" for Soapy or UHD sources).
+    itemsize: length of samples.
     vlen: length of sample vector.
     sdir: directory to write samples to.
+    prefix: prefix for samples file.
     write_step_samples: number of vectors to write after receiving a new tag.
     skip_tune_step_samples: skip N vectors after first receiving a new tag.
 
 templates:
   imports: from gnuradio import iqtlabs
-  make: iqtlabs.write_freq_samples(${tag}, ${vlen}, ${sdir}, ${write_step_samples}, ${skip_tune_step_samples})
+  make: iqtlabs.write_freq_samples(${tag}, ${type.size}, ${vlen}, ${sdir}, ${prefix}, ${write_step_samples}, ${skip_tune_step_samples})
 
 cpp_templates:
   includes: ['#include <gnuradio/iqtlabs/write_freq_samples.h>']
   declarations: 'gr::iqtlabs::write_freq_samples::sptr ${id};'
-  make: 'this->${id} = gr::iqtlabs::write_freq_samples::make(${tag}, ${vlen}, ${sdir}, ${write_step_samples}, ${skip_tune_step_samples}, ${samp_rate});'
+  make: 'this->${id} = gr::iqtlabs::write_freq_samples::make(${tag}, ${type.size}, ${vlen}, ${sdir}, ${prefix}, ${write_step_samples}, ${skip_tune_step_samples}, ${samp_rate});'
   link: ['libgnuradio-iqtlabs.so']
 
 parameters:
 - id: tag
   dtype: string
+- id: type
+  label: IO Type
+  dtype: enum
+  options: [complex, float, int, short, byte]
+  option_attributes:
+    size: [gr.sizeof_gr_complex, gr.sizeof_float, gr.sizeof_int, gr.sizeof_short, gr.sizeof_char]
+  hide: part
 - id: vlen
   dtype: int
 - id: sdir
+  dtype: string
+- id: prefix
   dtype: string
 - id: write_step_samples
   dtype: int
@@ -43,7 +54,7 @@ parameters:
 inputs:
 - label: input
   domain: stream
-  dtype: complex
+  dtype: ${ type }
   vlen: ${ vlen }
 
 file_format: 1

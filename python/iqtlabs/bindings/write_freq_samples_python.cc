@@ -1,6 +1,9 @@
 /*
+ * Copyright 2023 Free Software Foundation, Inc.
  *
- * SPDX-License-Identifier: Apache-2.0
+ * This file is part of GNU Radio
+ *
+ * SPDX-License-Identifier: GPL-3.0-or-later
  *
  */
 
@@ -11,7 +14,7 @@
 /* BINDTOOL_GEN_AUTOMATIC(0)                                                       */
 /* BINDTOOL_USE_PYGCCXML(0)                                                        */
 /* BINDTOOL_HEADER_FILE(write_freq_samples.h)                                        */
-/* BINDTOOL_HEADER_FILE_HASH(42756b77a276f113a54346b4470bb70d)                     */
+/* BINDTOOL_HEADER_FILE_HASH(93b7aabcda3b8a9bad87ff6af29d089d)                     */
 /***********************************************************************************/
 
 #include <pybind11/complex.h>
@@ -35,8 +38,10 @@ void bind_write_freq_samples(py::module& m)
 
         .def(py::init(&write_freq_samples::make),
            py::arg("tag"),
+           py::arg("itemsize"),
            py::arg("vlen"),
            py::arg("sdir"),
+           py::arg("prefix"),
            py::arg("write_step_samples"),
            py::arg("skip_tune_step_samples"),
            py::arg("samp_rate"),
