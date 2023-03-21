@@ -14,7 +14,7 @@
 /* BINDTOOL_GEN_AUTOMATIC(0)                                                       */
 /* BINDTOOL_USE_PYGCCXML(0)                                                        */
 /* BINDTOOL_HEADER_FILE(write_freq_samples.h)                                        */
-/* BINDTOOL_HEADER_FILE_HASH(8843cf72b49497b04711843168145a58)                     */
+/* BINDTOOL_HEADER_FILE_HASH(93b7aabcda3b8a9bad87ff6af29d089d)                     */
 /***********************************************************************************/
 
 #include <pybind11/complex.h>
@@ -38,6 +38,7 @@ void bind_write_freq_samples(py::module& m)
 
         .def(py::init(&write_freq_samples::make),
            py::arg("tag"),
+           py::arg("itemsize"),
            py::arg("vlen"),
            py::arg("sdir"),
            py::arg("prefix"),

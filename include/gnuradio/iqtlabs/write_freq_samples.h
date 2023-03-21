@@ -216,7 +216,7 @@ class IQTLABS_API write_freq_samples : virtual public gr::block
 public:
     typedef std::shared_ptr<write_freq_samples> sptr;
 
-    static sptr make(const std::string &tag, uint64_t vlen, const std::string &sdir, const std::string &prefix, uint64_t write_step_samples, uint64_t skip_tune_step_samples, uint64_t samp_rate);
+    static sptr make(const std::string &tag, uint64_t itemsize, uint64_t vlen, const std::string &sdir, const std::string &prefix, uint64_t write_step_samples, uint64_t skip_tune_step_samples, uint64_t samp_rate);
 };
 
 } // namespace iqtlabs

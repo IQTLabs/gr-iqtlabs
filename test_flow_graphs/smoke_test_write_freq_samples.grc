@@ -74,6 +74,7 @@ blocks:
     skip_tune_step_samples: '2'
     tag: '"rx_freq"'
     vlen: '1024'
+    itemsize: 8,
     write_step_samples: '128'
     samp_rate: int(samp_rate)
   states:
