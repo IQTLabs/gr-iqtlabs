@@ -351,7 +351,7 @@ namespace gr {
                         for (size_t k = 0; k < fft_half_window_size; ++k) {
                             sample_[k] += *lower_in++;
                         }
-                        for (size_t k = 0; k < fft_half_window_size; ++k) {
+                        for (size_t k = fft_half_window_size; k < nfft_; ++k) {
                             sample_[k] += *upper_in++;
                         }
                         in += nfft_;
