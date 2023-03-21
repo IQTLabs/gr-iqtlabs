@@ -37,7 +37,7 @@ parameters:
   options: [complex, float, int, short, byte]
   option_attributes:
     size: [gr.sizeof_gr_complex, gr.sizeof_float, gr.sizeof_int, gr.sizeof_short, gr.sizeof_char]
-    hide: part
+  hide: part
 - id: vlen
   dtype: int
 - id: sdir
