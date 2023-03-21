@@ -70,7 +70,7 @@ blocks:
     alias: ''
     comment: ''
     sdir: '"/tmp"'
-    prefix: '"samples"',
+    prefix: '"samples"'
     skip_tune_step_samples: '2'
     tag: '"rx_freq"'
     vlen: '1024'
