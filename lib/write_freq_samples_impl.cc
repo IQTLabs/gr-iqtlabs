@@ -214,13 +214,13 @@
 namespace gr {
 namespace iqtlabs {
 
-write_freq_samples::sptr write_freq_samples::make(const std::string &tag, uint64_t vlen, const std::string &sdir, uint64_t write_step_samples, uint64_t skip_tune_step_samples, uint64_t samp_rate)
+write_freq_samples::sptr write_freq_samples::make(const std::string &tag, uint64_t vlen, const std::string &sdir, const std::string &prefix, uint64_t write_step_samples, uint64_t skip_tune_step_samples, uint64_t samp_rate)
 {
-    return gnuradio::make_block_sptr<write_freq_samples_impl>(tag, vlen, sdir, write_step_samples, skip_tune_step_samples, samp_rate);
+    return gnuradio::make_block_sptr<write_freq_samples_impl>(tag, vlen, sdir, prefix, write_step_samples, skip_tune_step_samples, samp_rate);
 }
 
 
-write_freq_samples_impl::write_freq_samples_impl(const std::string &tag, uint64_t vlen, const std::string &sdir, uint64_t write_step_samples, uint64_t skip_tune_step_samples, uint64_t samp_rate)
+write_freq_samples_impl::write_freq_samples_impl(const std::string &tag, uint64_t vlen, const std::string &sdir, const std::string &prefix, uint64_t write_step_samples, uint64_t skip_tune_step_samples, uint64_t samp_rate)
     : gr::block("write_freq_samples",
                      gr::io_signature::make(
                          1 /* min inputs */, 1 /* max inputs */, vlen * sizeof(input_type)),
@@ -228,6 +228,7 @@ write_freq_samples_impl::write_freq_samples_impl(const std::string &tag, uint64_
                      tag_(pmt::intern(tag)),
                      vlen_(vlen),
                      sdir_(sdir),
+                     prefix_(prefix),
                      write_step_samples_(write_step_samples),
                      skip_tune_step_samples_(skip_tune_step_samples),
                      samp_rate_(samp_rate),
@@ -329,7 +330,8 @@ int write_freq_samples_impl::general_work(int noutput_items,
 
         if (rx_freq != last_rx_freq_) {
             d_logger->debug("new rx_freq tag: {}, last {}", rx_freq, last_rx_freq_);
-            std::string samples_path = sdir_ + "/samples_" +
+            std::string samples_path = sdir_ + "/" +
+                prefix_ + "_" +
                 std::to_string(host_now_()) + "_" +
                 std::to_string(uint64_t(rx_freq)) + "Hz_" +
                 std::to_string(uint64_t(samp_rate_)) + "sps.raw.zst";

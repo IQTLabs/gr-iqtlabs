@@ -234,7 +234,7 @@ class qa_write_freq_samples(gr_unittest.TestCase):
 
         with tempfile.TemporaryDirectory() as tmpdir:
             iqtlabs_tuneable_test_source_0 = tuneable_test_source(freq)
-            write_freq_samples_0 = write_freq_samples("rx_freq", points, tmpdir, fft_write_count, fft_write_count, samp_rate)
+            write_freq_samples_0 = write_freq_samples("rx_freq", points, tmpdir, "samples", fft_write_count, fft_write_count, samp_rate)
             blocks_throttle_0 = blocks.throttle(gr.sizeof_gr_complex*1, samp_rate, True)
             blocks_stream_to_vector_0 = blocks.stream_to_vector(gr.sizeof_gr_complex*1, points)
 
