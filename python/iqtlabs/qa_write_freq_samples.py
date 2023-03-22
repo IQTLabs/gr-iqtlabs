@@ -206,20 +206,22 @@
 import tempfile
 import time
 from gnuradio import gr, gr_unittest
+
 # from gnuradio import blocks
 try:
-  from gnuradio import blocks
-  from gnuradio.iqtlabs import tuneable_test_source, write_freq_samples
+    from gnuradio import blocks
+    from gnuradio.iqtlabs import tuneable_test_source, write_freq_samples
 except ImportError:
     import os
     import sys
+
     dirname, filename = os.path.split(os.path.abspath(__file__))
     sys.path.append(os.path.join(dirname, "bindings"))
     from gnuradio import blocks
     from gnuradio.iqtlabs import tuneable_test_source, write_freq_samples
 
-class qa_write_freq_samples(gr_unittest.TestCase):
 
+class qa_write_freq_samples(gr_unittest.TestCase):
     def setUp(self):
         self.tb = gr.top_block()
 
@@ -234,9 +236,22 @@ class qa_write_freq_samples(gr_unittest.TestCase):
 
         with tempfile.TemporaryDirectory() as tmpdir:
             iqtlabs_tuneable_test_source_0 = tuneable_test_source(freq)
-            write_freq_samples_0 = write_freq_samples("rx_freq", gr.sizeof_gr_complex*1, points, tmpdir, "samples", fft_write_count, fft_write_count, samp_rate)
-            blocks_throttle_0 = blocks.throttle(gr.sizeof_gr_complex*1, samp_rate, True)
-            blocks_stream_to_vector_0 = blocks.stream_to_vector(gr.sizeof_gr_complex*1, points)
+            write_freq_samples_0 = write_freq_samples(
+                "rx_freq",
+                gr.sizeof_gr_complex * 1,
+                points,
+                tmpdir,
+                "samples",
+                fft_write_count,
+                fft_write_count,
+                samp_rate,
+            )
+            blocks_throttle_0 = blocks.throttle(
+                gr.sizeof_gr_complex * 1, samp_rate, True
+            )
+            blocks_stream_to_vector_0 = blocks.stream_to_vector(
+                gr.sizeof_gr_complex * 1, points
+            )
 
             self.tb.connect((iqtlabs_tuneable_test_source_0, 0), (blocks_throttle_0, 0))
             self.tb.connect((blocks_throttle_0, 0), (blocks_stream_to_vector_0, 0))
@@ -251,5 +266,5 @@ class qa_write_freq_samples(gr_unittest.TestCase):
             # TODO: send pmt tuning message, ensure output.
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     gr_unittest.run(qa_write_freq_samples)
