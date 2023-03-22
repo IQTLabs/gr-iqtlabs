@@ -203,8 +203,12 @@
 #    limitations under the License.
 #
 
+import glob
+import subprocess
 import tempfile
 import time
+import pmt
+import numpy as np
 from gnuradio import gr, gr_unittest
 
 # from gnuradio import blocks
@@ -232,9 +236,11 @@ class qa_write_freq_samples(gr_unittest.TestCase):
         points = int(1024)
         samp_rate = points * points
         freq = int(1.1e9 / samp_rate) * samp_rate
-        fft_write_count = 2
+        tune_freq = freq + 1e9
+        samples_write_count = 2
 
         with tempfile.TemporaryDirectory() as tmpdir:
+            strobe = blocks.message_strobe(pmt.to_pmt({"freq": tune_freq}), 1000)
             iqtlabs_tuneable_test_source_0 = tuneable_test_source(freq)
             write_freq_samples_0 = write_freq_samples(
                 "rx_freq",
@@ -242,8 +248,8 @@ class qa_write_freq_samples(gr_unittest.TestCase):
                 points,
                 tmpdir,
                 "samples",
-                fft_write_count,
-                fft_write_count,
+                samples_write_count,
+                samples_write_count,
                 samp_rate,
             )
             blocks_throttle_0 = blocks.throttle(
@@ -253,6 +259,9 @@ class qa_write_freq_samples(gr_unittest.TestCase):
                 gr.sizeof_gr_complex * 1, points
             )
 
+            self.tb.msg_connect(
+                (strobe, "strobe"), (iqtlabs_tuneable_test_source_0, "cmd")
+            )
             self.tb.connect((iqtlabs_tuneable_test_source_0, 0), (blocks_throttle_0, 0))
             self.tb.connect((blocks_throttle_0, 0), (blocks_stream_to_vector_0, 0))
             self.tb.connect((blocks_stream_to_vector_0, 0), (write_freq_samples_0, 0))
@@ -263,7 +272,12 @@ class qa_write_freq_samples(gr_unittest.TestCase):
             self.tb.stop()
             self.tb.wait()
 
-            # TODO: send pmt tuning message, ensure output.
+            zst_file = glob.glob(f"{tmpdir}/*zst")[0]
+            self.assertIn(str(int(tune_freq)), zst_file)
+            subprocess.check_call(["zstd", "-d", zst_file])
+            bin_file = zst_file.replace(".zst", "")
+            samples = np.fromfile(bin_file, dtype=np.complex64)
+            self.assertEqual(len(samples), samples_write_count * points)
 
 
 if __name__ == "__main__":
