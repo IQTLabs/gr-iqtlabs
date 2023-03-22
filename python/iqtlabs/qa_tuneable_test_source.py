@@ -209,17 +209,19 @@ import numpy as np
 from gnuradio import gr, gr_unittest
 from gnuradio import blocks
 import pmt
+
 try:
-  from gnuradio.iqtlabs import tuneable_test_source
+    from gnuradio.iqtlabs import tuneable_test_source
 except ImportError:
     import os
     import sys
+
     dirname, filename = os.path.split(os.path.abspath(__file__))
     sys.path.append(os.path.join(dirname, "bindings"))
     from gnuradio.iqtlabs import tuneable_test_source
 
-class qa_tuneable_test_source(gr_unittest.TestCase):
 
+class qa_tuneable_test_source(gr_unittest.TestCase):
     def setUp(self):
         self.tb = gr.top_block()
 
@@ -233,9 +235,9 @@ class qa_tuneable_test_source(gr_unittest.TestCase):
         msg = pmt.to_pmt("TEST")
         strobe = blocks.message_strobe(msg, delay)
         samp_rate = 32e3
-        throttle = blocks.throttle(gr.sizeof_gr_complex*1, samp_rate, True)
-        sink = blocks.null_sink(gr.sizeof_gr_complex*1)
-        self.tb.msg_connect((strobe, 'strobe'), (source, 'cmd'))
+        throttle = blocks.throttle(gr.sizeof_gr_complex * 1, samp_rate, True)
+        sink = blocks.null_sink(gr.sizeof_gr_complex * 1)
+        self.tb.msg_connect((strobe, "strobe"), (source, "cmd"))
         self.tb.connect((source, 0), (throttle, 0))
         self.tb.connect((throttle, 0), (sink, 0))
         self.tb.start()
@@ -245,17 +247,17 @@ class qa_tuneable_test_source(gr_unittest.TestCase):
 
     def test_source(self):
         with tempfile.TemporaryDirectory() as tmpdir:
-            test_file = os.path.join(tmpdir, 'samples')
+            test_file = os.path.join(tmpdir, "samples")
             freq_divisor = 1e9
             new_freq = 1e9 / 2
             delay = 500
             source = tuneable_test_source(freq_divisor)
-            msg = pmt.to_pmt({'freq': new_freq})
+            msg = pmt.to_pmt({"freq": new_freq})
             strobe = blocks.message_strobe(msg, delay)
             samp_rate = 32e3
-            throttle = blocks.throttle(gr.sizeof_gr_complex*1, samp_rate, True)
-            sink = blocks.file_sink(gr.sizeof_gr_complex*1, test_file, False)
-            self.tb.msg_connect((strobe, 'strobe'), (source, 'cmd'))
+            throttle = blocks.throttle(gr.sizeof_gr_complex * 1, samp_rate, True)
+            sink = blocks.file_sink(gr.sizeof_gr_complex * 1, test_file, False)
+            self.tb.msg_connect((strobe, "strobe"), (source, "cmd"))
             self.tb.connect((source, 0), (throttle, 0))
             self.tb.connect((throttle, 0), (sink, 0))
             self.tb.start()
@@ -264,8 +266,10 @@ class qa_tuneable_test_source(gr_unittest.TestCase):
             self.tb.wait()
             sink_out = np.fromfile(test_file, dtype=np.complex64)
             self.assertEqual(complex(0, 0), sink_out[0])
-            self.assertEqual(complex(new_freq/freq_divisor, new_freq/freq_divisor), sink_out[-1])
+            self.assertEqual(
+                complex(new_freq / freq_divisor, new_freq / freq_divisor), sink_out[-1]
+            )
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     gr_unittest.run(qa_tuneable_test_source)

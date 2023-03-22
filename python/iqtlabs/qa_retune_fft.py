@@ -208,9 +208,9 @@ import os
 import subprocess
 import time
 import tempfile
+import numpy as np
 import pandas as pd
 from gnuradio import gr, gr_unittest
-from gnuradio import blocks
 from gnuradio import blocks
 from gnuradio import fft
 from gnuradio.fft import window
@@ -220,13 +220,28 @@ try:
     from gnuradio.iqtlabs import retune_fft, tuneable_test_source
 except ImportError:
     import sys
+
     dirname, filename = os.path.split(os.path.abspath(__file__))
     sys.path.append(os.path.join(dirname, "bindings"))
     from gnuradio.iqtlabs import retune_fft, tuneable_test_source
 
 
-class qa_retune_fft(gr_unittest.TestCase):
+class vector_roller(gr.sync_block):
+    def __init__(self, nfft):
+        gr.sync_block.__init__(
+            self,
+            name="vector_roller",
+            in_sig=[(np.complex64, nfft)],
+            out_sig=[(np.complex64, nfft)],
+        )
+        self.nfft = nfft
 
+    def work(self, input_items, output_items):
+        output_items[0][:] = [np.roll(v, int(self.nfft / 2)) for v in input_items[0]]
+        return len(output_items[0])
+
+
+class qa_retune_fft(gr_unittest.TestCase):
     def setUp(self):
         self.tb = gr.top_block()
 
@@ -250,20 +265,48 @@ class qa_retune_fft(gr_unittest.TestCase):
             test_file = os.path.join(tmpdir, "samples.csv")
             iqtlabs_tuneable_test_source_0 = tuneable_test_source(freq_end)
             iqtlabs_retune_fft_0 = retune_fft(
-                "rx_freq", points, points, int(samp_rate), int(freq_start), int(freq_end), int(samp_rate),
-                64, 2, fft_roll, 1e-4, 1e4, tmpdir, fft_write_count)
-            fft_vxx_0 = fft.fft_vcc(points, True, window.blackmanharris(points), True, 1)
-            blocks_throttle_0 = blocks.throttle(gr.sizeof_gr_complex*1, samp_rate, True)
-            blocks_stream_to_vector_0 = blocks.stream_to_vector(gr.sizeof_gr_complex*1, points)
-            blocks_file_sink_0 = blocks.file_sink(gr.sizeof_char*1, test_file, False)
+                "rx_freq",
+                points,
+                points,
+                int(samp_rate),
+                int(freq_start),
+                int(freq_end),
+                int(samp_rate),
+                64,
+                2,
+                fft_roll,
+                1e-4,
+                1e4,
+                tmpdir,
+                fft_write_count,
+            )
+            fft_vxx_0 = fft.fft_vcc(
+                points, True, window.blackmanharris(points), True, 1
+            )
+            blocks_throttle_0 = blocks.throttle(
+                gr.sizeof_gr_complex * 1, samp_rate, True
+            )
+            blocks_stream_to_vector_0 = blocks.stream_to_vector(
+                gr.sizeof_gr_complex * 1, points
+            )
+            blocks_file_sink_0 = blocks.file_sink(gr.sizeof_char * 1, test_file, False)
             blocks_file_sink_0.set_unbuffered(False)
             blocks_complex_to_mag_0 = blocks.complex_to_mag(points)
+            blocks_nlog10_ff_0 = blocks.nlog10_ff(20, points, 0)
+            vr = vector_roller(points)
 
-            self.tb.msg_connect((iqtlabs_retune_fft_0, 'tune'), (iqtlabs_tuneable_test_source_0, 'cmd'))
-            self.tb.connect((blocks_complex_to_mag_0, 0), (iqtlabs_retune_fft_0, 0))
+            self.tb.msg_connect(
+                (iqtlabs_retune_fft_0, "tune"), (iqtlabs_tuneable_test_source_0, "cmd")
+            )
+            self.tb.connect((blocks_complex_to_mag_0, 0), (blocks_nlog10_ff_0, 0))
+            self.tb.connect((blocks_nlog10_ff_0, 0), (iqtlabs_retune_fft_0, 0))
             self.tb.connect((blocks_stream_to_vector_0, 0), (fft_vxx_0, 0))
             self.tb.connect((blocks_throttle_0, 0), (blocks_stream_to_vector_0, 0))
-            self.tb.connect((fft_vxx_0, 0), (blocks_complex_to_mag_0, 0))
+            if fft_roll:
+                self.tb.connect((fft_vxx_0, 0), (vr, 0))
+                self.tb.connect((vr, 0), (blocks_complex_to_mag_0, 0))
+            else:
+                self.tb.connect((fft_vxx_0, 0), (blocks_complex_to_mag_0, 0))
             self.tb.connect((iqtlabs_retune_fft_0, 0), (blocks_file_sink_0, 0))
             self.tb.connect((iqtlabs_tuneable_test_source_0, 0), (blocks_throttle_0, 0))
 
@@ -280,35 +323,41 @@ class qa_retune_fft(gr_unittest.TestCase):
                 for line in f.readlines():
                     line = line.strip()
                     record = json.loads(line)
-                    ts = float(record['ts'])
-                    config = record['config']
-                    self.assertEqual(config['freq_start'], freq_start)
-                    self.assertEqual(config['freq_end'], freq_end)
-                    self.assertEqual(config['sample_rate'], samp_rate)
-                    self.assertEqual(config['nfft'], points)
-                    buckets = record['buckets']
-                    records.extend([{'ts': ts, 'f': float(freq), 'v': float(value)}
-                        for freq, value in buckets.items()])
+                    ts = float(record["ts"])
+                    config = record["config"]
+                    self.assertEqual(config["freq_start"], freq_start)
+                    self.assertEqual(config["freq_end"], freq_end)
+                    self.assertEqual(config["sample_rate"], samp_rate)
+                    self.assertEqual(config["nfft"], points)
+                    buckets = record["buckets"]
+                    records.extend(
+                        [
+                            {"ts": ts, "f": float(freq), "v": float(value)}
+                            for freq, value in buckets.items()
+                        ]
+                    )
             df = pd.DataFrame(records)[["f", "v"]]
             df["v"] = df["v"].round(2)
-            self.assertGreater(df["v"].max(), 100)
-            df["u"] = df.groupby("f")["v"].transform('nunique')
+            self.assertTrue(0 <= df["v"].min() <= 1)
+            self.assertTrue(54 <= df["v"].max() <= 55)
+            df["u"] = df.groupby("f")["v"].transform("nunique")
             non_unique_v = df[df["u"] != 1]
             f_count = df.groupby("f").count()
-            pd.set_option('display.max_rows', None)
+            pd.set_option("display.max_rows", None)
             f_count_min = f_count["u"].min()
             self.assertGreater(f_count_min, 1)
-            if not fft_roll:
-                self.assertTrue(non_unique_v.empty, (non_unique_v, df))
+            self.assertTrue(non_unique_v.empty, (non_unique_v, df))
 
-            zst_fft_files = sorted(glob.glob(os.path.join(tmpdir, '*.zst')))[:10]
+            zst_fft_files = sorted(glob.glob(os.path.join(tmpdir, "*.zst")))[:10]
             self.assertTrue(zst_fft_files)
-            output = subprocess.check_output(['zstd', '-tv'] + zst_fft_files).decode("utf8")
-            bytes_match = '%u bytes' % fft_write_count * 4
+            output = subprocess.check_output(["zstd", "-tv"] + zst_fft_files).decode(
+                "utf8"
+            )
+            bytes_match = "%u bytes" % fft_write_count * 4
             for file in output.splitlines():
                 # points output correct size (floats)
                 self.assertIn(bytes_match, file, file)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     gr_unittest.run(qa_retune_fft)
