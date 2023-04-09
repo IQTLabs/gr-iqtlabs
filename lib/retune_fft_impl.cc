@@ -218,13 +218,13 @@ namespace gr {
         static const size_t OUT_BUF_MAX = 1024 * 1024 * 64;
 
         retune_fft::sptr
-        retune_fft::make(const std::string &tag, int vlen, int nfft, uint64_t samp_rate, uint64_t freq_start, uint64_t freq_end, int tune_step_hz, int tune_step_fft, int skip_tune_step_fft, bool fft_roll, double fft_min, double fft_max, const std::string &sdir, uint64_t write_step_fft)
+        retune_fft::make(const std::string &tag, int vlen, int nfft, uint64_t samp_rate, uint64_t freq_start, uint64_t freq_end, int tune_step_hz, int tune_step_fft, int skip_tune_step_fft, bool fft_roll, double fft_min, double fft_max, const std::string &sdir, uint64_t write_step_fft, double bucket_range)
         {
             return gnuradio::make_block_sptr<retune_fft_impl>(
-                                                              tag, vlen, nfft, samp_rate, freq_start, freq_end, tune_step_hz, tune_step_fft, skip_tune_step_fft, fft_roll, fft_min, fft_max, sdir, write_step_fft);
+                                                              tag, vlen, nfft, samp_rate, freq_start, freq_end, tune_step_hz, tune_step_fft, skip_tune_step_fft, fft_roll, fft_min, fft_max, sdir, write_step_fft, bucket_range);
         }
 
-        retune_fft_impl::retune_fft_impl(const std::string &tag, int vlen, int nfft, uint64_t samp_rate, uint64_t freq_start, uint64_t freq_end, int tune_step_hz, int tune_step_fft, int skip_tune_step_fft, bool fft_roll, double fft_min, double fft_max, const std::string &sdir, uint64_t write_step_fft)
+        retune_fft_impl::retune_fft_impl(const std::string &tag, int vlen, int nfft, uint64_t samp_rate, uint64_t freq_start, uint64_t freq_end, int tune_step_hz, int tune_step_fft, int skip_tune_step_fft, bool fft_roll, double fft_min, double fft_max, const std::string &sdir, uint64_t write_step_fft, double bucket_range)
             : gr::block("retune_fft",
                         gr::io_signature::make(1 /* min inputs */, 1 /* max inputs */, vlen * sizeof(input_type)),
                         gr::io_signature::make(1 /* min outputs */, 1 /*max outputs */, sizeof(output_type))),
@@ -252,10 +252,13 @@ namespace gr {
               total_tune_count_(0),
               sdir_(sdir),
               write_step_fft_(write_step_fft),
-              write_step_fft_count_(write_step_fft)
+              write_step_fft_count_(write_step_fft),
+              bucket_range_(bucket_range)
         {
             outbuf_p.reset(new boost::iostreams::filtering_ostream());
             message_port_register_out(TUNE);
+            bucket_offset_ = round(float((vlen_ - round(bucket_range_ * vlen_)) / 2));
+            d_logger->debug("bucket_offset {}", bucket_offset_);
         }
 
         retune_fft_impl::~retune_fft_impl()
@@ -325,45 +328,53 @@ namespace gr {
             }
         }
 
-        void retune_fft_impl::sum_samples_(size_t c, const input_type* &in)
+        void retune_fft_impl::write_items_(const input_type* in)
+        {
+            if (write_step_fft_count_) {
+                if (fft_roll_) {
+                    const size_t fft_half_window_size = (sizeof(input_type) * nfft_) / 2;
+                    write_((const char*)in + fft_half_window_size, fft_half_window_size);
+                    write_((const char*)in, fft_half_window_size);
+                } else {
+                    write_((const char*)in, sizeof(input_type) * nfft_);
+                }
+                --write_step_fft_count_;
+            }
+        }
+
+        void retune_fft_impl::sum_items_(const input_type* in)
+        {
+            if (fft_roll_) {
+                const size_t fft_half_window_size = nfft_ / 2;
+                const input_type* lower_in = in + fft_half_window_size;
+                const input_type* upper_in = in;
+                for (size_t k = 0; k < fft_half_window_size; ++k) {
+                    sample_[k] += *lower_in++;
+                }
+                for (size_t k = fft_half_window_size; k < nfft_; ++k) {
+                    sample_[k] += *upper_in++;
+                }
+            } else {
+                for (size_t k = 0; k < nfft_; ++k) {
+                    sample_[k] += *in++;
+                }
+            }
+        }
+
+        void retune_fft_impl::process_items_(size_t c, const input_type* &in)
         {
             for (size_t i = 0; i < c; ++i) {
-                for (size_t j = 0; j < (vlen_ / nfft_); ++j) {
+                for (size_t j = 0; j < (vlen_ / nfft_); ++j, in += nfft_) {
                     if (skip_fft_count_) {
-                        in += nfft_;
                         --skip_fft_count_;
                         continue;
                     }
-                    if (write_step_fft_count_) {
-                        if (fft_roll_) {
-                            const size_t fft_half_window_size = (sizeof(input_type) * nfft_) / 2;
-                            write_((const char*)in + fft_half_window_size, fft_half_window_size);
-                            write_((const char*)in, fft_half_window_size);
-                        } else {
-                            write_((const char*)in, sizeof(input_type) * nfft_);
-                        }
-                        --write_step_fft_count_;
-                    }
-                    if (fft_roll_) {
-                        const size_t fft_half_window_size = nfft_ / 2;
-                        const input_type* lower_in = in + fft_half_window_size;
-                        const input_type* upper_in = in;
-                        for (size_t k = 0; k < fft_half_window_size; ++k) {
-                            sample_[k] += *lower_in++;
-                        }
-                        for (size_t k = fft_half_window_size; k < nfft_; ++k) {
-                            sample_[k] += *upper_in++;
-                        }
-                        in += nfft_;
-                    } else {
-                        for (size_t k = 0; k < nfft_; ++k) {
-                            sample_[k] += *in++;
-                        }
-                    }
+                    write_items_(in);
+                    sum_items_(in);
+                    ++sample_count_;
                     if ((pending_retune_ == 0 || total_tune_count_ == 0) && ++fft_count_ >= tune_step_fft_) {
                         retune_now_();
                     }
-                    ++sample_count_;
                 }
             }
             consume_each(c);
@@ -382,41 +393,59 @@ namespace gr {
                     ss << ", ";
                 }
                 const std::pair<double, double> s = *it;
-                ss << "\"" << s.first << "\": " << s.second;
+                ss << "\"" << uint64_t(s.first) << "\": " << s.second;
             }
             ss << "}";
         }
 
-        int retune_fft_impl::general_work(int noutput_items,
-                                          gr_vector_int& ninput_items,
-                                          gr_vector_const_void_star& input_items,
-                                          gr_vector_void_star& output_items)
+        void retune_fft_impl::reopen_(uint64_t host_now, uint64_t rx_freq)
         {
-            auto in = static_cast<const input_type*>(input_items[0]);
-            auto out = static_cast<output_type*>(output_items[0]);
-            const size_t in_count = ninput_items[0];
-            size_t in_first = nitems_read(0);
+            std::string bucket_path = sdir_ + "/fft_" +
+                std::to_string(host_now) + "_" +
+                std::to_string(uint64_t(nfft_)) + "points_" +
+                std::to_string(uint64_t(rx_freq)) + "Hz_" +
+                std::to_string(uint64_t(samp_rate_)) + "sps.raw.zst";
+            open_(bucket_path, 1);
+        }
 
-            if (!out_buf_.empty()) {
-                const size_t leftover = std::min(out_buf_.size(), (size_t)noutput_items);
-                auto from = out_buf_.begin();
-                auto to = from + leftover;
-                std::copy(from, to, out);
-                out_buf_.erase(from, to);
-                return leftover;
+        void retune_fft_impl::write_buckets_(uint64_t host_now, uint64_t rx_freq)
+        {
+            std::list<std::pair<double, double>> buckets;
+            const double bucket_size = samp_rate_ / vlen_;
+            const double bucket_freq_start = last_rx_freq_ - (samp_rate_ / 2);
+            for (size_t i = bucket_offset_; i < (vlen_ - bucket_offset_); ++i) {
+                double bucket_freq = bucket_freq_start + (i * bucket_size);
+                if (bucket_freq < freq_start_ || bucket_freq > freq_end_) {
+                    continue;
+                }
+                buckets.push_back(std::pair<double, double>(bucket_freq, sample_[i]));
             }
+            std::stringstream ss("", std::ios_base::app | std::ios_base::out);
+            ss << "{" <<
+                "\"ts\": " << host_now <<
+                ", \"sweep_start\": " << last_sweep_start_ <<
+                ", \"config\": {" <<
+                "\"freq_start\": " << freq_start_ <<
+                ", \"freq_end\": " << freq_end_ <<
+                ", \"sample_rate\": " << samp_rate_ <<
+                ", \"nfft\": " << nfft_ <<
+                ", \"tune_step_fft\": " << tune_step_fft_ <<
+                ", \"tune_step_hz\": " << tune_step_hz_ <<
+                "}, ";
+            output_buckets_("buckets", buckets, ss);
+            ss << "}" << std::endl;
+            const std::string s = ss.str();
+            out_buf_.insert(out_buf_.end(), s.begin(), s.end());
+        }
 
-            if (out_buf_.size() > OUT_BUF_MAX) {
-                d_logger->error("output buffer full");
-                return 0;
-            }
-
+        void retune_fft_impl::process_tags_(const input_type *in, size_t in_count, size_t in_first)
+        {
             std::vector<tag_t> tags;
             get_tags_in_window(tags, 0, 0, in_count, tag_);
 
             if (tags.empty()) {
-                sum_samples_(in_count, in);
-                return 0;
+                process_items_(in_count, in);
+                return;
             }
 
             for (size_t t = 0; t < tags.size(); ++t) {
@@ -425,7 +454,7 @@ namespace gr {
                 in_first += rel;
 
                 if (rel > 0) {
-                    sum_samples_(rel, in);
+                    process_items_(rel, in);
                 }
 
                 const uint64_t rx_freq = (uint64_t)pmt::to_double(tag.value);
@@ -433,40 +462,10 @@ namespace gr {
                 if (rx_freq != last_rx_freq_) {
                     d_logger->debug("new rx_freq tag: {}, last {}", rx_freq, last_rx_freq_);
                     if (last_rx_freq_ && sample_count_) {
-                        const uint64_t host_now = host_now_();
-                        std::string bucket_path = sdir_ + "/fft_" +
-                            std::to_string(host_now) + "_" +
-                            std::to_string(uint64_t(nfft_)) + "points_" +
-                            std::to_string(uint64_t(rx_freq)) + "Hz_" +
-                            std::to_string(uint64_t(samp_rate_)) + "sps.raw.zst";
-                        open_(bucket_path, 1);
-                        std::stringstream ss("", std::ios_base::app | std::ios_base::out);
-                        ss << "{" <<
-                            "\"ts\": " << host_now <<
-                            ", \"sweep_start\": " << last_sweep_start_ <<
-                            ", \"config\": {" <<
-                            "\"freq_start\": " << freq_start_ <<
-                            ", \"freq_end\": " << freq_end_ <<
-                            ", \"sample_rate\": " << samp_rate_ <<
-                            ", \"nfft\": " << nfft_ <<
-                            ", \"tune_step_fft\": " << tune_step_fft_ <<
-                            ", \"tune_step_hz\": " << tune_step_hz_ <<
-                            "}, ";
                         std::transform(sample_.begin(), sample_.end(), sample_.begin(), [=](double &c){ return std::max(fft_min_, std::min(c / sample_count_, fft_max_)); });
-                        std::list<std::pair<double, double>> buckets;
-                        const double bucket_size = samp_rate_ / vlen_;
-                        double bucket_freq = last_rx_freq_ - (samp_rate_ / 2);
-                        for (size_t i = 0; i < vlen_; ++i) {
-                            bucket_freq += bucket_size;
-                            if (bucket_freq < freq_start_ || bucket_freq > freq_end_) {
-                                continue;
-                            }
-                            buckets.push_back(std::pair<double, double>(bucket_freq, sample_[i]));
-                        }
-                        output_buckets_("buckets", buckets, ss);
-                        ss << "}" << std::endl;
-                        const std::string s = ss.str();
-                        out_buf_.insert(out_buf_.end(), s.begin(), s.end());
+                        const uint64_t host_now = host_now_();
+                        reopen_(host_now, rx_freq);
+                        write_buckets_(host_now, rx_freq);
                     }
                     std::transform(sample_.begin(), sample_.end(), sample_.begin(), [](double &c){ return 0; });
                     --pending_retune_;
@@ -478,9 +477,30 @@ namespace gr {
                 }
             }
 
-            sum_samples_(1, in);
-            return 0;
+            process_items_(1, in);
         }
 
+        int retune_fft_impl::general_work(int noutput_items,
+                                          gr_vector_int& ninput_items,
+                                          gr_vector_const_void_star& input_items,
+                                          gr_vector_void_star& output_items)
+        {
+            if (!out_buf_.empty()) {
+                auto out = static_cast<output_type*>(output_items[0]);
+                const size_t leftover = std::min(out_buf_.size(), (size_t)noutput_items);
+                auto from = out_buf_.begin();
+                auto to = from + leftover;
+                std::copy(from, to, out);
+                out_buf_.erase(from, to);
+                return leftover;
+            }
+
+            const input_type *in = static_cast<const input_type*>(input_items[0]);
+            size_t in_count = ninput_items[0];
+            size_t in_first = nitems_read(0);
+            process_tags_(in, in_count, in_first);
+
+            return 0;
+        }
     } /* namespace iqtlabs */
 } /* namespace gr */

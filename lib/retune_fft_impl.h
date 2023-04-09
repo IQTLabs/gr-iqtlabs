@@ -223,8 +223,13 @@ namespace gr {
      private:
       uint64_t host_now_();
       void retune_now_();
-      void sum_samples_(size_t c, const input_type* &in);
+      void write_items_(const input_type* in);
+      void sum_items_(const input_type* in);
+      void process_items_(size_t c, const input_type* &in);
       void output_buckets_(const std::string &name, const std::list<std::pair<double, double>> &buckets, std::stringstream &ss);
+      void reopen_(uint64_t host_now, uint64_t rx_freq);
+      void write_buckets_(uint64_t host_now, uint64_t rx_freq);
+      void process_tags_(const input_type *in, size_t in_count, size_t in_first);
       std::string get_prefix_file_(const std::string &file, const std::string &prefix);
       std::string get_dotfile_(const std::string &file);
       void write_(const char *data, size_t len);
@@ -241,6 +246,7 @@ namespace gr {
       uint64_t tune_step_fft_;
       uint64_t skip_tune_step_fft_;
       uint64_t write_step_fft_;
+      double bucket_range_;
       std::string sdir_;
 
       bool fft_roll_;
@@ -259,13 +265,14 @@ namespace gr {
       uint64_t total_tune_count_;
       uint64_t pending_retune_;
       uint64_t write_step_fft_count_;
+      size_t bucket_offset_;
 
       boost::scoped_ptr<boost::iostreams::filtering_ostream> outbuf_p;
       std::string file_;
       std::string dotfile_;
 
      public:
-      retune_fft_impl(const std::string &tag, int vlen, int nfft, uint64_t samp_rate, uint64_t freq_start, uint64_t freq_end, int tune_step_hz, int tune_step_fft, int skip_tune_step_fft, bool fft_roll, double fft_min, double fft_max, const std::string &sdir, uint64_t write_step_fft);
+      retune_fft_impl(const std::string &tag, int vlen, int nfft, uint64_t samp_rate, uint64_t freq_start, uint64_t freq_end, int tune_step_hz, int tune_step_fft, int skip_tune_step_fft, bool fft_roll, double fft_min, double fft_max, const std::string &sdir, uint64_t write_step_fft, double bucket_range);
       ~retune_fft_impl();
       void forecast(int noutput_items, gr_vector_int& ninput_items_required);
       int general_work(int noutput_items, gr_vector_int& ninput_items, gr_vector_const_void_star& input_items, gr_vector_void_star& output_items);
