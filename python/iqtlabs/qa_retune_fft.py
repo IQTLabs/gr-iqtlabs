@@ -209,6 +209,7 @@ import re
 import subprocess
 import time
 import tempfile
+from collections import defaultdict
 import numpy as np
 import pandas as pd
 from gnuradio import gr, gr_unittest
@@ -261,6 +262,7 @@ class qa_retune_fft(gr_unittest.TestCase):
         freq_start = int(1e9 / samp_rate) * samp_rate
         freq_end = int(1.1e9 / samp_rate) * samp_rate
         fft_write_count = 2
+        bucket_range = 0.98
 
         with tempfile.TemporaryDirectory() as tmpdir:
             test_file = os.path.join(tmpdir, "samples.csv")
@@ -280,6 +282,7 @@ class qa_retune_fft(gr_unittest.TestCase):
                 1e4,
                 tmpdir,
                 fft_write_count,
+                bucket_range,
             )
             fft_vxx_0 = fft.fft_vcc(
                 points, True, window.blackmanharris(points), True, 1
@@ -320,6 +323,7 @@ class qa_retune_fft(gr_unittest.TestCase):
             # Since test source generates the same samples for the same frequency value,
             # the same frequency must have the same power for repeated observations.
             records = []
+            bucket_counts = defaultdict(int)
             with open(test_file) as f:
                 for line in f.readlines():
                     line = line.strip()
@@ -331,12 +335,16 @@ class qa_retune_fft(gr_unittest.TestCase):
                     self.assertEqual(config["sample_rate"], samp_rate)
                     self.assertEqual(config["nfft"], points)
                     buckets = record["buckets"]
+                    bucket_counts[len(buckets)] += 1
                     records.extend(
                         [
                             {"ts": ts, "f": float(freq), "v": float(value)}
                             for freq, value in buckets.items()
                         ]
                     )
+            top_count = sorted(bucket_counts.items(), key=lambda x: x[1], reverse=True)[0]
+            expected_buckets = round(points * bucket_range)
+            self.assertEqual(top_count[0], expected_buckets)
             df = pd.DataFrame(records)[["f", "v"]]
             df["v"] = df["v"].round(2)
             self.assertTrue(0 <= df["v"].min() <= 1)

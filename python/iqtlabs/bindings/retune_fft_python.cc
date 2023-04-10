@@ -1,6 +1,9 @@
 /*
+ * Copyright 2023 Free Software Foundation, Inc.
  *
- * SPDX-License-Identifier: Apache-2.0
+ * This file is part of GNU Radio
+ *
+ * SPDX-License-Identifier: GPL-3.0-or-later
  *
  */
 
@@ -11,7 +14,7 @@
 /* BINDTOOL_GEN_AUTOMATIC(0)                                                       */
 /* BINDTOOL_USE_PYGCCXML(0)                                                        */
 /* BINDTOOL_HEADER_FILE(retune_fft.h)                                        */
-/* BINDTOOL_HEADER_FILE_HASH(7e10ef5081c4dc33ea3fd24a4ea3324f)                     */
+/* BINDTOOL_HEADER_FILE_HASH(7d3059ca1dd68d790144470a5fecd632)                     */
 /***********************************************************************************/
 
 #include <pybind11/complex.h>
@@ -48,6 +51,7 @@ void bind_retune_fft(py::module& m)
            py::arg("fft_max"),
            py::arg("sdir"),
            py::arg("write_step_fft"),
+           py::arg("bucket_range"),
            D(retune_fft,make)
         )
         
