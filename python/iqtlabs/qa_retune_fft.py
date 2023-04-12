@@ -324,12 +324,16 @@ class qa_retune_fft(gr_unittest.TestCase):
             # the same frequency must have the same power for repeated observations.
             records = []
             bucket_counts = defaultdict(int)
+            last_ts = 0
             with open(test_file) as f:
                 for line in f.readlines():
                     line = line.strip()
                     record = json.loads(line)
                     ts = float(record["ts"])
+                    self.assertGreater(ts, last_ts)
+                    last_ts = ts
                     config = record["config"]
+                    self.assertGreaterEqual(ts, record["sweep_start"])
                     self.assertEqual(config["freq_start"], freq_start)
                     self.assertEqual(config["freq_end"], freq_end)
                     self.assertEqual(config["sample_rate"], samp_rate)

@@ -204,6 +204,7 @@
 
 #include <chrono>
 #include <fstream>
+#include <iomanip>
 #include <ios>
 #include <iostream>
 #include <sstream>
@@ -298,16 +299,23 @@ namespace gr {
              }
         }
 
-        uint64_t retune_fft_impl::host_now_()
+        double retune_fft_impl::host_now_()
         {
-            const std::chrono::seconds sec(1);
-            const auto now = std::chrono::system_clock::now();
-            return now.time_since_epoch() / sec;
+            const auto now_millis = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now().time_since_epoch());
+            double now = double(now_millis.count()) / 1e3;
+            return now;
+        }
+
+        std::string retune_fft_impl::host_now_str_(double host_now)
+        {
+            std::ostringstream ss;
+            ss << std::fixed << std::setprecision(3) << host_now;
+            return ss.str();
         }
 
         void retune_fft_impl::retune_now_()
         {
-            const uint64_t host_now = host_now_();
+            const double host_now = host_now_();
 
             d_logger->debug("retuning to {}", tune_freq_);
             ++tune_count_;
@@ -398,17 +406,17 @@ namespace gr {
             ss << "}";
         }
 
-        void retune_fft_impl::reopen_(uint64_t host_now, uint64_t rx_freq)
+        void retune_fft_impl::reopen_(double host_now, uint64_t rx_freq)
         {
             std::string bucket_path = sdir_ + "/fft_" +
-                std::to_string(host_now) + "_" +
+                host_now_str_(host_now) + "_" +
                 std::to_string(uint64_t(nfft_)) + "points_" +
                 std::to_string(uint64_t(rx_freq)) + "Hz_" +
                 std::to_string(uint64_t(samp_rate_)) + "sps.raw.zst";
             open_(bucket_path, 1);
         }
 
-        void retune_fft_impl::write_buckets_(uint64_t host_now, uint64_t rx_freq)
+        void retune_fft_impl::write_buckets_(double host_now, uint64_t rx_freq)
         {
             std::list<std::pair<double, double>> buckets;
             const double bucket_size = samp_rate_ / vlen_;
@@ -422,8 +430,8 @@ namespace gr {
             }
             std::stringstream ss("", std::ios_base::app | std::ios_base::out);
             ss << "{" <<
-                "\"ts\": " << host_now <<
-                ", \"sweep_start\": " << last_sweep_start_ <<
+                "\"ts\": " << host_now_str_(host_now) <<
+                ", \"sweep_start\": " << host_now_str_(last_sweep_start_) <<
                 ", \"config\": {" <<
                 "\"freq_start\": " << freq_start_ <<
                 ", \"freq_end\": " << freq_end_ <<
@@ -463,7 +471,7 @@ namespace gr {
                     d_logger->debug("new rx_freq tag: {}, last {}", rx_freq, last_rx_freq_);
                     if (last_rx_freq_ && sample_count_) {
                         std::transform(sample_.begin(), sample_.end(), sample_.begin(), [=](double &c){ return std::max(fft_min_, std::min(c / sample_count_, fft_max_)); });
-                        const uint64_t host_now = host_now_();
+                        const double host_now = host_now_();
                         reopen_(host_now, rx_freq);
                         write_buckets_(host_now, rx_freq);
                     }
