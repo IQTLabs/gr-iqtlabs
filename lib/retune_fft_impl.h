@@ -221,14 +221,15 @@ namespace gr {
     class retune_fft_impl : public retune_fft
     {
      private:
-      uint64_t host_now_();
+      double host_now_();
+      std::string host_now_str_(double host_now);
       void retune_now_();
       void write_items_(const input_type* in);
       void sum_items_(const input_type* in);
       void process_items_(size_t c, const input_type* &in);
       void output_buckets_(const std::string &name, const std::list<std::pair<double, double>> &buckets, std::stringstream &ss);
-      void reopen_(uint64_t host_now, uint64_t rx_freq);
-      void write_buckets_(uint64_t host_now, uint64_t rx_freq);
+      void reopen_(double host_now, uint64_t rx_freq);
+      void write_buckets_(double host_now, uint64_t rx_freq);
       void process_tags_(const input_type *in, size_t in_count, size_t in_first);
       std::string get_prefix_file_(const std::string &file, const std::string &prefix);
       std::string get_dotfile_(const std::string &file);
@@ -260,7 +261,7 @@ namespace gr {
       uint64_t last_rx_freq_;
       uint64_t fft_count_;
       uint64_t tune_count_;
-      uint64_t last_sweep_start_;
+      double last_sweep_start_;
       uint64_t skip_fft_count_;
       uint64_t total_tune_count_;
       uint64_t pending_retune_;
