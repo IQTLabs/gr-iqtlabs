@@ -202,6 +202,7 @@
  *    limitations under the License.
  */
 
+#include <chrono>
 #include "tuneable_test_source_impl.h"
 #include <gnuradio/io_signature.h>
 
