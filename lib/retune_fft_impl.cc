@@ -468,10 +468,13 @@ namespace gr {
                 }
             }
 
+            // fall back to host timestamps.
             if (rx_freq_tags.size() != rx_times.size()) {
-                d_logger->debug("tag list mismatch - freq {}, time {}", rx_freq_tags.size(), rx_times.size());
-                process_items_(in_count, in);
-                return;
+                rx_times.clear();
+                const double host_now = host_now_();
+                for (size_t t = 0; t < rx_freq_tags.size(); ++t) {
+                    rx_times.push_back(host_now);
+                }
             }
 
             if (rx_freq_tags.empty()) {
