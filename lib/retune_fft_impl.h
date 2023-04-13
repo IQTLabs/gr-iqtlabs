@@ -259,6 +259,7 @@ namespace gr {
       size_t sample_count_;
       uint64_t tune_freq_;
       uint64_t last_rx_freq_;
+      double last_rx_time_;
       uint64_t fft_count_;
       uint64_t tune_count_;
       double last_sweep_start_;

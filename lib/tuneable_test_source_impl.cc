@@ -259,9 +259,9 @@ tuneable_test_source_impl::recv_cmd(pmt::pmt_t msg)
             if (pmt::is_number(val)) {
                 last_freq = pmt::to_double(val);
                 tag_now = true;
-		d_logger->debug("tag now with frequency {}", last_freq);
+                d_logger->debug("tag now with frequency {}", last_freq);
             }
-	}
+        }
         list_of_items = pmt::cdr(list_of_items);
     }
 }
@@ -276,8 +276,11 @@ int tuneable_test_source_impl::work(int noutput_items,
         std::stringstream str;
         str << name() << unique_id();
         pmt::pmt_t _id = pmt::string_to_symbol(str.str());
-        std::time_t time_now = std::time(nullptr);
-        pmt::pmt_t val = pmt::make_tuple(pmt::from_uint64(time_now), pmt::from_double(0));
+        const auto now_millis = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now().time_since_epoch());
+        double now = double(now_millis.count()) / 1e3;
+        uint64_t now_sec = now;
+        double now_frac = now - now_sec;
+        pmt::pmt_t val = pmt::make_tuple(pmt::from_uint64(now_sec), pmt::from_double(now_frac));
         this->add_item_tag(0, nitems_written(0), TIME_KEY, val, _id);
         this->add_item_tag(0, nitems_written(0), RX_FREQ_KEY, pmt::from_double(last_freq), _id);
         last_sample = gr_complex(last_freq / d_freq_divisor, last_freq / d_freq_divisor);
