@@ -215,6 +215,7 @@
 namespace gr {
     namespace iqtlabs {
 
+        static const pmt::pmt_t RX_TIME = pmt::intern("rx_time");
         static const pmt::pmt_t TUNE = pmt::mp("tune");
         static const size_t OUT_BUF_MAX = 1024 * 1024 * 64;
 
@@ -246,6 +247,7 @@ namespace gr {
               sample_count_(0),
               tune_freq_(freq_start),
               last_rx_freq_(0),
+              last_rx_time_(0),
               fft_count_(0),
               tune_count_(0),
               last_sweep_start_(0),
@@ -448,16 +450,38 @@ namespace gr {
 
         void retune_fft_impl::process_tags_(const input_type *in, size_t in_count, size_t in_first)
         {
-            std::vector<tag_t> tags;
-            get_tags_in_window(tags, 0, 0, in_count, tag_);
+            std::vector<tag_t> all_tags, rx_freq_tags;
+            std::vector<double> rx_times;
+            get_tags_in_window(all_tags, 0, 0, in_count);
 
-            if (tags.empty()) {
+            for (size_t t = 0; t < all_tags.size(); ++t) {
+                const auto& tag = all_tags[t];
+                if (tag.key == tag_) {
+                    rx_freq_tags.push_back(tag);
+                    continue;
+                }
+                if (tag.key == RX_TIME) {
+                    const double rx_time = pmt::to_uint64(pmt::tuple_ref(tag.value, 0)) +
+                        pmt::to_double(pmt::tuple_ref(tag.value, 1));
+                    rx_times.push_back(rx_time);
+                    continue;
+                }
+            }
+
+            if (rx_freq_tags.size() != rx_times.size()) {
+                d_logger->debug("tag list mismatch - freq {}, time {}", rx_freq_tags.size(), rx_times.size());
                 process_items_(in_count, in);
                 return;
             }
 
-            for (size_t t = 0; t < tags.size(); ++t) {
-                const auto& tag = tags[t];
+            if (rx_freq_tags.empty()) {
+                process_items_(in_count, in);
+                return;
+            }
+
+            for (size_t t = 0; t < rx_freq_tags.size(); ++t) {
+                const auto& tag = rx_freq_tags[t];
+                const double rx_time = rx_times[t];
                 const auto rel = tag.offset - in_first;
                 in_first += rel;
 
@@ -471,9 +495,8 @@ namespace gr {
                     d_logger->debug("new rx_freq tag: {}, last {}", rx_freq, last_rx_freq_);
                     if (last_rx_freq_ && sample_count_) {
                         std::transform(sample_.begin(), sample_.end(), sample_.begin(), [=](double &c){ return std::max(fft_min_, std::min(c / sample_count_, fft_max_)); });
-                        const double host_now = host_now_();
-                        reopen_(host_now, rx_freq);
-                        write_buckets_(host_now, rx_freq);
+                        reopen_(rx_time, rx_freq);
+                        write_buckets_(rx_time, rx_freq);
                     }
                     std::transform(sample_.begin(), sample_.end(), sample_.begin(), [](double &c){ return 0; });
                     --pending_retune_;
@@ -482,6 +505,7 @@ namespace gr {
                     skip_fft_count_ = skip_tune_step_fft_;
                     write_step_fft_count_ = write_step_fft_;
                     last_rx_freq_ = rx_freq;
+                    last_rx_time_ = rx_time;
                 }
             }
 
