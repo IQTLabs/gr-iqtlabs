@@ -203,11 +203,14 @@
  */
 
 #include <chrono>
+#include <cstdint>
 #include <fstream>
 #include <iomanip>
 #include <ios>
 #include <iostream>
 #include <sstream>
+#include <stdexcept>
+#include <boost/algorithm/string.hpp>
 
 #include <gnuradio/io_signature.h>
 #include "retune_fft_impl.h"
@@ -220,13 +223,13 @@ namespace gr {
         static const size_t OUT_BUF_MAX = 1024 * 1024 * 64;
 
         retune_fft::sptr
-        retune_fft::make(const std::string &tag, int vlen, int nfft, uint64_t samp_rate, uint64_t freq_start, uint64_t freq_end, int tune_step_hz, int tune_step_fft, int skip_tune_step_fft, bool fft_roll, double fft_min, double fft_max, const std::string &sdir, uint64_t write_step_fft, double bucket_range)
+        retune_fft::make(const std::string &tag, int vlen, int nfft, uint64_t samp_rate, uint64_t freq_start, uint64_t freq_end, int tune_step_hz, int tune_step_fft, int skip_tune_step_fft, bool fft_roll, double fft_min, double fft_max, const std::string &sdir, uint64_t write_step_fft, double bucket_range, const std::string &tuning_ranges)
         {
             return gnuradio::make_block_sptr<retune_fft_impl>(
-                                                              tag, vlen, nfft, samp_rate, freq_start, freq_end, tune_step_hz, tune_step_fft, skip_tune_step_fft, fft_roll, fft_min, fft_max, sdir, write_step_fft, bucket_range);
+                                                              tag, vlen, nfft, samp_rate, freq_start, freq_end, tune_step_hz, tune_step_fft, skip_tune_step_fft, fft_roll, fft_min, fft_max, sdir, write_step_fft, bucket_range, tuning_ranges);
         }
 
-        retune_fft_impl::retune_fft_impl(const std::string &tag, int vlen, int nfft, uint64_t samp_rate, uint64_t freq_start, uint64_t freq_end, int tune_step_hz, int tune_step_fft, int skip_tune_step_fft, bool fft_roll, double fft_min, double fft_max, const std::string &sdir, uint64_t write_step_fft, double bucket_range)
+        retune_fft_impl::retune_fft_impl(const std::string &tag, int vlen, int nfft, uint64_t samp_rate, uint64_t freq_start, uint64_t freq_end, int tune_step_hz, int tune_step_fft, int skip_tune_step_fft, bool fft_roll, double fft_min, double fft_max, const std::string &sdir, uint64_t write_step_fft, double bucket_range, const std::string &tuning_ranges)
             : gr::block("retune_fft",
                         gr::io_signature::make(1 /* min inputs */, 1 /* max inputs */, vlen * sizeof(input_type)),
                         gr::io_signature::make(1 /* min outputs */, 1 /*max outputs */, sizeof(output_type))),
@@ -245,11 +248,9 @@ namespace gr {
               fft_max_(fft_max),
               sample_(nfft),
               sample_count_(0),
-              tune_freq_(freq_start),
               last_rx_freq_(0),
               last_rx_time_(0),
               fft_count_(0),
-              tune_count_(0),
               last_sweep_start_(0),
               pending_retune_(0),
               total_tune_count_(0),
@@ -261,6 +262,50 @@ namespace gr {
             outbuf_p.reset(new boost::iostreams::filtering_ostream());
             message_port_register_out(TUNE);
             bucket_offset_ = round(float((vlen_ - round(bucket_range_ * vlen_)) / 2));
+            if (tuning_ranges.length() == 0) {
+                if (freq_end <= freq_start) {
+                    throw std::invalid_argument("invalid freq_start/freq_end (end must be greater than start)");
+                }
+                d_logger->debug("tuning_ranges empty, will scan from {} to {}", freq_start_, freq_end_);
+                tuning_ranges_.push_back(std::pair(freq_start_, freq_end_));
+            } else {
+                std::vector<std::string > tuning_ranges_raw;
+                boost::split(tuning_ranges_raw, tuning_ranges, boost::is_any_of(","), boost::token_compress_on);
+                d_logger->debug("using tuning_ranges");
+                freq_start_ = UINT64_MAX;
+                freq_end_ = 0;
+                for (size_t i = 0; i < tuning_ranges_raw.size(); ++i) {
+                    std::vector<std::string> tuning_range_raw;
+                    boost::split(tuning_range_raw, tuning_ranges_raw[i], boost::is_any_of("-"), boost::token_compress_on);
+                    if (tuning_range_raw.size() != 2) {
+                        throw std::invalid_argument("invalid tuning_range (must be min-max)");
+                    }
+                    uint64_t tuning_range_freq_start = (uint64_t)strtold(tuning_range_raw[0].c_str(), NULL);
+                    if (!tuning_range_freq_start) {
+                        throw std::invalid_argument("tuning range min cannot be 0");
+                    }
+                    uint64_t tuning_range_freq_end = (uint64_t)strtold(tuning_range_raw[1].c_str(), NULL);
+                    if (!tuning_range_freq_end) {
+                        throw std::invalid_argument("tuning range max cannot be 0");
+                    }
+                    if (tuning_range_freq_end <= tuning_range_freq_start) {
+                        throw std::invalid_argument("invalid tuning_range (max must be greater than min)");
+                    }
+                    if (i) {
+                        if (tuning_ranges_.back().second >= tuning_range_freq_start) {
+                            throw std::invalid_argument("tuning_ranges must be sorted - cannot have overlapping tuning ranges");
+                        }
+                    }
+                    freq_start_ = std::min(freq_start_, tuning_range_freq_start);
+                    freq_end_ = std::max(freq_end_, tuning_range_freq_end);
+                    d_logger->debug("tuning range {} will scan from {} to {}", i, tuning_range_freq_start, tuning_range_freq_end);
+                    tuning_ranges_.push_back(std::pair(tuning_range_freq_start, tuning_range_freq_end));
+                }
+                d_logger->debug("resetting freq_start to {} and freq_end to {} from tuning_ranges", freq_start_, freq_end_);
+            }
+            tuning_range_ = 0;
+            last_tuning_range_ = 0;
+            tune_freq_ = tuning_ranges_[0].first;
             d_logger->debug("bucket_offset {}", bucket_offset_);
         }
 
@@ -320,21 +365,23 @@ namespace gr {
             const double host_now = host_now_();
 
             d_logger->debug("retuning to {}", tune_freq_);
-            ++tune_count_;
             ++total_tune_count_;
             ++pending_retune_;
             pmt::pmt_t tune_rx = pmt::make_dict();
             tune_rx = pmt::dict_add(tune_rx, pmt::mp("freq"), pmt::from_long(tune_freq_));
             tune_rx = pmt::dict_add(tune_rx, pmt::mp("tag"), pmt::mp("now"));
             message_port_pub(TUNE, tune_rx);
-
+            last_tuning_range_ = tuning_range_;
             tune_freq_ += tune_step_hz_;
             if (last_sweep_start_ == 0) {
                 last_sweep_start_ = host_now;
-            } else if (tune_freq_ > freq_end_) {
-                last_sweep_start_ = host_now;
-                tune_freq_ = freq_start_;
-                tune_count_ = 0;
+            } else if (tune_freq_ > tuning_ranges_[tuning_range_].second) {
+                tuning_range_ = (tuning_range_ + 1) % tuning_ranges_.size();
+                d_logger->debug("moving to tuning range {}", tuning_range_);
+                tune_freq_ = tuning_ranges_[tuning_range_].first;
+                if (tuning_range_ == 0) {
+                    last_sweep_start_ = host_now;
+                }
             }
         }
 
@@ -423,19 +470,27 @@ namespace gr {
             std::list<std::pair<double, double>> buckets;
             const double bucket_size = samp_rate_ / vlen_;
             const double bucket_freq_start = last_rx_freq_ - (samp_rate_ / 2);
+            const uint64_t tuning_range_freq_start = tuning_ranges_[last_tuning_range_].first;
+            const uint64_t tuning_range_freq_end = tuning_ranges_[last_tuning_range_].second;
             for (size_t i = bucket_offset_; i < (vlen_ - bucket_offset_); ++i) {
-                double bucket_freq = bucket_freq_start + (i * bucket_size);
-                if (bucket_freq < freq_start_ || bucket_freq > freq_end_) {
+                double tuning_range_freq = bucket_freq_start + (i * bucket_size);
+                if (tuning_range_freq < tuning_range_freq_start || tuning_range_freq > tuning_range_freq_end) {
                     continue;
                 }
-                buckets.push_back(std::pair<double, double>(bucket_freq, sample_[i]));
+                buckets.push_back(std::pair<double, double>(tuning_range_freq, sample_[i]));
+            }
+            if (buckets.size() == 0) {
+                return;
             }
             std::stringstream ss("", std::ios_base::app | std::ios_base::out);
             ss << "{" <<
                 "\"ts\": " << host_now_str_(host_now) <<
                 ", \"sweep_start\": " << host_now_str_(last_sweep_start_) <<
                 ", \"config\": {" <<
-                "\"freq_start\": " << freq_start_ <<
+                "  \"tuning_range\":" << last_tuning_range_ <<
+                ", \"tuning_range_freq_start\": " << tuning_range_freq_start <<
+                ", \"tuning_range_freq_end\": " << tuning_range_freq_end <<
+                ", \"freq_start\": " << freq_start_ <<
                 ", \"freq_end\": " << freq_end_ <<
                 ", \"sample_rate\": " << samp_rate_ <<
                 ", \"nfft\": " << nfft_ <<

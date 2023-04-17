@@ -261,9 +261,10 @@ class qa_retune_fft(gr_unittest.TestCase):
         samp_rate = points * points
         freq_start = int(1e9 / samp_rate) * samp_rate
         freq_end = int(1.1e9 / samp_rate) * samp_rate
+        freq_mid = ((freq_end - freq_start) / 2) + freq_start
+        tuning_ranges = f"{freq_start}-{freq_mid},{freq_mid+samp_rate}-{freq_end}"
         fft_write_count = 2
-        bucket_range = 0.98
-
+        bucket_range = 1
         with tempfile.TemporaryDirectory() as tmpdir:
             test_file = os.path.join(tmpdir, "samples.csv")
             iqtlabs_tuneable_test_source_0 = tuneable_test_source(freq_end)
@@ -283,6 +284,7 @@ class qa_retune_fft(gr_unittest.TestCase):
                 tmpdir,
                 fft_write_count,
                 bucket_range,
+                tuning_ranges
             )
             fft_vxx_0 = fft.fft_vcc(
                 points, True, window.blackmanharris(points), True, 1
@@ -315,51 +317,91 @@ class qa_retune_fft(gr_unittest.TestCase):
             self.tb.connect((iqtlabs_tuneable_test_source_0, 0), (blocks_throttle_0, 0))
 
             self.tb.start()
-            sleep_time = 90
-            time.sleep(sleep_time)
-            self.tb.stop()
-            self.tb.wait()
 
             # Since test source generates the same samples for the same frequency value,
             # the same frequency must have the same power for repeated observations.
             records = []
             bucket_counts = defaultdict(int)
             last_ts = 0
+            last_buckets = None
+            last_tuning_range = None
+            tuning_range_changes = 0
+
+            startup_timeout = 1
+            for _ in range(10):
+                if os.path.exists(test_file):
+                    break
+                time.sleep(startup_timeout)
+            file_poll_timeout = 0.001
             with open(test_file) as f:
-                for line in f.readlines():
-                    line = line.strip()
+                linebuffer = ""
+                while True:
+                    line = f.readline()
+                    linebuffer = linebuffer + line
+                    if not linebuffer.endswith("\n"):
+                        time.sleep(file_poll_timeout)
+                        continue
+                    line = linebuffer.strip()
+                    linebuffer = ""
                     record = json.loads(line)
                     ts = float(record["ts"])
                     self.assertGreater(ts, last_ts)
                     last_ts = ts
                     config = record["config"]
                     self.assertGreaterEqual(ts, record["sweep_start"])
+                    tuning_range_freq_start = config["tuning_range_freq_start"]
+                    tuning_range_freq_end = config["tuning_range_freq_end"]
+                    tuning_range = int(config["tuning_range"])
+                    if tuning_range != last_tuning_range:
+                        tuning_range_changes += 1
+                    last_tuning_range = tuning_range
+                    if tuning_range_changes == 5:
+                        self.tb.stop()
+                        self.tb.wait()
+                        break
+                    self.assertTrue(
+                        (tuning_range_freq_start == freq_start and tuning_range_freq_end == freq_mid) or
+                        (tuning_range_freq_start == freq_mid + samp_rate and tuning_range_freq_end == freq_end))
                     self.assertEqual(config["freq_start"], freq_start)
                     self.assertEqual(config["freq_end"], freq_end)
                     self.assertEqual(config["sample_rate"], samp_rate)
                     self.assertEqual(config["nfft"], points)
                     buckets = record["buckets"]
+                    self.assertTrue(buckets, (last_buckets, buckets))
                     bucket_counts[len(buckets)] += 1
+                    fs = [int(f) for f in buckets.keys()]
+                    self.assertGreaterEqual(min(fs), tuning_range_freq_start)
+                    self.assertLessEqual(max(fs), tuning_range_freq_end)
                     records.extend(
                         [
-                            {"ts": ts, "f": float(freq), "v": float(value)}
+                            {"ts": ts, "f": float(freq), "v": float(value), "t": tuning_range}
                             for freq, value in buckets.items()
                         ]
                     )
+                    last_buckets = buckets
+
             top_count = sorted(bucket_counts.items(), key=lambda x: x[1], reverse=True)[0]
             expected_buckets = round(points * bucket_range)
             self.assertEqual(top_count[0], expected_buckets)
-            df = pd.DataFrame(records)[["f", "v"]]
-            df["v"] = df["v"].round(2)
-            self.assertTrue(0 <= df["v"].min() <= 1)
-            self.assertTrue(54 <= df["v"].max() <= 55)
-            df["u"] = df.groupby("f")["v"].transform("nunique")
-            non_unique_v = df[df["u"] != 1]
-            f_count = df.groupby("f").count()
-            pd.set_option("display.max_rows", None)
-            f_count_min = f_count["u"].min()
-            self.assertGreater(f_count_min, 1)
-            self.assertTrue(non_unique_v.empty, (non_unique_v, df))
+            all_df = pd.DataFrame(records)[["f", "v", "t"]].sort_values("f")
+            all_df["v"] = all_df["v"].round(2)
+
+            for _, df in all_df.groupby("t"):
+                # must have plausible unscaled dB value
+                self.assertTrue(0 <= df["v"].min() <= 1, df["v"].min())
+                self.assertTrue(50 <= df["v"].max() <= 60, df["v"].max())
+                df["u"] = df.groupby("f")["v"].transform("nunique")
+                non_unique_v = df[df["u"] != 1]
+                f_count = df.groupby("f").count()
+                pd.set_option("display.max_rows", None)
+                f_count_min = f_count["u"].min()
+                # every frequency must be observed more than once.
+                self.assertGreater(f_count_min, 1, df[df["u"] == 1])
+                self.assertTrue(non_unique_v.empty, (non_unique_v, df))
+                # must have even frequency coverage within the range
+                df["d"] = df["f"].diff()
+                df = df[(df["d"] != 0) & (df["d"].notna())]
+                self.assertTrue(df[df["d"] != points].empty, df[df["d"] != points])
 
             hz_re = re.compile(".+_([0-9]+)Hz.+")
             first_zst_fft_file = sorted(glob.glob(os.path.join(tmpdir, "*.zst")))[:1][0]
