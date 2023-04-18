@@ -21,8 +21,8 @@ documentation: |-
     vlen: length of FFT vector (generally same as number of FFT points - can be different when receiving multiple vectors at once).
     nfft: number of FFT points.
     samp_rate: sample rate.
-    freq_start: frequency to start scan at in Hz.
-    freq_end: frequency to end scan at in Hz.
+    freq_start: frequency to start scan at in Hz (overridden by tuning_ranges).
+    freq_end: frequency to end scan at in Hz (overridden by tuning_ranges).
     tune_step_hz: increment frequency by this value each retuning step.
     tune_step_fft: count at least this many FFT vectors between retuning steps.
     skip_tune_step_fft: discard this many FFT vectors before counting (to allow for radio to stabilize after retuning)
@@ -32,20 +32,31 @@ documentation: |-
     sdir: directory to write raw FFT points to.
     write_step_fft: if > 0, write N vectors of FFT points at each retune step.
     bucket_range: proportion of buckets to write out, at center frequency.
+    tuning_ranges: if not empty, a comma separated list of tuning ranges in ascending order (non-linear scan), e.g. "2.2e9-2.4e9,5.1e9-5.9e9"
 
   example JSON output:
     { "ts": <epoch time>, "config": { "freq_start": 10e6, "freq_end": 20e6, ... }, "buckets": { "10e6": 1, "10.1e6", ... } }
 
+    if tuning_ranges is used, freq_start and freq_end will be the minimum and maximum of all ranges.
+
 
 templates:
   imports: from gnuradio import iqtlabs
-  make: iqtlabs.retune_fft(${tag}, ${vlen}, ${nfft}, ${samp_rate}, ${freq_start}, ${freq_end}, ${tune_step_hz}, ${tune_step_fft}, ${skip_tune_step_fft}, ${fft_roll}, ${fft_min}, ${fft_max}, ${sdir}, ${write_step_fft}, ${bucket_range})
+  make: iqtlabs.retune_fft(${tag}, ${vlen}, ${nfft}, ${samp_rate}, ${freq_start}, ${freq_end}, ${tune_step_hz}, ${tune_step_fft}, ${skip_tune_step_fft}, ${fft_roll}, ${fft_min}, ${fft_max}, ${sdir}, ${write_step_fft}, ${bucket_range}, ${tuning_ranges})
 
 cpp_templates:
   includes: ['#include <gnuradio/iqtlabs/retune_fft.h>']
   declarations: 'gr::iqtlabs::retune_fft::sptr ${id};'
-  make: 'this->${id} = gr::iqtlabs::retune_fft::make(${tag}, ${vlen}, ${nfft}, ${samp_rate}, ${freq_start}, ${freq_end}, ${tune_step_hz}, ${tune_step_fft}, ${skip_tune_step_fft}, ${fft_roll} ${fft_min}, ${fft_max}, ${sdir}, ${write_step_fft}, ${bucket_range});'
+  make: 'this->${id} = gr::iqtlabs::retune_fft::make(${tag}, ${vlen}, ${nfft}, ${samp_rate}, ${freq_start}, ${freq_end}, ${tune_step_hz}, ${tune_step_fft}, ${skip_tune_step_fft}, ${fft_roll} ${fft_min}, ${fft_max}, ${sdir}, ${write_step_fft}, ${bucket_range}, ${tuning_ranges});'
   link: ['libgnuradio-iqtlabs.so']
+
+asserts:
+  - ${ tag != "" }
+  - ${ vlen > 0 }
+  - ${ nfft > 0 }
+  - ${ samp_rate > 0 }
+  - ${ freq_end > freq_start }
+  - ${ (tune_step_hz > 0) or (tune_step_fft > 0) }
 
 parameters:
 - id: tag
@@ -78,6 +89,8 @@ parameters:
   dtype: int
 - id: bucket_range
   dtype: float
+- id: tuning_ranges
+  dtype: string
 
 inputs:
 - label: input
