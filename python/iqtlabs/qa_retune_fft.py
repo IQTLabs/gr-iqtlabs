@@ -216,7 +216,6 @@ from gnuradio import gr, gr_unittest
 from gnuradio import blocks
 from gnuradio import fft
 from gnuradio.fft import window
-from gnuradio import gr
 
 try:
     from gnuradio.iqtlabs import retune_fft, tuneable_test_source
@@ -242,14 +241,7 @@ class vector_roller(gr.sync_block):
         output_items[0][:] = [np.roll(v, int(self.nfft / 2)) for v in input_items[0]]
         return len(output_items[0])
 
-
 class qa_retune_fft(gr_unittest.TestCase):
-    def setUp(self):
-        self.tb = gr.top_block()
-
-    def tearDown(self):
-        self.tb = None
-
     def test_retune_fft_no_roll(self):
         self.retune_fft(False)
 
@@ -257,6 +249,8 @@ class qa_retune_fft(gr_unittest.TestCase):
         self.retune_fft(True)
 
     def retune_fft(self, fft_roll):
+        tb = gr.top_block()
+
         points = int(1024)
         samp_rate = points * points
         freq_start = int(1e9 / samp_rate) * samp_rate
@@ -284,7 +278,7 @@ class qa_retune_fft(gr_unittest.TestCase):
                 tmpdir,
                 fft_write_count,
                 bucket_range,
-                tuning_ranges
+                tuning_ranges,
             )
             fft_vxx_0 = fft.fft_vcc(
                 points, True, window.blackmanharris(points), True, 1
@@ -301,30 +295,27 @@ class qa_retune_fft(gr_unittest.TestCase):
             blocks_nlog10_ff_0 = blocks.nlog10_ff(20, points, 0)
             vr = vector_roller(points)
 
-            self.tb.msg_connect(
+            tb.msg_connect(
                 (iqtlabs_retune_fft_0, "tune"), (iqtlabs_tuneable_test_source_0, "cmd")
             )
-            self.tb.connect((blocks_complex_to_mag_0, 0), (blocks_nlog10_ff_0, 0))
-            self.tb.connect((blocks_nlog10_ff_0, 0), (iqtlabs_retune_fft_0, 0))
-            self.tb.connect((blocks_stream_to_vector_0, 0), (fft_vxx_0, 0))
-            self.tb.connect((blocks_throttle_0, 0), (blocks_stream_to_vector_0, 0))
+            tb.connect((blocks_complex_to_mag_0, 0), (blocks_nlog10_ff_0, 0))
+            tb.connect((blocks_nlog10_ff_0, 0), (iqtlabs_retune_fft_0, 0))
+            tb.connect((blocks_stream_to_vector_0, 0), (fft_vxx_0, 0))
+            tb.connect((blocks_throttle_0, 0), (blocks_stream_to_vector_0, 0))
             if fft_roll:
-                self.tb.connect((fft_vxx_0, 0), (vr, 0))
-                self.tb.connect((vr, 0), (blocks_complex_to_mag_0, 0))
+                tb.connect((fft_vxx_0, 0), (vr, 0))
+                tb.connect((vr, 0), (blocks_complex_to_mag_0, 0))
             else:
-                self.tb.connect((fft_vxx_0, 0), (blocks_complex_to_mag_0, 0))
-            self.tb.connect((iqtlabs_retune_fft_0, 0), (blocks_file_sink_0, 0))
-            self.tb.connect((iqtlabs_tuneable_test_source_0, 0), (blocks_throttle_0, 0))
+                tb.connect((fft_vxx_0, 0), (blocks_complex_to_mag_0, 0))
+            tb.connect((iqtlabs_retune_fft_0, 0), (blocks_file_sink_0, 0))
+            tb.connect((iqtlabs_tuneable_test_source_0, 0), (blocks_throttle_0, 0))
 
-            self.tb.start()
+            tb.start()
 
             # Since test source generates the same samples for the same frequency value,
             # the same frequency must have the same power for repeated observations.
             records = []
             bucket_counts = defaultdict(int)
-            last_ts = 0
-            last_buckets = None
-            last_tuning_range = None
             tuning_range_changes = 0
 
             startup_timeout = 1
@@ -332,15 +323,23 @@ class qa_retune_fft(gr_unittest.TestCase):
                 if os.path.exists(test_file):
                     break
                 time.sleep(startup_timeout)
-            file_poll_timeout = 0.001
-            with open(test_file) as f:
+            self.assertTrue(os.path.exists(test_file))
+
+            with open(test_file, encoding="utf8") as f:
                 linebuffer = ""
-                while True:
+                last_data = time.time()
+                last_ts = 0
+                last_buckets = None
+                last_tuning_range = None
+                file_poll_timeout = 0.001
+                while tuning_range_changes < 5:
+                    self.assertLess(time.time() - last_data, 5)
                     line = f.readline()
                     linebuffer = linebuffer + line
                     if not linebuffer.endswith("\n"):
                         time.sleep(file_poll_timeout)
                         continue
+                    last_data = time.time()
                     line = linebuffer.strip()
                     linebuffer = ""
                     record = json.loads(line)
@@ -355,13 +354,16 @@ class qa_retune_fft(gr_unittest.TestCase):
                     if tuning_range != last_tuning_range:
                         tuning_range_changes += 1
                     last_tuning_range = tuning_range
-                    if tuning_range_changes == 5:
-                        self.tb.stop()
-                        self.tb.wait()
-                        break
                     self.assertTrue(
-                        (tuning_range_freq_start == freq_start and tuning_range_freq_end == freq_mid) or
-                        (tuning_range_freq_start == freq_mid + samp_rate and tuning_range_freq_end == freq_end))
+                        (
+                            tuning_range_freq_start == freq_start
+                            and tuning_range_freq_end == freq_mid
+                        )
+                        or (
+                            tuning_range_freq_start == freq_mid + samp_rate
+                            and tuning_range_freq_end == freq_end
+                        )
+                    )
                     self.assertEqual(config["freq_start"], freq_start)
                     self.assertEqual(config["freq_end"], freq_end)
                     self.assertEqual(config["sample_rate"], samp_rate)
@@ -374,13 +376,20 @@ class qa_retune_fft(gr_unittest.TestCase):
                     self.assertLessEqual(max(fs), tuning_range_freq_end)
                     records.extend(
                         [
-                            {"ts": ts, "f": float(freq), "v": float(value), "t": tuning_range}
+                            {
+                                "ts": ts,
+                                "f": float(freq),
+                                "v": float(value),
+                                "t": tuning_range,
+                            }
                             for freq, value in buckets.items()
                         ]
                     )
                     last_buckets = buckets
 
-            top_count = sorted(bucket_counts.items(), key=lambda x: x[1], reverse=True)[0]
+            top_count = sorted(bucket_counts.items(), key=lambda x: x[1], reverse=True)[
+                0
+            ]
             expected_buckets = round(points * bucket_range)
             self.assertEqual(top_count[0], expected_buckets)
             all_df = pd.DataFrame(records)[["f", "v", "t"]].sort_values("f")
@@ -406,6 +415,9 @@ class qa_retune_fft(gr_unittest.TestCase):
             hz_re = re.compile(".+_([0-9]+)Hz.+")
             first_zst_fft_file = sorted(glob.glob(os.path.join(tmpdir, "*.zst")))[:1][0]
             first_hz_match = hz_re.match(first_zst_fft_file)
+            if not first_hz_match:
+                self.fail(f"{first_zst_fft_file} did not match regexp")
+                return
             first_hz = int(first_hz_match.group(1))
             zst_fft_files = sorted(
                 glob.glob(os.path.join(tmpdir, f"*{first_hz}Hz_{samp_rate}sps.raw.zst"))
@@ -421,6 +433,9 @@ class qa_retune_fft(gr_unittest.TestCase):
                 self.assertTrue(np.array_equal(first_sample, sample))
                 self.assertGreater(len(np.unique(sample)), 1)
                 self.assertEqual(len(sample), fft_write_count * points)
+
+        tb.stop()
+        tb.wait()
 
 
 if __name__ == "__main__":
