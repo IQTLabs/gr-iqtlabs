@@ -21,6 +21,7 @@ mkShell {
     spdlog
     gmp
     boost
+    opencv
     volk
 
     gnuradio
