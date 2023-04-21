@@ -29,6 +29,8 @@ find_package(Gnuradio "3.9" REQUIRED)
 
 find_package(Boost ${Boost_Version} COMPONENTS filesystem iostreams REQUIRED)
 
+find_package(OpenCV REQUIRED)
+
 # Set the version information here
 set(VERSION_MAJOR 1)
 set(VERSION_API   0)
