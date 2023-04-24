@@ -1,0 +1,30 @@
+id: iqtlabs_image_inference
+label: image_inference
+category: '[iqtlabs]'
+flags: [python, cpp]
+
+templates:
+  imports: from gnuradio import iqtlabs
+  make: iqtlabs.image_inference(${tag}, ${vlen})
+
+cpp_templates:
+  includes: ['#include <gnuradio/iqtlabs/image_inference.h>']
+  declarations: 'gr::iqtlabs::image_inference::sptr ${id};'
+  make: 'this->${id} = gr::iqtlabs::image_inference::make(${tag}, ${vlen});'
+  link: ['libgnuradio-iqtlabs.so']
+
+parameters:
+- id: tag
+  dtype: string
+- id: vlen
+  dtype: int
+
+inputs:
+- label: input
+  domain: stream
+  dtype: float
+  vlen: ${ vlen }
+
+outputs:
+
+file_format: 1

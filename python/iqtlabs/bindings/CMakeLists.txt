@@ -28,7 +28,8 @@ include(GrPybind)
 list(APPEND iqtlabs_python_files
     tuneable_test_source_python.cc
     retune_fft_python.cc
-    write_freq_samples_python.cc python_bindings.cc)
+    write_freq_samples_python.cc
+    image_inference_python.cc python_bindings.cc)
 
 GR_PYBIND_MAKE_OOT(iqtlabs
    ../../..
