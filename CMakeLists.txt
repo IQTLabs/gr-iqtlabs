@@ -29,7 +29,8 @@ find_package(Gnuradio "3.9" REQUIRED)
 
 find_package(Boost ${Boost_Version} COMPONENTS filesystem iostreams REQUIRED)
 
-find_package(OpenCV REQUIRED)
+find_package(OpenCV 4 REQUIRED)
+include_directories(${CMAKE_SOURCE_DIR}/include ${OpenCV_INCLUDE_DIRS})
 
 # Set the version information here
 set(VERSION_MAJOR 1)

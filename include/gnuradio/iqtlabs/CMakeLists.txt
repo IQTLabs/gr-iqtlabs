@@ -9,5 +9,6 @@ install(FILES
     api.h
     tuneable_test_source.h
     retune_fft.h
-    write_freq_samples.h DESTINATION include/gnuradio/iqtlabs
+    write_freq_samples.h
+    image_inference.h DESTINATION include/gnuradio/iqtlabs
 )
