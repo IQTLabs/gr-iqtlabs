@@ -267,7 +267,7 @@ namespace gr {
                     throw std::invalid_argument("invalid freq_start/freq_end (end must be greater than start)");
                 }
                 d_logger->debug("tuning_ranges empty, will scan from {} to {}", freq_start_, freq_end_);
-                tuning_ranges_.push_back(std::pair(freq_start_, freq_end_));
+                tuning_ranges_.push_back(std::pair<uint64_t, uint64_t>(freq_start_, freq_end_));
             } else {
                 std::vector<std::string > tuning_ranges_raw;
                 boost::split(tuning_ranges_raw, tuning_ranges, boost::is_any_of(","), boost::token_compress_on);
@@ -299,7 +299,7 @@ namespace gr {
                     freq_start_ = std::min(freq_start_, tuning_range_freq_start);
                     freq_end_ = std::max(freq_end_, tuning_range_freq_end);
                     d_logger->debug("tuning range {} will scan from {} to {}", i, tuning_range_freq_start, tuning_range_freq_end);
-                    tuning_ranges_.push_back(std::pair(tuning_range_freq_start, tuning_range_freq_end));
+                    tuning_ranges_.push_back(std::pair<uint64_t, uint64_t>(tuning_range_freq_start, tuning_range_freq_end));
                 }
                 d_logger->debug("resetting freq_start to {} and freq_end to {} from tuning_ranges", freq_start_, freq_end_);
             }
