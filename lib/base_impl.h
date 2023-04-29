@@ -202,54 +202,24 @@
  *    limitations under the License.
  */
 
-#ifndef INCLUDED_IQTLABS_IMAGE_INFERENCE_IMPL_H
-#define INCLUDED_IQTLABS_IMAGE_INFERENCE_IMPL_H
-
-#include <boost/scoped_ptr.hpp>
-#include <opencv2/imgproc/imgproc.hpp>
-#include <opencv2/imgcodecs.hpp>
-#include <gnuradio/iqtlabs/image_inference.h>
-#include "base_impl.h"
+#include <string>
 
 namespace gr {
 namespace iqtlabs {
+        const pmt::pmt_t CMD_KEY = pmt::mp("cmd");
+        const pmt::pmt_t FREQ_KEY = pmt::mp("freq");
+        const pmt::pmt_t TUNE = pmt::mp("tune");
+        const pmt::pmt_t RX_TIME_KEY = pmt::string_to_symbol("rx_time");
+        const pmt::pmt_t RX_FREQ_KEY = pmt::string_to_symbol("rx_freq");
 
-using input_type = float;
-using output_type = unsigned char;
-
-typedef struct output_item {
-    uint64_t rx_freq;
-    double ts;
-    cv::Mat *buffer;
-} output_item_type;
-
-class image_inference_impl : public image_inference, base_impl
-{
-private:
-    int x_, y_, vlen_, norm_type_, colormap_, interpolation_, flip_;
-    uint64_t last_rx_freq_, last_rx_time_;
-    double convert_alpha_, norm_alpha_, norm_beta_;
-    std::vector<output_item_type> output_q_;
-    boost::scoped_ptr<cv::Mat> points_buffer_, cmapped_buffer_;
-    std::string image_dir_;
-    pmt::pmt_t tag_;
-
-    void process_items_(size_t c, const input_type* &in);
-    void create_image_();
-    void output_image_(output_type *out);
-    void delete_output_();
-
-public:
-    image_inference_impl(const std::string &tag, int vlen, int x, int y, const std::string &image_dir, double convert_alpha, double norm_alpha, double norm_beta, int norm_type, int colormap, int interpolation, int flip);
-    ~image_inference_impl();
-    int general_work(int noutput_items,
-                     gr_vector_int& ninput_items,
-                     gr_vector_const_void_star& input_items,
-                     gr_vector_void_star& output_items);
-    void forecast(int noutput_items, gr_vector_int& ninput_items_required);
-};
-
-} // namespace iqtlabs
-} // namespace gr
-
-#endif /* INCLUDED_IQTLABS_IMAGE_INFERENCE_IMPL_H */
+        class base_impl
+        {
+          public:
+              std::string get_prefix_file_(const std::string &file, const std::string &prefix);
+              std::string get_dotfile_(const std::string &file);
+              double host_now_();
+              std::string host_now_str_(double host_now);
+              pmt::pmt_t make_rx_time_key_(double host_now);
+        };
+    } /* namespace iqtlabs */
+} /* namespace gr */

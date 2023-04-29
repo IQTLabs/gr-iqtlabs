@@ -206,11 +206,12 @@
 #define INCLUDED_IQTLABS_TUNEABLE_TEST_SOURCE_IMPL_H
 
 #include <gnuradio/iqtlabs/tuneable_test_source.h>
+#include "base_impl.h"
 
 namespace gr {
 namespace iqtlabs {
 
-class tuneable_test_source_impl : public tuneable_test_source
+class tuneable_test_source_impl : public tuneable_test_source, base_impl
 {
 private:
     double d_freq_divisor;

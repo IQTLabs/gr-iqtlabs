@@ -203,19 +203,26 @@
 #    limitations under the License.
 #
 
+import glob
+import os
+import pmt
+import time
+import tempfile
 from gnuradio import gr, gr_unittest
-# from gnuradio import blocks
+from gnuradio import analog, blocks
+
 try:
-  from gnuradio.iqtlabs import image_inference
+    from gnuradio.iqtlabs import image_inference, tuneable_test_source
 except ImportError:
     import os
     import sys
+
     dirname, filename = os.path.split(os.path.abspath(__file__))
     sys.path.append(os.path.join(dirname, "bindings"))
-    from gnuradio.iqtlabs import image_inference
+    from gnuradio.iqtlabs import image_inference, tuneable_test_source
+
 
 class qa_image_inference(gr_unittest.TestCase):
-
     def setUp(self):
         self.tb = gr.top_block()
 
@@ -223,14 +230,52 @@ class qa_image_inference(gr_unittest.TestCase):
         self.tb = None
 
     def test_instance(self):
-        # FIXME: Test will fail until you pass sensible arguments to the constructor
-        instance = image_inference("rx_freq", 1024)
+        x = 800
+        y = 600
+        fft_size = 1024
+        output_vlen = x * y * 3
+        samp_rate = 32e3
+        with tempfile.TemporaryDirectory() as tmpdir:
+            test_file = os.path.join(tmpdir, "samples")
+            freq_divisor = 1e9
+            new_freq = 1e9 / 2
+            delay = 500
+            source = tuneable_test_source(freq_divisor)
 
-    def test_001_descriptive_test_name(self):
-        # set up fg
-        self.tb.run()
-        # check data
+            strobe = blocks.message_strobe(pmt.to_pmt({"freq": new_freq}), delay)
+            strobe2 = blocks.message_strobe(
+                pmt.to_pmt({"freq": new_freq * 3}), int(delay * 1.5)
+            )
+
+            image_inf = image_inference(
+                "rx_freq", fft_size, x, y, tmpdir, 255, 0, 1, 32, 20, 2, flip=0
+            )
+            c2r = blocks.complex_to_real(1)
+            stream2vector = blocks.stream_to_vector(gr.sizeof_float, fft_size)
+            throttle = blocks.throttle(gr.sizeof_float, samp_rate, True)
+            fs = blocks.file_sink(
+                gr.sizeof_char * output_vlen, os.path.join(tmpdir, test_file), False
+            )
+
+            self.tb.msg_connect((strobe, "strobe"), (source, "cmd"))
+            self.tb.msg_connect((strobe2, "strobe"), (source, "cmd"))
+            self.tb.connect((source, 0), (c2r, 0))
+            self.tb.connect((c2r, 0), (throttle, 0))
+            self.tb.connect((throttle, 0), (stream2vector, 0))
+            self.tb.connect((stream2vector, 0), (image_inf, 0))
+            self.tb.connect((image_inf, 0), (fs, 0))
+            self.tb.start()
+            test_time = 10
+            time.sleep(test_time)
+            self.tb.stop()
+            self.tb.wait()
+            image_files = glob.glob(f"{tmpdir}/image*bin")
+            self.assertTrue(image_files)
+            for image_file in image_files:
+                stat = os.stat(image_file)
+                self.assertEqual(stat.st_size, output_vlen)
+            self.assertTrue(os.stat(test_file).st_size)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     gr_unittest.run(qa_image_inference)

@@ -211,18 +211,16 @@
 #include <boost/iostreams/filter/zstd.hpp>
 #include <boost/scoped_ptr.hpp>
 #include <gnuradio/iqtlabs/retune_fft.h>
-
+#include "base_impl.h"
 
 namespace gr {
   namespace iqtlabs {
     using input_type = float;
     using output_type = char;
 
-    class retune_fft_impl : public retune_fft
+    class retune_fft_impl : public retune_fft, base_impl
     {
      private:
-      double host_now_();
-      std::string host_now_str_(double host_now);
       void retune_now_();
       void write_items_(const input_type* in);
       void sum_items_(const input_type* in);
@@ -231,8 +229,6 @@ namespace gr {
       void reopen_(double host_now, uint64_t rx_freq);
 	void write_buckets_(double host_now, uint64_t rx_freq);
       void process_tags_(const input_type *in, size_t in_count, size_t in_first);
-      std::string get_prefix_file_(const std::string &file, const std::string &prefix);
-      std::string get_dotfile_(const std::string &file);
       void write_(const char *data, size_t len);
       void open_(const std::string &file, size_t zlevel);
       void close_();

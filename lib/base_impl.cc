@@ -202,54 +202,44 @@
  *    limitations under the License.
  */
 
-#ifndef INCLUDED_IQTLABS_IMAGE_INFERENCE_IMPL_H
-#define INCLUDED_IQTLABS_IMAGE_INFERENCE_IMPL_H
-
-#include <boost/scoped_ptr.hpp>
-#include <opencv2/imgproc/imgproc.hpp>
-#include <opencv2/imgcodecs.hpp>
-#include <gnuradio/iqtlabs/image_inference.h>
+#include <chrono>
+#include <iomanip>
+#include <boost/algorithm/string.hpp>
+#include <boost/filesystem.hpp>
+#include <pmt/pmt.h>
 #include "base_impl.h"
 
 namespace gr {
 namespace iqtlabs {
+        std::string base_impl::get_prefix_file_(const std::string &file, const std::string &prefix) {
+            boost::filesystem::path orig_path(file);
+            std::string basename(orig_path.filename().c_str());
+            std::string dirname(boost::filesystem::canonical(orig_path.parent_path()).c_str());
+            return dirname + "/" + prefix + basename;
+        }
 
-using input_type = float;
-using output_type = unsigned char;
+        std::string base_impl::get_dotfile_(const std::string &file) {
+            return get_prefix_file_(file, ".");
+        }
 
-typedef struct output_item {
-    uint64_t rx_freq;
-    double ts;
-    cv::Mat *buffer;
-} output_item_type;
+        double base_impl::host_now_()
+        {
+            const auto now_millis = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now().time_since_epoch());
+            double now = double(now_millis.count()) / 1e3;
+            return now;
+        }
 
-class image_inference_impl : public image_inference, base_impl
-{
-private:
-    int x_, y_, vlen_, norm_type_, colormap_, interpolation_, flip_;
-    uint64_t last_rx_freq_, last_rx_time_;
-    double convert_alpha_, norm_alpha_, norm_beta_;
-    std::vector<output_item_type> output_q_;
-    boost::scoped_ptr<cv::Mat> points_buffer_, cmapped_buffer_;
-    std::string image_dir_;
-    pmt::pmt_t tag_;
+        std::string base_impl::host_now_str_(double host_now)
+        {
+            std::ostringstream ss;
+            ss << std::fixed << std::setprecision(3) << host_now;
+            return ss.str();
+        }
 
-    void process_items_(size_t c, const input_type* &in);
-    void create_image_();
-    void output_image_(output_type *out);
-    void delete_output_();
-
-public:
-    image_inference_impl(const std::string &tag, int vlen, int x, int y, const std::string &image_dir, double convert_alpha, double norm_alpha, double norm_beta, int norm_type, int colormap, int interpolation, int flip);
-    ~image_inference_impl();
-    int general_work(int noutput_items,
-                     gr_vector_int& ninput_items,
-                     gr_vector_const_void_star& input_items,
-                     gr_vector_void_star& output_items);
-    void forecast(int noutput_items, gr_vector_int& ninput_items_required);
-};
-
-} // namespace iqtlabs
-} // namespace gr
-
-#endif /* INCLUDED_IQTLABS_IMAGE_INFERENCE_IMPL_H */
+        pmt::pmt_t base_impl::make_rx_time_key_(double now)
+        {
+            uint64_t now_sec = uint64_t(now);
+            return pmt::make_tuple(pmt::from_uint64(now_sec), pmt::from_double(now - now_sec));
+        }
+    } /* namespace iqtlabs */
+} /* namespace gr */

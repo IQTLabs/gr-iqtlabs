@@ -5,19 +5,51 @@ flags: [python, cpp]
 
 templates:
   imports: from gnuradio import iqtlabs
-  make: iqtlabs.image_inference(${tag}, ${vlen})
+  make: iqtlabs.image_inference(${tag}, ${vlen}, ${x}, ${y}, ${image_dir}, ${convert_alpha}, ${norm_alpha}, ${norm_beta}, ${norm_type}, ${colormap}, ${interpolation})
 
 cpp_templates:
   includes: ['#include <gnuradio/iqtlabs/image_inference.h>']
   declarations: 'gr::iqtlabs::image_inference::sptr ${id};'
-  make: 'this->${id} = gr::iqtlabs::image_inference::make(${tag}, ${vlen});'
+  make: 'this->${id} = gr::iqtlabs::image_inference::make(${tag}, ${vlen}, ${x}, ${y}, ${image_dir}, ${convert_alpha}, ${norm_alpha}, ${norm_beta}, ${norm_type}, ${colormap}, ${interpolation});'
   link: ['libgnuradio-iqtlabs.so']
 
 parameters:
 - id: tag
   dtype: string
+  default: 'rx_freq'
 - id: vlen
   dtype: int
+- id: x
+  dtype: int
+- id: y
+  dtype: int
+- id: image_dir
+  dtype: str
+- id: convert_alpha
+  dtype: float
+  default: 255
+- id: norm_alpha
+  dtype: float
+  default: 0
+- id: norm_beta
+  dtype: float
+  default: 1
+- id: norm_type
+  dtype: int
+  default: 32 # https://docs.opencv.org/3.4/d2/de8/group__core__array.html (cv::NORM_MINMAX)
+- id: colormap
+  dtype: int
+  default: 20 # https://docs.opencv.org/4.x/d3/d50/group__imgproc__colormap.html (cv::TURBO)
+- id: interpolation
+  dtype: int
+  default: 2 # https://docs.opencv.org/3.4/da/d54/group__imgproc__transform.html (cv::INTER_CUBIC)
+- id: flip
+  dtype: int
+  default: 99 # https://docs.opencv.org/3.4/d2/de8/group__core__array.html (default no flip)
+
+asserts:
+  - ${ tag != "" }
+  - ${ vlen > 0 }
 
 inputs:
 - label: input
@@ -26,5 +58,9 @@ inputs:
   vlen: ${ vlen }
 
 outputs:
+- label: input
+  domain: stream
+  dtype: byte
+  vlen: ${ x * y }
 
 file_format: 1

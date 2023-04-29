@@ -12,6 +12,7 @@ list(APPEND iqtlabs_sources
     retune_fft_impl.cc
     write_freq_samples_impl.cc
     image_inference_impl.cc
+    base_impl.cc
 )
 
 set(iqtlabs_sources "${iqtlabs_sources}" PARENT_SCOPE)
@@ -21,7 +22,7 @@ if(NOT iqtlabs_sources)
 endif(NOT iqtlabs_sources)
 
 add_library(gnuradio-iqtlabs SHARED ${iqtlabs_sources})
-target_link_libraries(gnuradio-iqtlabs ${Boost_LIBRARIES} gnuradio::gnuradio-runtime )
+target_link_libraries(gnuradio-iqtlabs ${Boost_LIBRARIES} ${OpenCV_LIBS} gnuradio::gnuradio-runtime )
 target_include_directories(gnuradio-iqtlabs
     PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/../include>
     PUBLIC $<INSTALL_INTERFACE:include>

@@ -241,6 +241,7 @@ class vector_roller(gr.sync_block):
         output_items[0][:] = [np.roll(v, int(self.nfft / 2)) for v in input_items[0]]
         return len(output_items[0])
 
+
 class qa_retune_fft(gr_unittest.TestCase):
     def test_retune_fft_no_roll(self):
         self.retune_fft(False)
@@ -353,6 +354,7 @@ class qa_retune_fft(gr_unittest.TestCase):
                     tuning_range = int(config["tuning_range"])
                     if tuning_range != last_tuning_range:
                         tuning_range_changes += 1
+                        print('tuning_range_changes:', tuning_range_changes)
                     last_tuning_range = tuning_range
                     self.assertTrue(
                         (
@@ -374,17 +376,16 @@ class qa_retune_fft(gr_unittest.TestCase):
                     fs = [int(f) for f in buckets.keys()]
                     self.assertGreaterEqual(min(fs), tuning_range_freq_start)
                     self.assertLessEqual(max(fs), tuning_range_freq_end)
-                    records.extend(
-                        [
-                            {
-                                "ts": ts,
-                                "f": float(freq),
-                                "v": float(value),
-                                "t": tuning_range,
-                            }
-                            for freq, value in buckets.items()
-                        ]
-                    )
+                    new_records = [
+                        {
+                            "ts": ts,
+                            "f": float(freq),
+                            "v": float(value),
+                            "t": tuning_range,
+                        }
+                        for freq, value in buckets.items()
+                    ]
+                    records.extend(new_records)
                     last_buckets = buckets
 
             top_count = sorted(bucket_counts.items(), key=lambda x: x[1], reverse=True)[
