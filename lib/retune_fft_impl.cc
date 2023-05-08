@@ -202,24 +202,18 @@
  *    limitations under the License.
  */
 
-#include <chrono>
 #include <cstdint>
 #include <fstream>
-#include <iomanip>
 #include <ios>
 #include <iostream>
 #include <sstream>
 #include <stdexcept>
 #include <boost/algorithm/string.hpp>
-
 #include <gnuradio/io_signature.h>
 #include "retune_fft_impl.h"
 
 namespace gr {
     namespace iqtlabs {
-
-        static const pmt::pmt_t RX_TIME = pmt::intern("rx_time");
-        static const pmt::pmt_t TUNE = pmt::mp("tune");
         static const size_t OUT_BUF_MAX = 1024 * 1024 * 64;
 
         retune_fft::sptr
@@ -314,17 +308,6 @@ namespace gr {
             close_();
         }
 
-        std::string retune_fft_impl::get_prefix_file_(const std::string &file, const std::string &prefix) {
-            boost::filesystem::path orig_path(file);
-            std::string basename(orig_path.filename().c_str());
-            std::string dirname(boost::filesystem::canonical(orig_path.parent_path()).c_str());
-            return dirname + "/" + prefix + basename;
-        }
-
-        std::string retune_fft_impl::get_dotfile_(const std::string &file) {
-            return get_prefix_file_(file, ".");
-        }
-
         void retune_fft_impl::write_(const char *data, size_t len) {
             if (!outbuf_p->empty()) {
                 outbuf_p->write(data, len);
@@ -344,20 +327,6 @@ namespace gr {
                  outbuf_p->reset();
                  rename(dotfile_.c_str(), file_.c_str());
              }
-        }
-
-        double retune_fft_impl::host_now_()
-        {
-            const auto now_millis = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now().time_since_epoch());
-            double now = double(now_millis.count()) / 1e3;
-            return now;
-        }
-
-        std::string retune_fft_impl::host_now_str_(double host_now)
-        {
-            std::ostringstream ss;
-            ss << std::fixed << std::setprecision(3) << host_now;
-            return ss.str();
         }
 
         void retune_fft_impl::retune_now_()
@@ -515,7 +484,7 @@ namespace gr {
                     rx_freq_tags.push_back(tag);
                     continue;
                 }
-                if (tag.key == RX_TIME) {
+                if (tag.key == RX_TIME_KEY) {
                     const double rx_time = pmt::to_uint64(pmt::tuple_ref(tag.value, 0)) +
                         pmt::to_double(pmt::tuple_ref(tag.value, 1));
                     rx_times.push_back(rx_time);

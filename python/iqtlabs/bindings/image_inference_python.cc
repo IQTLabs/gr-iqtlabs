@@ -14,7 +14,7 @@
 /* BINDTOOL_GEN_AUTOMATIC(0)                                                       */
 /* BINDTOOL_USE_PYGCCXML(0)                                                        */
 /* BINDTOOL_HEADER_FILE(image_inference.h)                                        */
-/* BINDTOOL_HEADER_FILE_HASH(7e38388417a584ca20b637ddc58efb98)                     */
+/* BINDTOOL_HEADER_FILE_HASH(d12bdade23ee02594f49a2e7324b908b)                     */
 /***********************************************************************************/
 
 #include <pybind11/complex.h>
@@ -34,7 +34,6 @@ void bind_image_inference(py::module& m)
 
 
     py::class_<image_inference,
-               gr::sync_block,
                gr::block,
                gr::basic_block,
                std::shared_ptr<image_inference>>(m, "image_inference", D(image_inference))
@@ -42,6 +41,16 @@ void bind_image_inference(py::module& m)
         .def(py::init(&image_inference::make),
              py::arg("tag"),
              py::arg("vlen"),
+             py::arg("x"),
+             py::arg("y"),
+             py::arg("image_dir"),
+             py::arg("convert_alpha"),
+             py::arg("norm_alpha"),
+             py::arg("norm_beta"),
+             py::arg("norm_type"),
+             py::arg("colormap"),
+             py::arg("interpolation"),
+             py::arg("flip"),
              D(image_inference, make))
 
 

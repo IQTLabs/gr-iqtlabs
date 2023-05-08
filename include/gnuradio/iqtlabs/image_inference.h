@@ -206,7 +206,7 @@
 #define INCLUDED_IQTLABS_IMAGE_INFERENCE_H
 
 #include <gnuradio/iqtlabs/api.h>
-#include <gnuradio/sync_block.h>
+#include <gnuradio/block.h>
 
 namespace gr {
 namespace iqtlabs {
@@ -216,7 +216,7 @@ namespace iqtlabs {
  * \ingroup iqtlabs
  *
  */
-class IQTLABS_API image_inference : virtual public gr::sync_block
+class IQTLABS_API image_inference : virtual public gr::block
 {
 public:
     typedef std::shared_ptr<image_inference> sptr;
@@ -229,7 +229,7 @@ public:
      * class. iqtlabs::image_inference::make is the public interface for
      * creating new instances.
      */
-    static sptr make(const std::string &tag, int vlen);
+    static sptr make(const std::string &tag, int vlen, int x, int y, const std::string &image_dir, double convert_alpha, double norm_alpha, double norm_beta, int norm_type, int colormap, int interpolation, int flip);
 };
 
 } // namespace iqtlabs

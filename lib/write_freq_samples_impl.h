@@ -210,16 +210,16 @@
 #include <boost/iostreams/filtering_stream.hpp>
 #include <boost/iostreams/filter/zstd.hpp>
 #include <boost/scoped_ptr.hpp>
-
 #include <gnuradio/iqtlabs/write_freq_samples.h>
+#include "base_impl.h"
+
 
 namespace gr {
 namespace iqtlabs {
 
-class write_freq_samples_impl : public write_freq_samples
+class write_freq_samples_impl : public write_freq_samples, base_impl
 {
 private:
-    uint64_t host_now_();
     std::string get_prefix_file_(const std::string &file, const std::string &prefix);
     std::string get_dotfile_(const std::string &file);
     void write_(const char *data, size_t len);

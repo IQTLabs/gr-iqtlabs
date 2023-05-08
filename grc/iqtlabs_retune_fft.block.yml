@@ -61,6 +61,7 @@ asserts:
 parameters:
 - id: tag
   dtype: string
+  default: 'rx_freq'
 - id: vlen
   dtype: int
 - id: nfft

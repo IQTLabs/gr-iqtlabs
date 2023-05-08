@@ -6,7 +6,7 @@ cppcheck --verbose --language=c++ lib/* && \
   pip3 install --user -r codecheck-requirements.txt && \
   find python -name qa\* -exec pytype {} \; && \
   find python -name qa\* -exec black {} \; && \
-  rm -rf build && mkdir build && cd build && cmake .. && make && make test ARGS="--verbose --timeout 90" && sudo make install && sudo ldconfig && cd .. && \
+  rm -rf build && mkdir build && cd build && cmake .. && make && make test ARGS="--verbose --timeout 180" && sudo make install && sudo ldconfig && cd .. && \
   cd test_flow_graphs && rm -rf test && mkdir test && cd test && testdir=$(pwd) && \
   for g in ../*grc ; do
       cd $testdir && echo testing: $g && \

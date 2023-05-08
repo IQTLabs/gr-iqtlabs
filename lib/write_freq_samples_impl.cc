@@ -202,7 +202,6 @@
  *    limitations under the License.
  */
 
-#include <chrono>
 #include <fstream>
 #include <ios>
 #include <iostream>
@@ -242,13 +241,6 @@ write_freq_samples_impl::write_freq_samples_impl(const std::string &tag, uint64_
 
 write_freq_samples_impl::~write_freq_samples_impl() {
     close_();
-}
-
-uint64_t write_freq_samples_impl::host_now_()
-{
-    const std::chrono::seconds sec(1);
-    const auto now = std::chrono::system_clock::now();
-    return now.time_since_epoch() / sec;
 }
 
 std::string write_freq_samples_impl::get_prefix_file_(const std::string &file, const std::string &prefix) {

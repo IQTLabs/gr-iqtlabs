@@ -202,17 +202,11 @@
  *    limitations under the License.
  */
 
-#include <chrono>
 #include "tuneable_test_source_impl.h"
 #include <gnuradio/io_signature.h>
 
 namespace gr {
 namespace iqtlabs {
-
-static const pmt::pmt_t CMD_KEY = pmt::mp("cmd");
-static const pmt::pmt_t FREQ_KEY = pmt::mp("freq");
-static const pmt::pmt_t TIME_KEY = pmt::string_to_symbol("rx_time");
-static const pmt::pmt_t RX_FREQ_KEY = pmt::string_to_symbol("rx_freq");
 
 using output_type = gr_complex;
 tuneable_test_source::sptr tuneable_test_source::make(float freq_divisor)
@@ -260,7 +254,6 @@ tuneable_test_source_impl::recv_cmd(pmt::pmt_t msg)
             if (pmt::is_number(val)) {
                 last_freq = pmt::to_double(val);
                 tag_now = true;
-                d_logger->debug("tag now with frequency {}", last_freq);
             }
         }
         list_of_items = pmt::cdr(list_of_items);
@@ -277,15 +270,11 @@ int tuneable_test_source_impl::work(int noutput_items,
         std::stringstream str;
         str << name() << unique_id();
         pmt::pmt_t _id = pmt::string_to_symbol(str.str());
-        const auto now_millis = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now().time_since_epoch());
-        double now = double(now_millis.count()) / 1e3;
-        uint64_t now_sec = now;
-        double now_frac = now - now_sec;
-        pmt::pmt_t val = pmt::make_tuple(pmt::from_uint64(now_sec), pmt::from_double(now_frac));
-        this->add_item_tag(0, nitems_written(0), TIME_KEY, val, _id);
+        this->add_item_tag(0, nitems_written(0), RX_TIME_KEY, make_rx_time_key_(host_now_()), _id);
         this->add_item_tag(0, nitems_written(0), RX_FREQ_KEY, pmt::from_double(last_freq), _id);
         last_sample = gr_complex(last_freq / d_freq_divisor, last_freq / d_freq_divisor);
         tag_now = false;
+        d_logger->debug("tag now with frequency {}", last_freq);
     }
     std::fill_n(out, noutput_items, last_sample);
     return noutput_items;
