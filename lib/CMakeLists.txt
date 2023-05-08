@@ -13,6 +13,7 @@ list(APPEND iqtlabs_sources
     write_freq_samples_impl.cc
     image_inference_impl.cc
     base_impl.cc
+    vector_to_json_impl.cc
 )
 
 set(iqtlabs_sources "${iqtlabs_sources}" PARENT_SCOPE)
