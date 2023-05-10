@@ -22,6 +22,7 @@ namespace py = pybind11;
     void bind_retune_fft(py::module& m);
     void bind_write_freq_samples(py::module& m);
     void bind_image_inference(py::module& m);
+    void bind_vector_to_json(py::module& m);
 // ) END BINDING_FUNCTION_PROTOTYPES
 
 
@@ -54,5 +55,6 @@ PYBIND11_MODULE(iqtlabs_python, m)
     bind_retune_fft(m);
     bind_write_freq_samples(m);
     bind_image_inference(m);
+    bind_vector_to_json(m);
     // ) END BINDING_FUNCTION_CALLS
 }

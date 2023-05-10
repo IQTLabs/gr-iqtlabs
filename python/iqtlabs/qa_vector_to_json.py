@@ -202,242 +202,74 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
 #
-import glob
+
 import json
 import os
-import re
-import subprocess
-import time
+import pmt
 import tempfile
-from collections import defaultdict
-import numpy as np
-import pandas as pd
-from gnuradio import gr, gr_unittest
-from gnuradio import blocks
-from gnuradio import fft
-from gnuradio.fft import window
+import time
+from gnuradio import gr, gr_unittest, blocks
 
+# from gnuradio import blocks
 try:
-    from gnuradio.iqtlabs import retune_fft, tuneable_test_source
+    from gnuradio.iqtlabs import vector_to_json_ff, tuneable_test_source
 except ImportError:
+    import os
     import sys
 
     dirname, filename = os.path.split(os.path.abspath(__file__))
     sys.path.append(os.path.join(dirname, "bindings"))
-    from gnuradio.iqtlabs import retune_fft, tuneable_test_source
+    from gnuradio.iqtlabs import vector_to_json_ff, tuneable_test_source
 
 
-class vector_roller(gr.sync_block):
-    def __init__(self, nfft):
-        gr.sync_block.__init__(
-            self,
-            name="vector_roller",
-            in_sig=[(np.complex64, nfft)],
-            out_sig=[(np.complex64, nfft)],
-        )
-        self.nfft = nfft
+class qa_vector_to_json(gr_unittest.TestCase):
+    def setUp(self):
+        self.tb = gr.top_block()
 
-    def work(self, input_items, output_items):
-        output_items[0][:] = [np.roll(v, int(self.nfft / 2)) for v in input_items[0]]
-        return len(output_items[0])
+    def tearDown(self):
+        self.tb = None
 
-
-class qa_retune_fft(gr_unittest.TestCase):
-    def test_retune_fft_no_roll(self):
-        self.retune_fft(False)
-
-    def test_retune_fft_roll(self):
-        self.retune_fft(True)
-
-    def retune_fft(self, fft_roll):
-        tb = gr.top_block()
-
-        points = int(1024)
-        samp_rate = points * points
-        freq_start = int(1e9 / samp_rate) * samp_rate
-        freq_end = int(1.1e9 / samp_rate) * samp_rate
-        freq_mid = ((freq_end - freq_start) / 2) + freq_start
-        tuning_ranges = f"{freq_start}-{freq_mid},{freq_mid+samp_rate}-{freq_end}"
-        fft_write_count = 2
-        bucket_range = 1
+    def test_instance(self):
         with tempfile.TemporaryDirectory() as tmpdir:
-            test_file = os.path.join(tmpdir, "samples.csv")
-            iqtlabs_tuneable_test_source_0 = tuneable_test_source(freq_end)
-            iqtlabs_retune_fft_0 = retune_fft(
-                "rx_freq",
-                points,
-                points,
-                int(samp_rate),
-                int(freq_start),
-                int(freq_end),
-                int(samp_rate),
-                64,
-                2,
-                fft_roll,
-                1e-4,
-                1e4,
-                tmpdir,
-                fft_write_count,
-                bucket_range,
-                tuning_ranges,
-            )
-            fft_vxx_0 = fft.fft_vcc(
-                points, True, window.blackmanharris(points), True, 1
-            )
-            blocks_throttle_0 = blocks.throttle(
-                gr.sizeof_gr_complex * 1, samp_rate, True
-            )
-            blocks_stream_to_vector_0 = blocks.stream_to_vector(
-                gr.sizeof_gr_complex * 1, points
-            )
-            blocks_file_sink_0 = blocks.file_sink(gr.sizeof_char * 1, test_file, False)
-            blocks_file_sink_0.set_unbuffered(False)
-            blocks_complex_to_mag_0 = blocks.complex_to_mag(points)
-            blocks_nlog10_ff_0 = blocks.nlog10_ff(20, points, 0)
-            vr = vector_roller(points)
+            test_file = os.path.join(tmpdir, "out.json")
+            freq_divisor = 1e9
+            new_freq = 1e9 / 2
+            delay = 500
+            samp_rate = 32e3
+            msg = pmt.to_pmt({"freq": new_freq})
 
-            tb.msg_connect(
-                (iqtlabs_retune_fft_0, "tune"), (iqtlabs_tuneable_test_source_0, "cmd")
-            )
-            tb.connect((blocks_complex_to_mag_0, 0), (blocks_nlog10_ff_0, 0))
-            tb.connect((blocks_nlog10_ff_0, 0), (iqtlabs_retune_fft_0, 0))
-            tb.connect((blocks_stream_to_vector_0, 0), (fft_vxx_0, 0))
-            tb.connect((blocks_throttle_0, 0), (blocks_stream_to_vector_0, 0))
-            if fft_roll:
-                tb.connect((fft_vxx_0, 0), (vr, 0))
-                tb.connect((vr, 0), (blocks_complex_to_mag_0, 0))
-            else:
-                tb.connect((fft_vxx_0, 0), (blocks_complex_to_mag_0, 0))
-            tb.connect((iqtlabs_retune_fft_0, 0), (blocks_file_sink_0, 0))
-            tb.connect((iqtlabs_tuneable_test_source_0, 0), (blocks_throttle_0, 0))
+            source = tuneable_test_source(freq_divisor)
+            instance = vector_to_json_ff(int(1024))
+            strobe = blocks.message_strobe(msg, delay)
+            throttle = blocks.throttle(gr.sizeof_gr_complex * 1, samp_rate, True)
+            c2r = blocks.complex_to_real()
+            s2v = blocks.stream_to_vector(gr.sizeof_float, 1024)
+            sink = blocks.file_sink(1, test_file, False)
 
-            tb.start()
+            self.tb.msg_connect((strobe, "strobe"), (source, "cmd"))
+            self.tb.connect((source, 0), (throttle, 0))
+            self.tb.connect((throttle, 0), (c2r, 0))
+            self.tb.connect((c2r, 0), (s2v, 0))
+            self.tb.connect((s2v, 0), (instance, 0))
+            self.tb.connect((instance, 0), (sink, 0))
 
-            # Since test source generates the same samples for the same frequency value,
-            # the same frequency must have the same power for repeated observations.
-            records = []
-            bucket_counts = defaultdict(int)
-            tuning_range_changes = 0
+            self.tb.start()
+            time.sleep((delay / 1000) * 10)
+            self.tb.stop()
+            self.tb.wait()
 
-            startup_timeout = 1
-            for _ in range(10):
-                if os.path.exists(test_file):
-                    break
-                time.sleep(startup_timeout)
-            self.assertTrue(os.path.exists(test_file))
-
-            with open(test_file, encoding="utf8") as f:
-                linebuffer = ""
-                last_data = time.time()
-                last_ts = 0
-                last_buckets = None
-                last_tuning_range = None
-                file_poll_timeout = 0.001
-                while tuning_range_changes < 5:
-                    self.assertLess(time.time() - last_data, 5)
-                    line = f.readline()
-                    linebuffer = linebuffer + line
-                    if not linebuffer.endswith("\n"):
-                        time.sleep(file_poll_timeout)
-                        continue
-                    last_data = time.time()
-                    line = linebuffer.strip()
-                    linebuffer = ""
-                    record = json.loads(line)
-                    ts = float(record["ts"])
-                    self.assertGreater(ts, last_ts)
-                    last_ts = ts
-                    config = record["config"]
-                    self.assertGreaterEqual(ts, record["sweep_start"])
-                    tuning_range_freq_start = config["tuning_range_freq_start"]
-                    tuning_range_freq_end = config["tuning_range_freq_end"]
-                    tuning_range = int(config["tuning_range"])
-                    if tuning_range != last_tuning_range:
-                        tuning_range_changes += 1
-                        print("tuning_range_changes:", tuning_range_changes)
-                    last_tuning_range = tuning_range
-                    self.assertTrue(
-                        (
-                            tuning_range_freq_start == freq_start
-                            and tuning_range_freq_end == freq_mid
-                        )
-                        or (
-                            tuning_range_freq_start == freq_mid + samp_rate
-                            and tuning_range_freq_end == freq_end
-                        )
+            with open(test_file, "r") as f:
+                lines = [line.strip() for line in f]
+                lines = lines[:-1]
+                lines = [json.loads(line) for line in lines]
+                self.assertTrue(lines)
+                for line in lines:
+                    self.assertLess(
+                        time.time() - float(line["tags"]["rx_time"]), 60, line
                     )
-                    self.assertEqual(config["freq_start"], freq_start)
-                    self.assertEqual(config["freq_end"], freq_end)
-                    self.assertEqual(config["sample_rate"], samp_rate)
-                    self.assertEqual(config["nfft"], points)
-                    buckets = record["buckets"]
-                    self.assertTrue(buckets, (last_buckets, buckets))
-                    bucket_counts[len(buckets)] += 1
-                    fs = [int(f) for f in buckets.keys()]
-                    self.assertGreaterEqual(min(fs), tuning_range_freq_start)
-                    self.assertLessEqual(max(fs), tuning_range_freq_end)
-                    new_records = [
-                        {
-                            "ts": ts,
-                            "f": float(freq),
-                            "v": float(value),
-                            "t": tuning_range,
-                        }
-                        for freq, value in buckets.items()
-                    ]
-                    records.extend(new_records)
-                    last_buckets = buckets
-
-            top_count = sorted(bucket_counts.items(), key=lambda x: x[1], reverse=True)[
-                0
-            ]
-            expected_buckets = round(points * bucket_range)
-            self.assertEqual(top_count[0], expected_buckets)
-            all_df = pd.DataFrame(records)[["f", "v", "t"]].sort_values("f")
-            all_df["v"] = all_df["v"].round(2)
-
-            for _, df in all_df.groupby("t"):
-                # must have plausible unscaled dB value
-                self.assertTrue(0 <= df["v"].min() <= 1, df["v"].min())
-                self.assertTrue(50 <= df["v"].max() <= 60, df["v"].max())
-                df["u"] = df.groupby("f")["v"].transform("nunique")
-                non_unique_v = df[df["u"] != 1]
-                f_count = df.groupby("f").count()
-                pd.set_option("display.max_rows", None)
-                f_count_min = f_count["u"].min()
-                # every frequency must be observed more than once.
-                self.assertGreater(f_count_min, 1, df[df["u"] == 1])
-                self.assertTrue(non_unique_v.empty, (non_unique_v, df))
-                # must have even frequency coverage within the range
-                df["d"] = df["f"].diff()
-                df = df[(df["d"] != 0) & (df["d"].notna())]
-                self.assertTrue(df[df["d"] != points].empty, df[df["d"] != points])
-
-            hz_re = re.compile(".+_([0-9]+)Hz.+")
-            first_zst_fft_file = sorted(glob.glob(os.path.join(tmpdir, "*.zst")))[:1][0]
-            first_hz_match = hz_re.match(first_zst_fft_file)
-            if not first_hz_match:
-                self.fail(f"{first_zst_fft_file} did not match regexp")
-                return
-            first_hz = int(first_hz_match.group(1))
-            zst_fft_files = sorted(
-                glob.glob(os.path.join(tmpdir, f"*{first_hz}Hz_{samp_rate}sps.raw.zst"))
-            )
-            self.assertGreater(len(zst_fft_files), 2)
-            first_sample = None
-            for zst_file in zst_fft_files:
-                subprocess.check_call(["zstd", "-d", zst_file])
-                bin_file = zst_file.replace(".zst", "")
-                sample = np.fromfile(bin_file, dtype=np.float32)
-                if first_sample is None:
-                    first_sample = sample
-                self.assertTrue(np.array_equal(first_sample, sample))
-                self.assertGreater(len(np.unique(sample)), 1)
-                self.assertEqual(len(sample), fft_write_count * points)
-
-        tb.stop()
-        tb.wait()
+                    self.assertEqual(1024, len(line["values"]), line)
+                    self.assertEqual(new_freq, float(line["tags"]["rx_freq"]), line)
 
 
 if __name__ == "__main__":
-    gr_unittest.run(qa_retune_fft)
+    gr_unittest.run(qa_vector_to_json)
