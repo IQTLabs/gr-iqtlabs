@@ -242,16 +242,11 @@ class vector_roller(gr.sync_block):
         return len(output_items[0])
 
 
-class qa_retune_fft(gr_unittest.TestCase):
-    def test_retune_fft_no_roll(self):
-        self.retune_fft(False)
-
-    def test_retune_fft_roll(self):
-        self.retune_fft(True)
+class qa_retune_fft_base:
+    def __init__(self):
+        self.tb = None
 
     def retune_fft(self, fft_roll):
-        tb = gr.top_block()
-
         points = int(1024)
         samp_rate = points * points
         freq_start = int(1e9 / samp_rate) * samp_rate
@@ -296,22 +291,22 @@ class qa_retune_fft(gr_unittest.TestCase):
             blocks_nlog10_ff_0 = blocks.nlog10_ff(20, points, 0)
             vr = vector_roller(points)
 
-            tb.msg_connect(
+            self.tb.msg_connect(
                 (iqtlabs_retune_fft_0, "tune"), (iqtlabs_tuneable_test_source_0, "cmd")
             )
-            tb.connect((blocks_complex_to_mag_0, 0), (blocks_nlog10_ff_0, 0))
-            tb.connect((blocks_nlog10_ff_0, 0), (iqtlabs_retune_fft_0, 0))
-            tb.connect((blocks_stream_to_vector_0, 0), (fft_vxx_0, 0))
-            tb.connect((blocks_throttle_0, 0), (blocks_stream_to_vector_0, 0))
+            self.tb.connect((blocks_complex_to_mag_0, 0), (blocks_nlog10_ff_0, 0))
+            self.tb.connect((blocks_nlog10_ff_0, 0), (iqtlabs_retune_fft_0, 0))
+            self.tb.connect((blocks_stream_to_vector_0, 0), (fft_vxx_0, 0))
+            self.tb.connect((blocks_throttle_0, 0), (blocks_stream_to_vector_0, 0))
             if fft_roll:
-                tb.connect((fft_vxx_0, 0), (vr, 0))
-                tb.connect((vr, 0), (blocks_complex_to_mag_0, 0))
+                self.tb.connect((fft_vxx_0, 0), (vr, 0))
+                self.tb.connect((vr, 0), (blocks_complex_to_mag_0, 0))
             else:
-                tb.connect((fft_vxx_0, 0), (blocks_complex_to_mag_0, 0))
-            tb.connect((iqtlabs_retune_fft_0, 0), (blocks_file_sink_0, 0))
-            tb.connect((iqtlabs_tuneable_test_source_0, 0), (blocks_throttle_0, 0))
+                self.tb.connect((fft_vxx_0, 0), (blocks_complex_to_mag_0, 0))
+            self.tb.connect((iqtlabs_retune_fft_0, 0), (blocks_file_sink_0, 0))
+            self.tb.connect((iqtlabs_tuneable_test_source_0, 0), (blocks_throttle_0, 0))
 
-            tb.start()
+            self.tb.start()
 
             # Since test source generates the same samples for the same frequency value,
             # the same frequency must have the same power for repeated observations.
@@ -435,9 +430,32 @@ class qa_retune_fft(gr_unittest.TestCase):
                 self.assertGreater(len(np.unique(sample)), 1)
                 self.assertEqual(len(sample), fft_write_count * points)
 
-        tb.stop()
-        tb.wait()
+        self.tb.stop()
+        self.tb.wait()
+
+
+class qa_retune_fft_no_roll(gr_unittest.TestCase, qa_retune_fft_base):
+    def setUp(self):
+        self.tb = gr.top_block()
+
+    def tearDown(self):
+        self.tb = None
+
+    def test_retune_fft_no_roll(self):
+        self.retune_fft(False)
+
+
+class qa_retune_fft_roll(gr_unittest.TestCase, qa_retune_fft_base):
+    def setUp(self):
+        self.tb = gr.top_block()
+
+    def tearDown(self):
+        self.tb = None
+
+    def test_retune_fft_roll(self):
+        self.retune_fft(True)
 
 
 if __name__ == "__main__":
-    gr_unittest.run(qa_retune_fft)
+    gr_unittest.run(qa_retune_fft_no_roll)
+    gr_unittest.run(qa_retune_fft_roll)
