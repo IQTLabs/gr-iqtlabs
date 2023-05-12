@@ -383,6 +383,10 @@ class qa_retune_fft_base:
                     records.extend(new_records)
                     last_buckets = buckets
 
+            self.tb.stop()
+            self.tb.wait()
+            os.remove(test_file)
+
             top_count = sorted(bucket_counts.items(), key=lambda x: x[1], reverse=True)[
                 0
             ]
@@ -429,9 +433,9 @@ class qa_retune_fft_base:
                 self.assertTrue(np.array_equal(first_sample, sample))
                 self.assertGreater(len(np.unique(sample)), 1)
                 self.assertEqual(len(sample), fft_write_count * points)
-
-        self.tb.stop()
-        self.tb.wait()
+                os.remove(zst_file)
+            remaining_files = glob.glob(os.path.join(tmpdir, "*"))
+            print(f"remaining {remaining_files}")
 
 
 class qa_retune_fft_no_roll(gr_unittest.TestCase, qa_retune_fft_base):
