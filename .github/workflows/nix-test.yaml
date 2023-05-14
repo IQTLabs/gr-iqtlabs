@@ -17,4 +17,4 @@ jobs:
     - name: run test in nix-shell
       run: |
         nix-shell ${GITHUB_WORKSPACE}/.github/workflows/config/test-shell.nix \
-        --command bin/build_test.sh
+        --command bin/build_nix.sh

@@ -205,10 +205,12 @@
 import glob
 import json
 import os
+import pmt
 import re
 import subprocess
 import time
 import tempfile
+import zstandard
 from collections import defaultdict
 import numpy as np
 import pandas as pd
@@ -242,6 +244,30 @@ class vector_roller(gr.sync_block):
         return len(output_items[0])
 
 
+class pdu_decoder(gr.sync_block):
+    def __init__(self):
+        gr.sync_block.__init__(
+            self,
+            name="pdu_decoder",
+            in_sig=[],
+            out_sig=[],
+        )
+        self.message_port_register_in(pmt.intern("pdu"))
+        self.set_msg_handler(pmt.intern("pdu"), self.receive_pdu)
+        self.decompressor = zstandard.ZstdDecompressor()
+        self.json_output = []
+        self.compressed_received = 0
+        self.decompressed_received = 0
+
+    def receive_pdu(self, pdu):
+        compressed_payload = bytes(pmt.to_python(pmt.cdr(pdu)))
+        self.compressed_received += len(compressed_payload)
+        with self.decompressor.stream_reader(compressed_payload) as reader:
+            decompressed_payload = reader.read().decode("utf-8")
+            self.decompressed_received += len(decompressed_payload)
+            self.json_output.append(json.loads(decompressed_payload))
+
+
 class qa_retune_fft_base:
     def __init__(self):
         self.tb = None
@@ -255,6 +281,7 @@ class qa_retune_fft_base:
         tuning_ranges = f"{freq_start}-{freq_mid},{freq_mid+samp_rate}-{freq_end}"
         fft_write_count = 2
         bucket_range = 1
+
         with tempfile.TemporaryDirectory() as tmpdir:
             test_file = os.path.join(tmpdir, "samples.csv")
             iqtlabs_tuneable_test_source_0 = tuneable_test_source(freq_end)
@@ -276,6 +303,7 @@ class qa_retune_fft_base:
                 bucket_range,
                 tuning_ranges,
             )
+            pdu_decoder_0 = pdu_decoder()
             fft_vxx_0 = fft.fft_vcc(
                 points, True, window.blackmanharris(points), True, 1
             )
@@ -293,6 +321,9 @@ class qa_retune_fft_base:
 
             self.tb.msg_connect(
                 (iqtlabs_retune_fft_0, "tune"), (iqtlabs_tuneable_test_source_0, "cmd")
+            )
+            self.tb.msg_connect(
+                (iqtlabs_retune_fft_0, "json_output"), (pdu_decoder_0, "pdu")
             )
             self.tb.connect((blocks_complex_to_mag_0, 0), (blocks_nlog10_ff_0, 0))
             self.tb.connect((blocks_nlog10_ff_0, 0), (iqtlabs_retune_fft_0, 0))
@@ -429,6 +460,11 @@ class qa_retune_fft_base:
                 self.assertTrue(np.array_equal(first_sample, sample))
                 self.assertGreater(len(np.unique(sample)), 1)
                 self.assertEqual(len(sample), fft_write_count * points)
+
+            self.assertTrue(pdu_decoder_0.json_output)
+            self.assertGreater(
+                pdu_decoder_0.decompressed_received, pdu_decoder_0.compressed_received
+            )
 
         self.tb.stop()
         self.tb.wait()

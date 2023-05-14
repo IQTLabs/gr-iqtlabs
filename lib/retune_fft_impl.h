@@ -230,7 +230,7 @@ namespace gr {
 	void write_buckets_(double host_now, uint64_t rx_freq);
       void process_tags_(const input_type *in, size_t in_count, size_t in_first);
       void write_(const char *data, size_t len);
-      void open_(const std::string &file, size_t zlevel);
+      void open_(const std::string &file);
       void close_();
 
       pmt::pmt_t tag_;

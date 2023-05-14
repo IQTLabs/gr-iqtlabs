@@ -106,5 +106,8 @@ outputs:
   vlen: 1
 - label: tune
   domain: message
+- label: json_output
+  optional: true
+  domain: message
 
 file_format: 1

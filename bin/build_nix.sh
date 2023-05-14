@@ -1,5 +1,8 @@
 #!/bin/bash
 set -e
+python -m venv .venv
+source .venv/bin/activate
+sudo python -m pip install -r codecheck-requirements.txt
 export GRC_BLOCKS_PATH=/var/empty/local/share/gnuradio/grc/blocks
 export CXXFLAGS="-I /var/empty/local/include/ -L /var/empty/local/lib/"
 cppcheck --verbose --language=c++ lib/* && \
