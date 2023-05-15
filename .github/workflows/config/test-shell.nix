@@ -3,7 +3,7 @@ with (import (builtins.fetchGit {
   name = "nixpkgs-03-08-2023";
   url = "https://github.com/nixos/nixpkgs/";
   ref = "refs/heads/nixpkgs-unstable";
-  rev = "1e383aada51b416c6c27d4884d2e258df201bc11";
+  # rev = "1e383aada51b416c6c27d4884d2e258df201bc11";
 }) {} );
 let
   test-py-packages = python-packages: with python-packages; [
