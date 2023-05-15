@@ -1,6 +1,5 @@
 #!/bin/bash
 set -e
-export GRC_BLOCKS_PATH=/var/empty/local/share/gnuradio/grc/blocks
 export CXXFLAGS="-I /var/empty/local/include/ -L /var/empty/local/lib/"
 cppcheck --verbose --language=c++ lib/* && \
   rm -rf build && mkdir build && cd build && cmake .. && make && \
