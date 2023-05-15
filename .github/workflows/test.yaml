@@ -11,7 +11,16 @@ jobs:
         fetch-depth: 0
     - name: build_test 
       run: |
-        bin/apt_get.sh && bin/build_test.sh
+        bin/apt_get.sh && bin/build_test.sh && bin/test_grc310.sh
+  test-2004-gnuradio39:
+    runs-on: ubuntu-20.04
+    steps:
+    - uses: actions/checkout@v3
+      with:
+        fetch-depth: 0
+    - name: build_test
+      run: |
+        bin/apt_get_39.sh && bin/build_test.sh
   test-2004:
     runs-on: ubuntu-20.04
     steps:
@@ -20,4 +29,4 @@ jobs:
         fetch-depth: 0
     - name: build_test
       run: |
-        sudo apt-get -y update && sudo add-apt-repository ppa:gnuradio/gnuradio-releases && bin/apt_get.sh && bin/build_test.sh
+        sudo apt-get -y update && sudo add-apt-repository ppa:gnuradio/gnuradio-releases && bin/apt_get.sh && bin/build_test.sh && bin/test_grc310.sh
