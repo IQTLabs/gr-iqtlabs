@@ -1,6 +1,5 @@
 #!/bin/sh
 set -e
-export CXXFLAGS="-I /var/empty/local/include/ -L /var/empty/local/lib/"
 cppcheck --verbose --language=c++ lib/* && \
   pip3 install --user -r codecheck-requirements.txt && \
   find python -name qa\* -exec pytype {} \; && \

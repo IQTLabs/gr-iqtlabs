@@ -209,11 +209,15 @@
 #include <sstream>
 #include <stdexcept>
 #include <boost/algorithm/string.hpp>
+#include <boost/iostreams/copy.hpp>
 #include <gnuradio/io_signature.h>
 #include "retune_fft_impl.h"
 
 namespace gr {
     namespace iqtlabs {
+        const pmt::pmt_t JSON_OUTPUT = pmt::mp("json_output");
+        const boost::iostreams::zstd_params zstd_params = boost::iostreams::zstd_params(boost::iostreams::zstd::default_compression);
+
         retune_fft::sptr
         retune_fft::make(const std::string &tag, int vlen, int nfft, uint64_t samp_rate, uint64_t freq_start, uint64_t freq_end, int tune_step_hz, int tune_step_fft, int skip_tune_step_fft, bool fft_roll, double fft_min, double fft_max, const std::string &sdir, uint64_t write_step_fft, double bucket_range, const std::string &tuning_ranges)
         {
@@ -253,6 +257,7 @@ namespace gr {
         {
             outbuf_p.reset(new boost::iostreams::filtering_ostream());
             message_port_register_out(TUNE);
+            message_port_register_out(JSON_OUTPUT);
             bucket_offset_ = round(float((vlen_ - round(bucket_range_ * vlen_)) / 2));
             if (tuning_ranges.length() == 0) {
                 if (freq_end <= freq_start) {
@@ -312,11 +317,11 @@ namespace gr {
             }
         }
 
-        void retune_fft_impl::open_(const std::string &file, size_t zlevel) {
+        void retune_fft_impl::open_(const std::string &file) {
             close_();
             file_ = file;
             dotfile_ = get_dotfile_(file_);
-            outbuf_p->push(boost::iostreams::zstd_compressor(boost::iostreams::zstd_params(zlevel)));
+            outbuf_p->push(boost::iostreams::zstd_compressor(zstd_params));
             outbuf_p->push(boost::iostreams::file_sink(file_));
         }
 
@@ -429,7 +434,7 @@ namespace gr {
                 std::to_string(uint64_t(nfft_)) + "points_" +
                 std::to_string(uint64_t(rx_freq)) + "Hz_" +
                 std::to_string(uint64_t(samp_rate_)) + "sps.raw.zst";
-            open_(bucket_path, 1);
+            open_(bucket_path);
         }
 
         void retune_fft_impl::write_buckets_(double host_now, uint64_t rx_freq)
@@ -468,6 +473,18 @@ namespace gr {
             ss << "}" << std::endl;
             const std::string s = ss.str();
             out_buf_.insert(out_buf_.end(), s.begin(), s.end());
+            // TODO: migrate to PMT if/when PMT supports compressed payloads.
+            // TODO: compressing multiple messages together if latency not a concern.
+            std::stringstream uncompressed_ss(s);
+            std::stringstream compressed_ss;
+            boost::iostreams::filtering_streambuf<boost::iostreams::input> zstd_out;
+            zstd_out.push(boost::iostreams::zstd_compressor(zstd_params));
+            zstd_out.push(uncompressed_ss);
+            uncompressed_ss.flush();
+            boost::iostreams::copy(zstd_out, compressed_ss);
+            const std::string compressed_s = compressed_ss.str();
+            auto pdu = pmt::cons(pmt::make_dict(), pmt::init_u8vector(compressed_s.length(), (const uint8_t*)compressed_s.c_str()));
+            message_port_pub(JSON_OUTPUT, pdu);
         }
 
         void retune_fft_impl::process_tags_(const input_type *in, size_t in_count, size_t in_first)
