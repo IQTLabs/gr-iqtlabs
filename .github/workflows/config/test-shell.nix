@@ -7,35 +7,31 @@ with (import (builtins.fetchGit {
 }) {} );
 let
   test-py-packages = python-packages: with python-packages; [
-    pandas
-    numpy
-
-    pybind11
     cython
+    numpy
+    pandas
+    pybind11
+    zstandard
   ];
   python-with-packages = python3.withPackages test-py-packages;
 in
 mkShell {
   propagatedBuildInputs = [
-    # stuff cmake needs
-    spdlog
-    gmp
     boost
-    opencv
-    volk
-
+    cmake
+    cppcheck
+    gmp
     gnuradio
     gnuradio.python
     gnuradio.python.pkgs.numpy
-    gnuradio.python.pkgs.pybind11
     gnuradio.python.pkgs.pandas
-    cmake
-
-    zstd
-    boost
+    gnuradio.python.pkgs.pybind11
     libsndfile
+    opencv
     soapysdr
-    cppcheck
+    spdlog
     uhd
+    volk
+    zstd
   ];
 }
