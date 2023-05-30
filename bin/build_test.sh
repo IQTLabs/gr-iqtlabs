@@ -1,6 +1,6 @@
 #!/bin/sh
 set -e
-cppcheck --verbose --language=c++ lib/* && \
+cppcheck --verbose --language=c++ --error-exitcode=1 --enable=performance,portability lib/*.h lib/*.cc include/iqtlabs/*h && \
   pip3 install --user -r codecheck-requirements.txt && \
   find python -name qa\* -exec pytype {} \; && \
   find python -name qa\* -exec black {} \; && \
