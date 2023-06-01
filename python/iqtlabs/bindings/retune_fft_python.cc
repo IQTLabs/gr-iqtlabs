@@ -14,7 +14,7 @@
 /* BINDTOOL_GEN_AUTOMATIC(0)                                                       */
 /* BINDTOOL_USE_PYGCCXML(0)                                                        */
 /* BINDTOOL_HEADER_FILE(retune_fft.h)                                        */
-/* BINDTOOL_HEADER_FILE_HASH(6b44dac2cb5d952034e8cd5c9fc8bc2b)                     */
+/* BINDTOOL_HEADER_FILE_HASH(a681c053e27a5fc4a0e698dff87da6f5)                     */
 /***********************************************************************************/
 
 #include <pybind11/complex.h>
@@ -53,6 +53,7 @@ void bind_retune_fft(py::module& m)
              py::arg("write_step_fft"),
              py::arg("bucket_range"),
              py::arg("tuning_ranges"),
+             py::arg("description"),
              D(retune_fft, make))
 
 

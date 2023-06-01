@@ -219,13 +219,13 @@ namespace gr {
         const boost::iostreams::zstd_params zstd_params = boost::iostreams::zstd_params(boost::iostreams::zstd::default_compression);
 
         retune_fft::sptr
-        retune_fft::make(const std::string &tag, int vlen, int nfft, uint64_t samp_rate, uint64_t freq_start, uint64_t freq_end, int tune_step_hz, int tune_step_fft, int skip_tune_step_fft, bool fft_roll, double fft_min, double fft_max, const std::string &sdir, uint64_t write_step_fft, double bucket_range, const std::string &tuning_ranges)
+        retune_fft::make(const std::string &tag, int vlen, int nfft, uint64_t samp_rate, uint64_t freq_start, uint64_t freq_end, int tune_step_hz, int tune_step_fft, int skip_tune_step_fft, bool fft_roll, double fft_min, double fft_max, const std::string &sdir, uint64_t write_step_fft, double bucket_range, const std::string &tuning_ranges, const std::string &description)
         {
             return gnuradio::make_block_sptr<retune_fft_impl>(
-                                                              tag, vlen, nfft, samp_rate, freq_start, freq_end, tune_step_hz, tune_step_fft, skip_tune_step_fft, fft_roll, fft_min, fft_max, sdir, write_step_fft, bucket_range, tuning_ranges);
+                                                              tag, vlen, nfft, samp_rate, freq_start, freq_end, tune_step_hz, tune_step_fft, skip_tune_step_fft, fft_roll, fft_min, fft_max, sdir, write_step_fft, bucket_range, tuning_ranges, description);
         }
 
-        retune_fft_impl::retune_fft_impl(const std::string &tag, int vlen, int nfft, uint64_t samp_rate, uint64_t freq_start, uint64_t freq_end, int tune_step_hz, int tune_step_fft, int skip_tune_step_fft, bool fft_roll, double fft_min, double fft_max, const std::string &sdir, uint64_t write_step_fft, double bucket_range, const std::string &tuning_ranges)
+        retune_fft_impl::retune_fft_impl(const std::string &tag, int vlen, int nfft, uint64_t samp_rate, uint64_t freq_start, uint64_t freq_end, int tune_step_hz, int tune_step_fft, int skip_tune_step_fft, bool fft_roll, double fft_min, double fft_max, const std::string &sdir, uint64_t write_step_fft, double bucket_range, const std::string &tuning_ranges, const std::string &description)
             : gr::block("retune_fft",
                         gr::io_signature::make(1 /* min inputs */, 1 /* max inputs */, vlen * sizeof(input_type)),
                         gr::io_signature::make(1 /* min outputs */, 1 /*max outputs */, sizeof(output_type))),
@@ -253,7 +253,8 @@ namespace gr {
               sdir_(sdir),
               write_step_fft_(write_step_fft),
               write_step_fft_count_(write_step_fft),
-              bucket_range_(bucket_range)
+              bucket_range_(bucket_range),
+              description_(description)
         {
             outbuf_p.reset(new boost::iostreams::filtering_ostream());
             message_port_register_out(TUNE);
@@ -459,7 +460,8 @@ namespace gr {
                 "\"ts\": " << host_now_str_(host_now) <<
                 ", \"sweep_start\": " << host_now_str_(last_sweep_start_) <<
                 ", \"config\": {" <<
-                "  \"tuning_range\":" << last_tuning_range_ <<
+                "  \"description\": \"" << description_ << "\"" <<
+                ", \"tuning_range\":" << last_tuning_range_ <<
                 ", \"tuning_range_freq_start\": " << tuning_range_freq_start <<
                 ", \"tuning_range_freq_end\": " << tuning_range_freq_end <<
                 ", \"freq_start\": " << freq_start_ <<
