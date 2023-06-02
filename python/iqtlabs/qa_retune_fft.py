@@ -302,6 +302,7 @@ class qa_retune_fft_base:
                 fft_write_count,
                 bucket_range,
                 tuning_ranges,
+                "a text description",
             )
             pdu_decoder_0 = pdu_decoder()
             fft_vxx_0 = fft.fft_vcc(
@@ -375,6 +376,7 @@ class qa_retune_fft_base:
                     last_ts = ts
                     config = record["config"]
                     self.assertGreaterEqual(ts, record["sweep_start"])
+                    self.assertEqual("a text description", config["description"]),
                     tuning_range_freq_start = config["tuning_range_freq_start"]
                     tuning_range_freq_end = config["tuning_range_freq_end"]
                     tuning_range = int(config["tuning_range"])
