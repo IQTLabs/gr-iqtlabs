@@ -5607,20 +5607,6 @@ rules:
     - pattern: $F = tempfile.NamedTemporaryFile(...)
     - pattern: $F = tempfile.SpooledTemporaryFile(...)
   severity: ERROR
-- id: arbitrary-sleep
-  languages:
-  - python
-  message: time.sleep() call; did you mean to leave this in?
-  metadata:
-    category: best-practice
-    technology:
-    - python
-  patterns:
-  - pattern-not: time.sleep($F(...))
-  - pattern-either:
-    - pattern: "time.sleep($X: int)\n"
-    - pattern: "time.sleep($X: float)\n"
-  severity: ERROR
 - id: missing-hash-with-eq
   languages:
   - python
