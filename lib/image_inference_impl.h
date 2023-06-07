@@ -227,8 +227,8 @@ class image_inference_impl : public image_inference, base_impl
 {
 private:
     int x_, y_, vlen_, norm_type_, colormap_, interpolation_, flip_;
-    uint64_t last_rx_freq_, last_rx_time_;
-    double convert_alpha_, norm_alpha_, norm_beta_;
+    uint64_t last_rx_freq_;
+    double convert_alpha_, norm_alpha_, norm_beta_, last_rx_time_;
     std::vector<output_item_type> output_q_;
     boost::scoped_ptr<cv::Mat> points_buffer_, cmapped_buffer_;
     std::string image_dir_;

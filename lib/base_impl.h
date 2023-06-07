@@ -203,6 +203,7 @@
  */
 
 #include <string>
+#include <gnuradio/tags.h>
 
 namespace gr {
 namespace iqtlabs {
@@ -220,6 +221,7 @@ namespace iqtlabs {
               double host_now_();
               std::string host_now_str_(double host_now);
               pmt::pmt_t make_rx_time_key_(double host_now);
+              double rx_time_from_tag_(const gr::tag_t tag);
         };
     } /* namespace iqtlabs */
 } /* namespace gr */
