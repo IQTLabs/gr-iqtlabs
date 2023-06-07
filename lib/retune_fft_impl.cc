@@ -460,8 +460,8 @@ namespace gr {
                 "\"ts\": " << host_now_str_(host_now) <<
                 ", \"sweep_start\": " << host_now_str_(last_sweep_start_) <<
                 ", \"config\": {" <<
-                "  \"description\": \"" << description_ << "\"" <<
-                ", \"tuning_range\":" << last_tuning_range_ <<
+                "\"description\": \"" << description_ << "\"" <<
+                ", \"tuning_range\": " << last_tuning_range_ <<
                 ", \"tuning_range_freq_start\": " << tuning_range_freq_start <<
                 ", \"tuning_range_freq_end\": " << tuning_range_freq_end <<
                 ", \"freq_start\": " << freq_start_ <<
@@ -502,9 +502,7 @@ namespace gr {
                     continue;
                 }
                 if (tag.key == RX_TIME_KEY) {
-                    const double rx_time = pmt::to_uint64(pmt::tuple_ref(tag.value, 0)) +
-                        pmt::to_double(pmt::tuple_ref(tag.value, 1));
-                    rx_times.push_back(rx_time);
+                    rx_times.push_back(rx_time_from_tag_(tag));
                     continue;
                 }
             }
