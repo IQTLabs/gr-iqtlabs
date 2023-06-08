@@ -345,9 +345,7 @@ int image_inference_impl::general_work(int noutput_items,
             continue;
         }
         if (tag.key == RX_TIME_KEY) {
-            const double rx_time = pmt::to_uint64(pmt::tuple_ref(tag.value, 0)) +
-                pmt::to_double(pmt::tuple_ref(tag.value, 1));
-            rx_times.push_back(rx_time);
+            rx_times.push_back(rx_time_from_tag_(tag));
             continue;
         }
     }

@@ -241,5 +241,11 @@ namespace iqtlabs {
             uint64_t now_sec = uint64_t(now);
             return pmt::make_tuple(pmt::from_uint64(now_sec), pmt::from_double(now - now_sec));
         }
+
+        double base_impl::rx_time_from_tag_(const gr::tag_t tag)
+        {
+            return pmt::to_uint64(pmt::tuple_ref(tag.value, 0)) +
+                pmt::to_double(pmt::tuple_ref(tag.value, 1));
+        }
     } /* namespace iqtlabs */
 } /* namespace gr */
