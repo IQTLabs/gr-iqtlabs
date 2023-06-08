@@ -276,6 +276,7 @@ void image_inference_impl::create_image_()
         cv::normalize(*points_buffer_, *points_buffer_, norm_alpha_, norm_beta_, norm_type_);
         points_buffer_->convertTo(*cmapped_buffer_, CV_8UC3, convert_alpha_, 0);
         cv::applyColorMap(*cmapped_buffer_, *cmapped_buffer_, colormap_);
+        cv::cvtColor(*cmapped_buffer_, *cmapped_buffer_, cv::COLOR_BGR2RGB);
         cv::resize(*cmapped_buffer_, *output_item.buffer, cv::Size(x_, y_), interpolation_);
         if (flip_ == -1 || flip_ == 0 || flip_ == 1) {
             cv::flip(*output_item.buffer, *output_item.buffer, flip_);
@@ -313,6 +314,7 @@ void image_inference_impl::output_image_(output_type *out)
     std::string image_file_png = image_file_base + ".png";
     std::string dot_image_file_png = image_dir_ + "/." + image_file_png;
     std::string full_image_file_png = image_dir_ + "/" + image_file_png;
+    cv::cvtColor(*output_item.buffer, *output_item.buffer, cv::COLOR_RGB2BGR);
     cv::imwrite(dot_image_file_png, *output_item.buffer);
     rename(dot_image_file_png.c_str(), full_image_file_png.c_str());
     delete_output_();
