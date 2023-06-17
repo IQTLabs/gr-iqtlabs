@@ -348,7 +348,7 @@ namespace gr {
             tune_freq_ += tune_step_hz_;
             if (last_sweep_start_ == 0) {
                 last_sweep_start_ = host_now;
-            } else if (tune_freq_ > tuning_ranges_[tuning_range_].second) {
+            } else if (tune_freq_ - (samp_rate_ / 2) > tuning_ranges_[tuning_range_].second) {
                 tuning_range_ = (tuning_range_ + 1) % tuning_ranges_.size();
                 d_logger->debug("moving to tuning range {}", tuning_range_);
                 tune_freq_ = tuning_ranges_[tuning_range_].first;
