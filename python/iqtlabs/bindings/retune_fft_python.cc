@@ -14,7 +14,7 @@
 /* BINDTOOL_GEN_AUTOMATIC(0)                                                       */
 /* BINDTOOL_USE_PYGCCXML(0)                                                        */
 /* BINDTOOL_HEADER_FILE(retune_fft.h)                                        */
-/* BINDTOOL_HEADER_FILE_HASH(a681c053e27a5fc4a0e698dff87da6f5)                     */
+/* BINDTOOL_HEADER_FILE_HASH(dd906b2aa0c0c7cd4b2ad4ceacf44bf0)                     */
 /***********************************************************************************/
 
 #include <pybind11/complex.h>
@@ -54,6 +54,7 @@ void bind_retune_fft(py::module& m)
              py::arg("bucket_range"),
              py::arg("tuning_ranges"),
              py::arg("description"),
+             py::arg("rotate_secs"),
              D(retune_fft, make))
 
 

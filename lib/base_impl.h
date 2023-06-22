@@ -222,6 +222,7 @@ namespace iqtlabs {
               std::string host_now_str_(double host_now);
               pmt::pmt_t make_rx_time_key_(double host_now);
               double rx_time_from_tag_(const gr::tag_t tag);
+              std::string secs_dir(const std::string &dir, uint64_t rotate_secs);
         };
     } /* namespace iqtlabs */
 } /* namespace gr */

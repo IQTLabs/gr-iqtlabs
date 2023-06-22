@@ -14,7 +14,7 @@
 /* BINDTOOL_GEN_AUTOMATIC(0)                                                       */
 /* BINDTOOL_USE_PYGCCXML(0)                                                        */
 /* BINDTOOL_HEADER_FILE(write_freq_samples.h)                                        */
-/* BINDTOOL_HEADER_FILE_HASH(93b7aabcda3b8a9bad87ff6af29d089d)                     */
+/* BINDTOOL_HEADER_FILE_HASH(93f636f0d8fcb328dbca8348868440ee)                     */
 /***********************************************************************************/
 
 #include <pybind11/complex.h>
@@ -30,38 +30,27 @@ namespace py = pybind11;
 void bind_write_freq_samples(py::module& m)
 {
 
-    using write_freq_samples    = ::gr::iqtlabs::write_freq_samples;
+    using write_freq_samples = ::gr::iqtlabs::write_freq_samples;
 
 
-    py::class_<write_freq_samples, gr::block, gr::basic_block,
-        std::shared_ptr<write_freq_samples>>(m, "write_freq_samples", D(write_freq_samples))
+    py::class_<write_freq_samples,
+               gr::block,
+               gr::basic_block,
+               std::shared_ptr<write_freq_samples>>(
+        m, "write_freq_samples", D(write_freq_samples))
 
         .def(py::init(&write_freq_samples::make),
-           py::arg("tag"),
-           py::arg("itemsize"),
-           py::arg("vlen"),
-           py::arg("sdir"),
-           py::arg("prefix"),
-           py::arg("write_step_samples"),
-           py::arg("skip_tune_step_samples"),
-           py::arg("samp_rate"),
-           D(write_freq_samples,make)
-        )
-        
-
+             py::arg("tag"),
+             py::arg("itemsize"),
+             py::arg("vlen"),
+             py::arg("sdir"),
+             py::arg("prefix"),
+             py::arg("write_step_samples"),
+             py::arg("skip_tune_step_samples"),
+             py::arg("samp_rate"),
+             py::arg("rotate_secs"),
+             D(write_freq_samples, make))
 
 
         ;
-
-
-
-
 }
-
-
-
-
-
-
-
-

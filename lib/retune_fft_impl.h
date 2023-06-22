@@ -243,6 +243,7 @@ namespace gr {
       uint64_t tune_step_fft_;
       uint64_t skip_tune_step_fft_;
       uint64_t write_step_fft_;
+      uint64_t rotate_secs_;
       double bucket_range_;
       std::string sdir_;
       std::string description_;
@@ -273,7 +274,7 @@ namespace gr {
       std::string dotfile_;
 
      public:
-      retune_fft_impl(const std::string &tag, int vlen, int nfft, uint64_t samp_rate, uint64_t freq_start, uint64_t freq_end, int tune_step_hz, int tune_step_fft, int skip_tune_step_fft, bool fft_roll, double fft_min, double fft_max, const std::string &sdir, uint64_t write_step_fft, double bucket_range, const std::string &tuning_ranges, const std::string &description);
+      retune_fft_impl(const std::string &tag, int vlen, int nfft, uint64_t samp_rate, uint64_t freq_start, uint64_t freq_end, int tune_step_hz, int tune_step_fft, int skip_tune_step_fft, bool fft_roll, double fft_min, double fft_max, const std::string &sdir, uint64_t write_step_fft, double bucket_range, const std::string &tuning_ranges, const std::string &description, uint64_t rotate_secs);
       ~retune_fft_impl();
       void forecast(int noutput_items, gr_vector_int& ninput_items_required);
       int general_work(int noutput_items, gr_vector_int& ninput_items, gr_vector_const_void_star& input_items, gr_vector_void_star& output_items);

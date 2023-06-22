@@ -247,5 +247,17 @@ namespace iqtlabs {
             return pmt::to_uint64(pmt::tuple_ref(tag.value, 0)) +
                 pmt::to_double(pmt::tuple_ref(tag.value, 1));
         }
+
+        std::string base_impl::secs_dir(const std::string &dir, uint64_t rotate_secs)
+        {
+            if (rotate_secs) {
+                const auto now = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::high_resolution_clock::now().time_since_epoch());
+                uint64_t ts = now.count() / rotate_secs * rotate_secs;
+                const std::string ts_dir = dir + "/" + std::to_string(ts);
+                boost::filesystem::create_directory(ts_dir);
+                return ts_dir + "/";
+            }
+            return dir + "/";
+        }
     } /* namespace iqtlabs */
 } /* namespace gr */
