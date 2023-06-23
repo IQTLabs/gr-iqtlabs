@@ -220,8 +220,6 @@ namespace iqtlabs {
 class write_freq_samples_impl : public write_freq_samples, base_impl
 {
 private:
-    std::string get_prefix_file_(const std::string &file, const std::string &prefix);
-    std::string get_dotfile_(const std::string &file);
     void write_(const char *data, size_t len);
     void open_(const std::string &file, size_t zlevel);
     void close_();
@@ -239,13 +237,14 @@ private:
     uint64_t write_step_samples_count_;
     uint64_t skip_tune_step_samples_count_;
     uint64_t last_rx_freq_;
+    uint64_t rotate_secs_;
 
     boost::scoped_ptr<boost::iostreams::filtering_ostream> outbuf_p;
     std::string file_;
     std::string dotfile_;
 
 public:
-    write_freq_samples_impl(const std::string &tag, uint64_t itemsize, uint64_t vlen, const std::string &sdir, const std::string &prefix, uint64_t write_step_samples, uint64_t skip_tune_step_samples, uint64_t samp_rate);
+    write_freq_samples_impl(const std::string &tag, uint64_t itemsize, uint64_t vlen, const std::string &sdir, const std::string &prefix, uint64_t write_step_samples, uint64_t skip_tune_step_samples, uint64_t samp_rate, uint64_t rotate_secs);
     ~write_freq_samples_impl();
     int general_work(int noutput_items, gr_vector_int& ninput_items, gr_vector_const_void_star& input_items, gr_vector_void_star& output_items);
 };

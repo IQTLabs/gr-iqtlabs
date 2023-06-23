@@ -17,6 +17,7 @@ documentation: |-
     prefix: prefix for samples file.
     write_step_samples: number of vectors to write after receiving a new tag.
     skip_tune_step_samples: skip N vectors after first receiving a new tag.
+    rotate_secs: if > 0, use a new epoch timestamped directory every N seconds.
 
 templates:
   imports: from gnuradio import iqtlabs
@@ -25,7 +26,7 @@ templates:
 cpp_templates:
   includes: ['#include <gnuradio/iqtlabs/write_freq_samples.h>']
   declarations: 'gr::iqtlabs::write_freq_samples::sptr ${id};'
-  make: 'this->${id} = gr::iqtlabs::write_freq_samples::make(${tag}, ${type.size}, ${vlen}, ${sdir}, ${prefix}, ${write_step_samples}, ${skip_tune_step_samples}, ${samp_rate});'
+  make: 'this->${id} = gr::iqtlabs::write_freq_samples::make(${tag}, ${type.size}, ${vlen}, ${sdir}, ${prefix}, ${write_step_samples}, ${skip_tune_step_samples}, ${samp_rate}, ${rotate_secs});'
   link: ['libgnuradio-iqtlabs.so']
 
 parameters:
@@ -50,6 +51,8 @@ parameters:
 - id: skip_tune_step_samples
   dtype: int
 - id: samp_rate
+  dtype: int
+- id: rotate_secs
   dtype: int
 
 inputs:

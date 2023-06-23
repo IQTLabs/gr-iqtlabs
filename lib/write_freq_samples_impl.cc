@@ -213,13 +213,13 @@
 namespace gr {
 namespace iqtlabs {
 
-write_freq_samples::sptr write_freq_samples::make(const std::string &tag, uint64_t itemsize, uint64_t vlen, const std::string &sdir, const std::string &prefix, uint64_t write_step_samples, uint64_t skip_tune_step_samples, uint64_t samp_rate)
+write_freq_samples::sptr write_freq_samples::make(const std::string &tag, uint64_t itemsize, uint64_t vlen, const std::string &sdir, const std::string &prefix, uint64_t write_step_samples, uint64_t skip_tune_step_samples, uint64_t samp_rate, uint64_t rotate_secs)
 {
-    return gnuradio::make_block_sptr<write_freq_samples_impl>(tag, itemsize, vlen, sdir, prefix, write_step_samples, skip_tune_step_samples, samp_rate);
+    return gnuradio::make_block_sptr<write_freq_samples_impl>(tag, itemsize, vlen, sdir, prefix, write_step_samples, skip_tune_step_samples, samp_rate, rotate_secs);
 }
 
 
-write_freq_samples_impl::write_freq_samples_impl(const std::string &tag, uint64_t itemsize, uint64_t vlen, const std::string &sdir, const std::string &prefix, uint64_t write_step_samples, uint64_t skip_tune_step_samples, uint64_t samp_rate)
+write_freq_samples_impl::write_freq_samples_impl(const std::string &tag, uint64_t itemsize, uint64_t vlen, const std::string &sdir, const std::string &prefix, uint64_t write_step_samples, uint64_t skip_tune_step_samples, uint64_t samp_rate, uint64_t rotate_secs)
     : gr::block("write_freq_samples",
                      gr::io_signature::make(
                          1 /* min inputs */, 1 /* max inputs */, vlen * itemsize),
@@ -234,24 +234,14 @@ write_freq_samples_impl::write_freq_samples_impl(const std::string &tag, uint64_
                      samp_rate_(samp_rate),
                      write_step_samples_count_(0),
                      skip_tune_step_samples_count_(0),
-                     last_rx_freq_(0)
+                     last_rx_freq_(0),
+                     rotate_secs_(rotate_secs)
 {
     outbuf_p.reset(new boost::iostreams::filtering_ostream());
 }
 
 write_freq_samples_impl::~write_freq_samples_impl() {
     close_();
-}
-
-std::string write_freq_samples_impl::get_prefix_file_(const std::string &file, const std::string &prefix) {
-    boost::filesystem::path orig_path(file);
-    std::string basename(orig_path.filename().c_str());
-    std::string dirname(boost::filesystem::canonical(orig_path.parent_path()).c_str());
-    return dirname + "/" + prefix + basename;
-}
-
-std::string write_freq_samples_impl::get_dotfile_(const std::string &file) {
-    return get_prefix_file_(file, ".");
 }
 
 void write_freq_samples_impl::write_(const char *data, size_t len) {
@@ -323,7 +313,7 @@ int write_freq_samples_impl::general_work(int noutput_items,
 
         if (rx_freq != last_rx_freq_) {
             d_logger->debug("new rx_freq tag: {}, last {}", rx_freq, last_rx_freq_);
-            std::string samples_path = sdir_ + "/" +
+            std::string samples_path = secs_dir(sdir_, rotate_secs_) +
                 prefix_ + "_" +
                 std::to_string(host_now_()) + "_" +
                 std::to_string(uint64_t(rx_freq)) + "Hz_" +

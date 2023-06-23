@@ -251,6 +251,7 @@ class qa_write_freq_samples(gr_unittest.TestCase):
                 samples_write_count,
                 samples_write_count,
                 samp_rate,
+                3600,
             )
             blocks_throttle_0 = blocks.throttle(
                 gr.sizeof_gr_complex * 1, samp_rate, True
@@ -272,7 +273,7 @@ class qa_write_freq_samples(gr_unittest.TestCase):
             self.tb.stop()
             self.tb.wait()
 
-            zst_file = glob.glob(f"{tmpdir}/*zst")[0]
+            zst_file = glob.glob(f"{tmpdir}/*/*zst")[0]
             self.assertIn(str(int(tune_freq)), zst_file)
             subprocess.check_call(["zstd", "-d", zst_file])
             bin_file = zst_file.replace(".zst", "")

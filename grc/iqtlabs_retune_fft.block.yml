@@ -34,6 +34,7 @@ documentation: |-
     bucket_range: proportion of buckets to write out, at center frequency.
     tuning_ranges: if not empty, a comma separated list of tuning ranges in ascending order (non-linear scan), e.g. "2.2e9-2.4e9,5.1e9-5.9e9".
     description: a string description to be included with each update.
+    rotate_secs: if > 0, use a new epoch timestamped directory every N seconds.
 
   example JSON output:
     { "ts": <epoch time>, "sweep start": <epoch time>, "config": { "description": "...", "freq_start": 10e6, "freq_end": 20e6, ... }, "buckets": { "10e6": 1, "10.1e6", ... } }
@@ -43,12 +44,12 @@ documentation: |-
 
 templates:
   imports: from gnuradio import iqtlabs
-  make: iqtlabs.retune_fft(${tag}, ${vlen}, ${nfft}, ${samp_rate}, ${freq_start}, ${freq_end}, ${tune_step_hz}, ${tune_step_fft}, ${skip_tune_step_fft}, ${fft_roll}, ${fft_min}, ${fft_max}, ${sdir}, ${write_step_fft}, ${bucket_range}, ${tuning_ranges}, ${description})
+  make: iqtlabs.retune_fft(${tag}, ${vlen}, ${nfft}, ${samp_rate}, ${freq_start}, ${freq_end}, ${tune_step_hz}, ${tune_step_fft}, ${skip_tune_step_fft}, ${fft_roll}, ${fft_min}, ${fft_max}, ${sdir}, ${write_step_fft}, ${bucket_range}, ${tuning_ranges}, ${description}, ${rotate_secs})
 
 cpp_templates:
   includes: ['#include <gnuradio/iqtlabs/retune_fft.h>']
   declarations: 'gr::iqtlabs::retune_fft::sptr ${id};'
-  make: 'this->${id} = gr::iqtlabs::retune_fft::make(${tag}, ${vlen}, ${nfft}, ${samp_rate}, ${freq_start}, ${freq_end}, ${tune_step_hz}, ${tune_step_fft}, ${skip_tune_step_fft}, ${fft_roll} ${fft_min}, ${fft_max}, ${sdir}, ${write_step_fft}, ${bucket_range}, ${tuning_ranges}, ${description});'
+  make: 'this->${id} = gr::iqtlabs::retune_fft::make(${tag}, ${vlen}, ${nfft}, ${samp_rate}, ${freq_start}, ${freq_end}, ${tune_step_hz}, ${tune_step_fft}, ${skip_tune_step_fft}, ${fft_roll} ${fft_min}, ${fft_max}, ${sdir}, ${write_step_fft}, ${bucket_range}, ${tuning_ranges}, ${description}, ${rotate_secs});'
   link: ['libgnuradio-iqtlabs.so']
 
 asserts:
@@ -95,6 +96,8 @@ parameters:
   dtype: string
 - id: description
   dtype: string
+- id: rotate_secs
+  dtype: int
 
 inputs:
 - label: input
