@@ -447,14 +447,18 @@ class qa_retune_fft_base:
                 self.assertTrue(df[df["d"] != points].empty, df[df["d"] != points])
 
             hz_re = re.compile(".+_([0-9]+)Hz.+")
-            first_zst_fft_file = sorted(glob.glob(os.path.join(tmpdir, "*/*.zst")))[:1][0]
+            first_zst_fft_file = sorted(glob.glob(os.path.join(tmpdir, "*/*.zst")))[:1][
+                0
+            ]
             first_hz_match = hz_re.match(first_zst_fft_file)
             if not first_hz_match:
                 self.fail(f"{first_zst_fft_file} did not match regexp")
                 return
             first_hz = int(first_hz_match.group(1))
             zst_fft_files = sorted(
-                glob.glob(os.path.join(tmpdir, f"*/*{first_hz}Hz_{samp_rate}sps.raw.zst"))
+                glob.glob(
+                    os.path.join(tmpdir, f"*/*{first_hz}Hz_{samp_rate}sps.raw.zst")
+                )
             )
             self.assertGreater(len(zst_fft_files), 2)
             first_sample = None

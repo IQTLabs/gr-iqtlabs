@@ -32,6 +32,8 @@ find_package(Boost ${Boost_Version} COMPONENTS filesystem iostreams REQUIRED)
 find_package(OpenCV 4 REQUIRED)
 include_directories(${CMAKE_SOURCE_DIR}/include ${OpenCV_INCLUDE_DIRS})
 
+find_package(libsigmf REQUIRED)
+
 # Set the version information here
 set(VERSION_MAJOR 1)
 set(VERSION_API   0)
