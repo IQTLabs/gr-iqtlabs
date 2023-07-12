@@ -256,7 +256,7 @@ namespace iqtlabs {
                 const auto now = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::high_resolution_clock::now().time_since_epoch());
                 uint64_t ts = now.count() / rotate_secs * rotate_secs;
                 const std::string ts_dir = dir + "/" + std::to_string(ts);
-                boost::filesystem::create_directory(ts_dir);
+                boost::filesystem::create_directories(ts_dir);
                 return ts_dir + "/";
             }
             return dir + "/";

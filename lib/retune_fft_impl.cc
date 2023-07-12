@@ -329,8 +329,10 @@ namespace gr {
         void retune_fft_impl::close_() {
              if (!outbuf_p->empty()) {
                  outbuf_p->reset();
-                 std::string dotfile = get_dotfile_(file_);
-                 rename(dotfile.c_str(), file_.c_str());
+                 if (boost::filesystem::exists(file_)) {
+                     std::string dotfile = get_dotfile_(file_);
+                     rename(dotfile.c_str(), file_.c_str());
+                 }
              }
         }
 
