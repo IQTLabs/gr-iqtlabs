@@ -431,12 +431,14 @@ namespace gr {
 
         void retune_fft_impl::reopen_(double host_now, uint64_t rx_freq)
         {
-            std::string bucket_path = secs_dir(sdir_, rotate_secs_) + "fft_" +
-                host_now_str_(host_now) + "_" +
-                std::to_string(uint64_t(nfft_)) + "points_" +
-                std::to_string(uint64_t(rx_freq)) + "Hz_" +
-                std::to_string(uint64_t(samp_rate_)) + "sps.raw.zst";
-            open_(bucket_path);
+            if (sdir_.length()) {
+                std::string bucket_path = secs_dir(sdir_, rotate_secs_) + "fft_" +
+                    host_now_str_(host_now) + "_" +
+                    std::to_string(uint64_t(nfft_)) + "points_" +
+                    std::to_string(uint64_t(rx_freq)) + "Hz_" +
+                    std::to_string(uint64_t(samp_rate_)) + "sps.raw.zst";
+                open_(bucket_path);
+            }
         }
 
         void retune_fft_impl::write_buckets_(double host_now, uint64_t rx_freq)
