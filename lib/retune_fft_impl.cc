@@ -322,7 +322,6 @@ namespace gr {
         void retune_fft_impl::open_(const std::string &file) {
             close_();
             file_ = file;
-            dotfile_ = get_dotfile_(file_);
             outbuf_p->push(boost::iostreams::zstd_compressor(zstd_params));
             outbuf_p->push(boost::iostreams::file_sink(file_));
         }
@@ -330,7 +329,10 @@ namespace gr {
         void retune_fft_impl::close_() {
              if (!outbuf_p->empty()) {
                  outbuf_p->reset();
-                 rename(dotfile_.c_str(), file_.c_str());
+                 if (boost::filesystem::exists(file_)) {
+                     std::string dotfile = get_dotfile_(file_);
+                     rename(dotfile.c_str(), file_.c_str());
+                 }
              }
         }
 
@@ -349,12 +351,15 @@ namespace gr {
             tune_freq_ += tune_step_hz_;
             if (last_sweep_start_ == 0) {
                 last_sweep_start_ = host_now;
-            } else if (tune_freq_ - (samp_rate_ / 2) > tuning_ranges_[tuning_range_].second) {
-                tuning_range_ = (tuning_range_ + 1) % tuning_ranges_.size();
-                d_logger->debug("moving to tuning range {}", tuning_range_);
-                tune_freq_ = tuning_ranges_[tuning_range_].first;
-                if (tuning_range_ == 0) {
-                    last_sweep_start_ = host_now;
+            } else {
+                auto range_end = tuning_ranges_[tuning_range_].second;
+                if ((tune_freq_ > range_end) || (tune_freq_ - (samp_rate_ / 2) > range_end)) {
+                    tuning_range_ = (tuning_range_ + 1) % tuning_ranges_.size();
+                    d_logger->debug("moving to tuning range {}", tuning_range_);
+                    tune_freq_ = tuning_ranges_[tuning_range_].first;
+                    if (tuning_range_ == 0) {
+                        last_sweep_start_ = host_now;
+                    }
                 }
             }
         }
@@ -431,12 +436,14 @@ namespace gr {
 
         void retune_fft_impl::reopen_(double host_now, uint64_t rx_freq)
         {
-            std::string bucket_path = secs_dir(sdir_, rotate_secs_) + "fft_" +
-                host_now_str_(host_now) + "_" +
-                std::to_string(uint64_t(nfft_)) + "points_" +
-                std::to_string(uint64_t(rx_freq)) + "Hz_" +
-                std::to_string(uint64_t(samp_rate_)) + "sps.raw.zst";
-            open_(bucket_path);
+            if (sdir_.length()) {
+                std::string bucket_path = secs_dir(sdir_, rotate_secs_) + "fft_" +
+                    host_now_str_(host_now) + "_" +
+                    std::to_string(uint64_t(nfft_)) + "points_" +
+                    std::to_string(uint64_t(rx_freq)) + "Hz_" +
+                    std::to_string(uint64_t(samp_rate_)) + "sps.raw.zst";
+                open_(bucket_path);
+            }
         }
 
         void retune_fft_impl::write_buckets_(double host_now, uint64_t rx_freq)

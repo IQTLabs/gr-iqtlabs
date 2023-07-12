@@ -9,6 +9,8 @@ cmake_minimum_required(VERSION 3.8)
 project(gr-iqtlabs CXX C)
 enable_testing()
 
+set(CMAKE_CXX_STANDARD 17)
+
 # Install to PyBOMBS target prefix if defined
 if(DEFINED ENV{PYBOMBS_PREFIX})
     set(CMAKE_INSTALL_PREFIX $ENV{PYBOMBS_PREFIX})

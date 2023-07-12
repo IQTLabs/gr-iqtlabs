@@ -203,10 +203,12 @@
  */
 
 #include <chrono>
+#include <fstream>
 #include <iomanip>
 #include <boost/algorithm/string.hpp>
 #include <boost/filesystem.hpp>
 #include <pmt/pmt.h>
+#include <sigmf/sigmf.h>
 #include "base_impl.h"
 
 namespace gr {
@@ -254,10 +256,34 @@ namespace iqtlabs {
                 const auto now = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::high_resolution_clock::now().time_since_epoch());
                 uint64_t ts = now.count() / rotate_secs * rotate_secs;
                 const std::string ts_dir = dir + "/" + std::to_string(ts);
-                boost::filesystem::create_directory(ts_dir);
+                boost::filesystem::create_directories(ts_dir);
                 return ts_dir + "/";
             }
             return dir + "/";
+        }
+
+        void base_impl::write_sigmf(const std::string &filename, const std::string &source_file, double timestamp, const std::string &datatype, double sample_rate, double frequency, double gain)
+        {
+             // TODO: add sensor gain, explicit source_file.
+             sigmf::SigMF<sigmf::VariadicDataClass<sigmf::core::GlobalT>,
+                 sigmf::VariadicDataClass<sigmf::core::CaptureT>,
+                 sigmf::VariadicDataClass<sigmf::core::AnnotationT> > record;
+             record.global.access<sigmf::core::GlobalT>().datatype = datatype;
+             record.global.access<sigmf::core::GlobalT>().sample_rate = sample_rate;
+             auto capture = sigmf::Capture<sigmf::core::DescrT>();
+             capture.get<sigmf::core::DescrT>().sample_start = 0;
+             capture.get<sigmf::core::DescrT>().global_index = 0;
+             capture.get<sigmf::core::DescrT>().frequency = frequency;
+             std::ostringstream ts_ss;
+             time_t timestamp_t = static_cast<time_t>(timestamp);
+             ts_ss << std::put_time(gmtime(&timestamp_t), "%FT%TZ");
+             capture.get<sigmf::core::DescrT>().datetime = ts_ss.str();
+             record.captures.emplace_back(capture);
+             std::string dotfilename = get_dotfile_(filename);
+             std::ofstream jsonfile(dotfilename);
+             jsonfile << record.to_json();
+             jsonfile.close();
+             rename(dotfilename.c_str(), filename.c_str());
         }
     } /* namespace iqtlabs */
 } /* namespace gr */
