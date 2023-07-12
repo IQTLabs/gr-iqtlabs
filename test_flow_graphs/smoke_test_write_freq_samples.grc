@@ -74,10 +74,12 @@ blocks:
     skip_tune_step_samples: '2'
     tag: '"rx_freq"'
     vlen: '1024'
-    itemsize: 8,
+    itemsize: '8'
     write_step_samples: '128'
     samp_rate: int(samp_rate)
-    rotate_secs: 3600
+    rotate_secs: '3600'
+    gain: '25'
+    sigmf: '1'
   states:
     bus_sink: false
     bus_source: false

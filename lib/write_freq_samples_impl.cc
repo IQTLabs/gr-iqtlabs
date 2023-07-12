@@ -213,13 +213,13 @@
 namespace gr {
 namespace iqtlabs {
 
-write_freq_samples::sptr write_freq_samples::make(const std::string &tag, uint64_t itemsize, uint64_t vlen, const std::string &sdir, const std::string &prefix, uint64_t write_step_samples, uint64_t skip_tune_step_samples, uint64_t samp_rate, uint64_t rotate_secs)
+write_freq_samples::sptr write_freq_samples::make(const std::string &tag, uint64_t itemsize, const std::string &datatype, uint64_t vlen, const std::string &sdir, const std::string &prefix, uint64_t write_step_samples, uint64_t skip_tune_step_samples, uint64_t samp_rate, uint64_t rotate_secs, double gain, bool sigmf)
 {
-    return gnuradio::make_block_sptr<write_freq_samples_impl>(tag, itemsize, vlen, sdir, prefix, write_step_samples, skip_tune_step_samples, samp_rate, rotate_secs);
+    return gnuradio::make_block_sptr<write_freq_samples_impl>(tag, itemsize, datatype, vlen, sdir, prefix, write_step_samples, skip_tune_step_samples, samp_rate, rotate_secs, gain, sigmf);
 }
 
 
-write_freq_samples_impl::write_freq_samples_impl(const std::string &tag, uint64_t itemsize, uint64_t vlen, const std::string &sdir, const std::string &prefix, uint64_t write_step_samples, uint64_t skip_tune_step_samples, uint64_t samp_rate, uint64_t rotate_secs)
+write_freq_samples_impl::write_freq_samples_impl(const std::string &tag, uint64_t itemsize, const std::string &datatype, uint64_t vlen, const std::string &sdir, const std::string &prefix, uint64_t write_step_samples, uint64_t skip_tune_step_samples, uint64_t samp_rate, uint64_t rotate_secs, double gain, bool sigmf)
     : gr::block("write_freq_samples",
                      gr::io_signature::make(
                          1 /* min inputs */, 1 /* max inputs */, vlen * itemsize),
@@ -235,7 +235,9 @@ write_freq_samples_impl::write_freq_samples_impl(const std::string &tag, uint64_
                      write_step_samples_count_(0),
                      skip_tune_step_samples_count_(0),
                      last_rx_freq_(0),
-                     rotate_secs_(rotate_secs)
+                     rotate_secs_(rotate_secs),
+                     gain_(gain),
+                     sigmf_(sigmf)
 {
     outbuf_p.reset(new boost::iostreams::filtering_ostream());
 }
@@ -250,18 +252,29 @@ void write_freq_samples_impl::write_(const char *data, size_t len) {
     }
 }
 
-void write_freq_samples_impl::open_(const std::string &file, size_t zlevel) {
+void write_freq_samples_impl::open_(size_t zlevel) {
     close_();
-    file_ = file;
-    dotfile_ = get_dotfile_(file_);
+    double now = host_now_();
+    std::string samples_path = secs_dir(sdir_, rotate_secs_) +
+        prefix_ + "_" +
+        std::to_string(now) + "_" +
+        std::to_string(uint64_t(last_rx_freq_)) + "Hz_" +
+        std::to_string(uint64_t(samp_rate_)) + "sps.raw";
+    zstfile_ = samples_path + ".zst";
+    sigmffile_ = samples_path + ".sigmf-meta";
+    open_time_ = now;
     outbuf_p->push(boost::iostreams::zstd_compressor(boost::iostreams::zstd_params(zlevel)));
-    outbuf_p->push(boost::iostreams::file_sink(file_));
+    outbuf_p->push(boost::iostreams::file_sink(zstfile_));
 }
 
 void write_freq_samples_impl::close_() {
     if (!outbuf_p->empty()) {
         outbuf_p->reset();
-        rename(dotfile_.c_str(), file_.c_str());
+        if (sigmf_) {
+            write_sigmf(sigmffile_, zstfile_, open_time_, datatype_, samp_rate_, last_rx_freq_, gain_);
+        }
+        std::string dotfile = get_dotfile_(zstfile_);
+        rename(dotfile.c_str(), zstfile_.c_str());
     }
 }
 
@@ -313,15 +326,10 @@ int write_freq_samples_impl::general_work(int noutput_items,
 
         if (rx_freq != last_rx_freq_) {
             d_logger->debug("new rx_freq tag: {}, last {}", rx_freq, last_rx_freq_);
-            std::string samples_path = secs_dir(sdir_, rotate_secs_) +
-                prefix_ + "_" +
-                std::to_string(host_now_()) + "_" +
-                std::to_string(uint64_t(rx_freq)) + "Hz_" +
-                std::to_string(uint64_t(samp_rate_)) + "sps.raw.zst";
-            open_(samples_path, 1);
             last_rx_freq_ = rx_freq;
             skip_tune_step_samples_count_ = skip_tune_step_samples_;
             write_step_samples_count_ = write_step_samples_;
+            open_(1);
         }
     }
 

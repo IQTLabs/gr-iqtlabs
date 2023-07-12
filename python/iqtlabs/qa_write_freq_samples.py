@@ -203,8 +203,10 @@
 #    limitations under the License.
 #
 
+import json
 import glob
 import subprocess
+import os
 import tempfile
 import time
 import pmt
@@ -245,6 +247,7 @@ class qa_write_freq_samples(gr_unittest.TestCase):
             write_freq_samples_0 = write_freq_samples(
                 "rx_freq",
                 gr.sizeof_gr_complex * 1,
+                "cf32",
                 points,
                 tmpdir,
                 "samples",
@@ -252,6 +255,8 @@ class qa_write_freq_samples(gr_unittest.TestCase):
                 samples_write_count,
                 samp_rate,
                 3600,
+                25,
+                True,
             )
             blocks_throttle_0 = blocks.throttle(
                 gr.sizeof_gr_complex * 1, samp_rate, True
@@ -274,9 +279,17 @@ class qa_write_freq_samples(gr_unittest.TestCase):
             self.tb.wait()
 
             zst_file = glob.glob(f"{tmpdir}/*/*zst")[0]
+            sigmf_file = zst_file.replace("zst", "sigmf-meta")
+            bin_file = zst_file.replace(".zst", "")
+            self.assertTrue(os.path.exists(sigmf_file))
+            with open(sigmf_file, "r", encoding="utf8") as f:
+                sigmf = json.loads(f.read())
+                sigmf_global = sigmf["global"]
+                sigmf_capture = sigmf["captures"][0]
+                self.assertEqual(samp_rate, sigmf_global["core:sample_rate"], sigmf)
+                self.assertEqual(tune_freq, sigmf_capture["core:frequency"], sigmf)
             self.assertIn(str(int(tune_freq)), zst_file)
             subprocess.check_call(["zstd", "-d", zst_file])
-            bin_file = zst_file.replace(".zst", "")
             samples = np.fromfile(bin_file, dtype=np.complex64)
             self.assertEqual(len(samples), samples_write_count * points)
 

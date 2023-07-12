@@ -223,6 +223,7 @@ namespace iqtlabs {
               pmt::pmt_t make_rx_time_key_(double host_now);
               double rx_time_from_tag_(const gr::tag_t tag);
               std::string secs_dir(const std::string &dir, uint64_t rotate_secs);
+              void write_sigmf(const std::string &filename, const std::string &source_file, double timestamp, const std::string &datatype, double sample_rate, double frequency, double gain);
         };
     } /* namespace iqtlabs */
 } /* namespace gr */
