@@ -264,13 +264,12 @@ namespace iqtlabs {
 
         void base_impl::write_sigmf(const std::string &filename, const std::string &source_file, double timestamp, const std::string &datatype, double sample_rate, double frequency, double gain)
         {
-             // TODO: add sensor gain, explicit source_file.
-             sigmf::SigMF<sigmf::VariadicDataClass<sigmf::core::GlobalT>,
-                 sigmf::VariadicDataClass<sigmf::core::CaptureT>,
-                 sigmf::VariadicDataClass<sigmf::core::AnnotationT> > record;
+             sigmf::SigMF<sigmf::Global<sigmf::core::DescrT>,
+                 sigmf::Capture<sigmf::core::DescrT, sigmf::capture_details::DescrT>,
+                 sigmf::Annotation<sigmf::core::DescrT> > record;
              record.global.access<sigmf::core::GlobalT>().datatype = datatype;
              record.global.access<sigmf::core::GlobalT>().sample_rate = sample_rate;
-             auto capture = sigmf::Capture<sigmf::core::DescrT>();
+             auto capture = sigmf::Capture<sigmf::core::DescrT, sigmf::capture_details::DescrT>();
              capture.get<sigmf::core::DescrT>().sample_start = 0;
              capture.get<sigmf::core::DescrT>().global_index = 0;
              capture.get<sigmf::core::DescrT>().frequency = frequency;
@@ -278,6 +277,8 @@ namespace iqtlabs {
              time_t timestamp_t = static_cast<time_t>(timestamp);
              ts_ss << std::put_time(gmtime(&timestamp_t), "%FT%TZ");
              capture.get<sigmf::core::DescrT>().datetime = ts_ss.str();
+             capture.get<sigmf::capture_details::DescrT>().source_file = basename(source_file.c_str());
+             capture.get<sigmf::capture_details::DescrT>().gain = gain;
              record.captures.emplace_back(capture);
              std::string dotfilename = get_dotfile_(filename);
              std::ofstream jsonfile(dotfilename);
