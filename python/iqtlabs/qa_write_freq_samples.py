@@ -288,6 +288,13 @@ class qa_write_freq_samples(gr_unittest.TestCase):
                 sigmf_capture = sigmf["captures"][0]
                 self.assertEqual(samp_rate, sigmf_global["core:sample_rate"], sigmf)
                 self.assertEqual(tune_freq, sigmf_capture["core:frequency"], sigmf)
+                source_file = sigmf_capture["capture_details:source_file"]
+                self.assertEqual(
+                    source_file,
+                    os.path.basename(sigmf_file.replace("sigmf-meta", "zst")),
+                    sigmf,
+                )
+                self.assertEqual(25, sigmf_capture["capture_details:gain"], sigmf)
             self.assertIn(str(int(tune_freq)), zst_file)
             subprocess.check_call(["zstd", "-d", zst_file])
             samples = np.fromfile(bin_file, dtype=np.complex64)
