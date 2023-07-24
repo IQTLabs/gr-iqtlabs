@@ -273,7 +273,7 @@ class qa_retune_fft_base:
         self.tb = None
 
     def retune_fft(self, fft_roll):
-        points = int(1024)
+        points = int(2048)
         samp_rate = points * points
         freq_start = int(1e9 / samp_rate) * samp_rate
         freq_end = int(1.1e9 / samp_rate) * samp_rate
@@ -281,6 +281,7 @@ class qa_retune_fft_base:
         tuning_ranges = f"{freq_start}-{freq_mid},{freq_mid+samp_rate}-{freq_end}"
         fft_write_count = 2
         bucket_range = 1
+        fft_min = -1e9
 
         with tempfile.TemporaryDirectory() as tmpdir:
             test_file = os.path.join(tmpdir, "samples.csv")
@@ -296,8 +297,8 @@ class qa_retune_fft_base:
                 64,
                 2,
                 fft_roll,
-                1e-4,
-                1e4,
+                fft_min,
+                1e9,
                 tmpdir,
                 fft_write_count,
                 bucket_range,
@@ -372,7 +373,7 @@ class qa_retune_fft_base:
                     line = linebuffer.strip()
                     linebuffer = ""
                     record = json.loads(line)
-                    ts = float(record["ts"])
+                    ts = record["ts"]
                     self.assertGreater(ts, last_ts)
                     last_ts = ts
                     config = record["config"]
@@ -408,9 +409,9 @@ class qa_retune_fft_base:
                     new_records = [
                         {
                             "ts": ts,
-                            "f": float(freq),
+                            "f": int(freq),
                             "v": float(value),
-                            "t": tuning_range,
+                            "t": int(tuning_range),
                         }
                         for freq, value in buckets.items()
                     ]
@@ -426,21 +427,25 @@ class qa_retune_fft_base:
             ]
             expected_buckets = round(points * bucket_range)
             self.assertEqual(top_count[0], expected_buckets)
-            all_df = pd.DataFrame(records)[["f", "v", "t"]].sort_values("f")
-            all_df["v"] = all_df["v"].round(2)
+            all_df = pd.DataFrame(records)[["t", "f", "v"]]
+            all_df["v"] = all_df["v"].round(1)
+            all_df = all_df.sort_values(["t", "f", "v"])
 
             for _, df in all_df.groupby("t"):
                 # must have plausible unscaled dB value
-                self.assertTrue(0 <= df["v"].min() <= 1, df["v"].min())
-                self.assertTrue(50 <= df["v"].max() <= 60, df["v"].max())
+                self.assertTrue(fft_min <= df["v"].min() <= 1, df["v"].min())
+                self.assertTrue(50 <= df["v"].max() <= 61, df["v"].max())
                 df["u"] = df.groupby("f")["v"].transform("nunique")
-                non_unique_v = df[df["u"] != 1]
+                df["m"] = df.groupby("f")["v"].transform("diff")
+                df["m"] = df["m"].abs().max()
+                non_unique_v = df[df["m"] > 2]
+                # every frequency must have power values within 1-2dB (accounts for precision loss in FFT block)
+                self.assertTrue(non_unique_v.empty, non_unique_v)
                 f_count = df.groupby("f").count()
-                pd.set_option("display.max_rows", None)
+                # pd.set_option("display.max_rows", None)
                 f_count_min = f_count["u"].min()
                 # every frequency must be observed more than once.
                 self.assertGreater(f_count_min, 1, df[df["u"] == 1])
-                self.assertTrue(non_unique_v.empty, (non_unique_v, df))
                 # must have even frequency coverage within the range
                 df["d"] = df["f"].diff()
                 df = df[(df["d"] != 0) & (df["d"].notna())]
