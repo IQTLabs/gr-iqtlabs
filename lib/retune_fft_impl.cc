@@ -405,6 +405,13 @@ namespace gr {
                         --skip_fft_count_;
                         continue;
                     }
+                    // Discard windows where max power, is less than requested minimum.
+                    // Ettus radios periodically output low power after retuning. This
+                    // avoids having to use a static skip_fft_count setting.
+                    input_type in_max = *std::max_element(in, in + nfft_);
+                    if (in_max < fft_min_) {
+                        continue;
+                    }
                     write_items_(in);
                     sum_items_(in);
                     ++sample_count_;
