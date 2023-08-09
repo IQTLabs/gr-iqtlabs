@@ -13,7 +13,7 @@ jobs:
       run: |
         bin/apt_get.sh && bin/build_test.sh && bin/test_grc310.sh
   test-2004-gnuradio39:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     steps:
     - uses: actions/checkout@v3
       with:
@@ -22,7 +22,7 @@ jobs:
       run: |
         bin/apt_get_39.sh && bin/build_test.sh
   test-2004:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     steps:
     - uses: actions/checkout@v3
       with:
