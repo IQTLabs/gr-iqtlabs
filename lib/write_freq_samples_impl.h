@@ -205,52 +205,57 @@
 #ifndef INCLUDED_IQTLABS_WRITE_FREQ_SAMPLES_IMPL_H
 #define INCLUDED_IQTLABS_WRITE_FREQ_SAMPLES_IMPL_H
 
+#include "base_impl.h"
 #include <boost/filesystem.hpp>
 #include <boost/iostreams/device/file.hpp>
-#include <boost/iostreams/filtering_stream.hpp>
 #include <boost/iostreams/filter/zstd.hpp>
+#include <boost/iostreams/filtering_stream.hpp>
 #include <boost/scoped_ptr.hpp>
 #include <gnuradio/iqtlabs/write_freq_samples.h>
-#include "base_impl.h"
-
 
 namespace gr {
 namespace iqtlabs {
 
-class write_freq_samples_impl : public write_freq_samples, base_impl
-{
+class write_freq_samples_impl : public write_freq_samples, base_impl {
 private:
-    void write_(const char *data, size_t len);
-    void open_(size_t zlevel);
-    void close_();
-    void write_samples_(size_t c, const char* &in);
+  void write_(const char *data, size_t len);
+  void open_(size_t zlevel);
+  void close_();
+  void write_samples_(size_t c, const char *&in);
 
-    pmt::pmt_t tag_;
-    uint64_t itemsize_;
-    uint64_t vlen_;
-    std::string sdir_;
-    std::string prefix_;
-    std::string datatype_;
-    uint64_t write_step_samples_;
-    uint64_t skip_tune_step_samples_;
-    uint64_t samp_rate_;
-    double gain_;
-    bool sigmf_;
+  pmt::pmt_t tag_;
+  uint64_t itemsize_;
+  uint64_t vlen_;
+  std::string sdir_;
+  std::string prefix_;
+  std::string datatype_;
+  uint64_t write_step_samples_;
+  uint64_t skip_tune_step_samples_;
+  uint64_t samp_rate_;
+  double gain_;
+  bool sigmf_;
 
-    uint64_t write_step_samples_count_;
-    uint64_t skip_tune_step_samples_count_;
-    uint64_t last_rx_freq_;
-    uint64_t rotate_secs_;
-    double open_time_;
+  uint64_t write_step_samples_count_;
+  uint64_t skip_tune_step_samples_count_;
+  uint64_t last_rx_freq_;
+  uint64_t rotate_secs_;
+  double open_time_;
 
-    boost::scoped_ptr<boost::iostreams::filtering_ostream> outbuf_p;
-    std::string zstfile_;
-    std::string sigmffile_;
+  boost::scoped_ptr<boost::iostreams::filtering_ostream> outbuf_p;
+  std::string zstfile_;
+  std::string sigmffile_;
 
 public:
-    write_freq_samples_impl(const std::string &tag, uint64_t itemsize, const std::string &datatype, uint64_t vlen, const std::string &sdir, const std::string &prefix, uint64_t write_step_samples, uint64_t skip_tune_step_samples, uint64_t samp_rate, uint64_t rotate_secs, double gain, bool sigmf);
-    ~write_freq_samples_impl();
-    int general_work(int noutput_items, gr_vector_int& ninput_items, gr_vector_const_void_star& input_items, gr_vector_void_star& output_items);
+  write_freq_samples_impl(const std::string &tag, uint64_t itemsize,
+                          const std::string &datatype, uint64_t vlen,
+                          const std::string &sdir, const std::string &prefix,
+                          uint64_t write_step_samples,
+                          uint64_t skip_tune_step_samples, uint64_t samp_rate,
+                          uint64_t rotate_secs, double gain, bool sigmf);
+  ~write_freq_samples_impl();
+  int general_work(int noutput_items, gr_vector_int &ninput_items,
+                   gr_vector_const_void_star &input_items,
+                   gr_vector_void_star &output_items);
 };
 
 } // namespace iqtlabs

@@ -202,192 +202,192 @@
  *    limitations under the License.
  */
 
+#include "image_inference_impl.h"
 #include <fstream>
+#include <gnuradio/io_signature.h>
 #include <ios>
 #include <iostream>
-#include "image_inference_impl.h"
-#include <gnuradio/io_signature.h>
 
 namespace gr {
 namespace iqtlabs {
 
-image_inference::sptr image_inference::make(const std::string &tag, int vlen, int x, int y, const std::string &image_dir, double convert_alpha, double norm_alpha, double norm_beta, int norm_type, int colormap, int interpolation, int flip)
-{
-    return gnuradio::make_block_sptr<image_inference_impl>(tag, vlen, x, y, image_dir, convert_alpha, norm_alpha, norm_beta, norm_type, colormap, interpolation, flip);
+image_inference::sptr
+image_inference::make(const std::string &tag, int vlen, int x, int y,
+                      const std::string &image_dir, double convert_alpha,
+                      double norm_alpha, double norm_beta, int norm_type,
+                      int colormap, int interpolation, int flip) {
+  return gnuradio::make_block_sptr<image_inference_impl>(
+      tag, vlen, x, y, image_dir, convert_alpha, norm_alpha, norm_beta,
+      norm_type, colormap, interpolation, flip);
 }
 
-image_inference_impl::image_inference_impl(const std::string &tag, int vlen, int x, int y, const std::string &image_dir, double convert_alpha, double norm_alpha, double norm_beta, int norm_type, int colormap, int interpolation, int flip)
+image_inference_impl::image_inference_impl(
+    const std::string &tag, int vlen, int x, int y,
+    const std::string &image_dir, double convert_alpha, double norm_alpha,
+    double norm_beta, int norm_type, int colormap, int interpolation, int flip)
     : gr::block("image_inference",
-                gr::io_signature::make(
-                    1 /* min inputs */, 1 /* max inputs */,  vlen * sizeof(input_type)),
-                gr::io_signature::make(
-                    1 /* min outputs */, 1 /*max outputs */, x * y * sizeof(output_type) * 3)),
-                tag_(pmt::intern(tag)),
-                x_(x),
-                y_(y),
-                vlen_(vlen),
-                last_rx_freq_(0),
-                last_rx_time_(0),
-                image_dir_(image_dir),
-                convert_alpha_(convert_alpha),
-                norm_alpha_(norm_alpha),
-                norm_beta_(norm_beta),
-                norm_type_(norm_type),
-                colormap_(colormap),
-                interpolation_(interpolation),
-                flip_(flip)
-{
-    points_buffer_.reset(new cv::Mat(cv::Size(vlen, 0), CV_32F, cv::Scalar::all(0)));
-    cmapped_buffer_.reset(new cv::Mat(cv::Size(vlen, 0), CV_8UC3, cv::Scalar::all(0)));
-    // we will output our own metadata tags.
-    set_tag_propagation_policy(TPP_DONT);
+                gr::io_signature::make(1 /* min inputs */, 1 /* max inputs */,
+                                       vlen * sizeof(input_type)),
+                gr::io_signature::make(1 /* min outputs */, 1 /*max outputs */,
+                                       x * y * sizeof(output_type) * 3)),
+      tag_(pmt::intern(tag)), x_(x), y_(y), vlen_(vlen), last_rx_freq_(0),
+      last_rx_time_(0), image_dir_(image_dir), convert_alpha_(convert_alpha),
+      norm_alpha_(norm_alpha), norm_beta_(norm_beta), norm_type_(norm_type),
+      colormap_(colormap), interpolation_(interpolation), flip_(flip) {
+  points_buffer_.reset(
+      new cv::Mat(cv::Size(vlen, 0), CV_32F, cv::Scalar::all(0)));
+  cmapped_buffer_.reset(
+      new cv::Mat(cv::Size(vlen, 0), CV_8UC3, cv::Scalar::all(0)));
+  // we will output our own metadata tags.
+  set_tag_propagation_policy(TPP_DONT);
 }
 
-void image_inference_impl::delete_output_()
-{
-    output_item_type output_item = output_q_.back();
-    output_q_.pop_back();
-    delete output_item.buffer;
+void image_inference_impl::delete_output_() {
+  output_item_type output_item = output_q_.back();
+  output_q_.pop_back();
+  delete output_item.buffer;
 }
 
 image_inference_impl::~image_inference_impl() {
-    while (!output_q_.empty()) {
-        delete_output_();
-    }
-}
-
-void image_inference_impl::process_items_(size_t c, const input_type* &in)
-{
-    for (size_t i = 0; i < c; ++i, in += vlen_) {
-        cv::Mat new_row(cv::Size(vlen_, 1), CV_32F, (void*)in);
-        points_buffer_->push_back(new_row);
-    }
-    consume_each(c);
-}
-
-void image_inference_impl::create_image_()
-{
-    if (!points_buffer_->empty()) {
-        output_item_type output_item;
-        output_item.rx_freq = last_rx_freq_;
-        output_item.ts = last_rx_time_;
-        output_item.buffer = new cv::Mat(cv::Size(x_, y_), CV_8UC3, cv::Scalar::all(0));
-        this->d_logger->debug("rx_freq {} rx_time {} rows {}", last_rx_freq_, last_rx_time_, points_buffer_->rows);
-        cv::normalize(*points_buffer_, *points_buffer_, norm_alpha_, norm_beta_, norm_type_);
-        points_buffer_->convertTo(*cmapped_buffer_, CV_8UC3, convert_alpha_, 0);
-        cv::applyColorMap(*cmapped_buffer_, *cmapped_buffer_, colormap_);
-        cv::cvtColor(*cmapped_buffer_, *cmapped_buffer_, cv::COLOR_BGR2RGB);
-        cv::resize(*cmapped_buffer_, *output_item.buffer, cv::Size(x_, y_), interpolation_);
-        if (flip_ == -1 || flip_ == 0 || flip_ == 1) {
-            cv::flip(*output_item.buffer, *output_item.buffer, flip_);
-        }
-        output_q_.insert(output_q_.begin(), output_item);
-        points_buffer_->resize(0);
-    }
-}
-
-void image_inference_impl::output_image_(output_type *out)
-{
-    output_item_type output_item = output_q_.back();
-    void *resized_buffer_p = output_item.buffer->ptr(0);
-    std::stringstream str;
-    str << name() << unique_id();
-    pmt::pmt_t _id = pmt::string_to_symbol(str.str());
-    // TODO: add more metadata as needed for inference.
-    this->add_item_tag(0, nitems_written(0), RX_TIME_KEY, make_rx_time_key_(output_item.ts), _id);
-    this->add_item_tag(0, nitems_written(0), RX_FREQ_KEY, pmt::from_double(output_item.rx_freq), _id);
-    const size_t buffer_size = output_item.buffer->total() * output_item.buffer->elemSize();
-    std::memcpy(out, resized_buffer_p, buffer_size);
-    std::string image_file_base = "image_" +
-        host_now_str_(output_item.ts) + "_" +
-        std::to_string(uint64_t(x_)) + "x" +
-        std::to_string(uint64_t(y_)) + "_" +
-        std::to_string(uint64_t(output_item.rx_freq)) + "Hz";
-    std::string image_file = image_file_base + ".bin";
-    std::string dot_image_file = image_dir_ + "/." + image_file;
-    std::string full_image_file = image_dir_ + "/" + image_file;
-    std::ofstream image_out;
-    image_out.open(dot_image_file, std::ios::binary | std::ios::out);
-    image_out.write((const char*)resized_buffer_p, buffer_size);
-    image_out.close();
-    rename(dot_image_file.c_str(), full_image_file.c_str());
-    std::string image_file_png = image_file_base + ".png";
-    std::string dot_image_file_png = image_dir_ + "/." + image_file_png;
-    std::string full_image_file_png = image_dir_ + "/" + image_file_png;
-    cv::cvtColor(*output_item.buffer, *output_item.buffer, cv::COLOR_RGB2BGR);
-    cv::imwrite(dot_image_file_png, *output_item.buffer);
-    rename(dot_image_file_png.c_str(), full_image_file_png.c_str());
+  while (!output_q_.empty()) {
     delete_output_();
+  }
+}
+
+void image_inference_impl::process_items_(size_t c, const input_type *&in) {
+  for (size_t i = 0; i < c; ++i, in += vlen_) {
+    cv::Mat new_row(cv::Size(vlen_, 1), CV_32F, (void *)in);
+    points_buffer_->push_back(new_row);
+  }
+  consume_each(c);
+}
+
+void image_inference_impl::create_image_() {
+  if (!points_buffer_->empty()) {
+    output_item_type output_item;
+    output_item.rx_freq = last_rx_freq_;
+    output_item.ts = last_rx_time_;
+    output_item.buffer =
+        new cv::Mat(cv::Size(x_, y_), CV_8UC3, cv::Scalar::all(0));
+    this->d_logger->debug("rx_freq {} rx_time {} rows {}", last_rx_freq_,
+                          last_rx_time_, points_buffer_->rows);
+    cv::normalize(*points_buffer_, *points_buffer_, norm_alpha_, norm_beta_,
+                  norm_type_);
+    points_buffer_->convertTo(*cmapped_buffer_, CV_8UC3, convert_alpha_, 0);
+    cv::applyColorMap(*cmapped_buffer_, *cmapped_buffer_, colormap_);
+    cv::cvtColor(*cmapped_buffer_, *cmapped_buffer_, cv::COLOR_BGR2RGB);
+    cv::resize(*cmapped_buffer_, *output_item.buffer, cv::Size(x_, y_),
+               interpolation_);
+    if (flip_ == -1 || flip_ == 0 || flip_ == 1) {
+      cv::flip(*output_item.buffer, *output_item.buffer, flip_);
+    }
+    output_q_.insert(output_q_.begin(), output_item);
+    points_buffer_->resize(0);
+  }
+}
+
+void image_inference_impl::output_image_(output_type *out) {
+  output_item_type output_item = output_q_.back();
+  void *resized_buffer_p = output_item.buffer->ptr(0);
+  std::stringstream str;
+  str << name() << unique_id();
+  pmt::pmt_t _id = pmt::string_to_symbol(str.str());
+  // TODO: add more metadata as needed for inference.
+  this->add_item_tag(0, nitems_written(0), RX_TIME_KEY,
+                     make_rx_time_key_(output_item.ts), _id);
+  this->add_item_tag(0, nitems_written(0), RX_FREQ_KEY,
+                     pmt::from_double(output_item.rx_freq), _id);
+  const size_t buffer_size =
+      output_item.buffer->total() * output_item.buffer->elemSize();
+  std::memcpy(out, resized_buffer_p, buffer_size);
+  std::string image_file_base =
+      "image_" + host_now_str_(output_item.ts) + "_" +
+      std::to_string(uint64_t(x_)) + "x" + std::to_string(uint64_t(y_)) + "_" +
+      std::to_string(uint64_t(output_item.rx_freq)) + "Hz";
+  std::string image_file = image_file_base + ".bin";
+  std::string dot_image_file = image_dir_ + "/." + image_file;
+  std::string full_image_file = image_dir_ + "/" + image_file;
+  std::ofstream image_out;
+  image_out.open(dot_image_file, std::ios::binary | std::ios::out);
+  image_out.write((const char *)resized_buffer_p, buffer_size);
+  image_out.close();
+  rename(dot_image_file.c_str(), full_image_file.c_str());
+  std::string image_file_png = image_file_base + ".png";
+  std::string dot_image_file_png = image_dir_ + "/." + image_file_png;
+  std::string full_image_file_png = image_dir_ + "/" + image_file_png;
+  cv::cvtColor(*output_item.buffer, *output_item.buffer, cv::COLOR_RGB2BGR);
+  cv::imwrite(dot_image_file_png, *output_item.buffer);
+  rename(dot_image_file_png.c_str(), full_image_file_png.c_str());
+  delete_output_();
 }
 
 int image_inference_impl::general_work(int noutput_items,
-                                       gr_vector_int& ninput_items,
-                                       gr_vector_const_void_star& input_items,
-                                       gr_vector_void_star& output_items)
-{
-    const input_type *in = static_cast<const input_type*>(input_items[0]);
-    size_t in_count = ninput_items[0];
-    size_t in_first = nitems_read(0);
+                                       gr_vector_int &ninput_items,
+                                       gr_vector_const_void_star &input_items,
+                                       gr_vector_void_star &output_items) {
+  const input_type *in = static_cast<const input_type *>(input_items[0]);
+  size_t in_count = ninput_items[0];
+  size_t in_first = nitems_read(0);
 
-    if (!output_q_.empty()) {
-        output_image_(static_cast<output_type*>(output_items[0]));
-        return 1;
+  if (!output_q_.empty()) {
+    output_image_(static_cast<output_type *>(output_items[0]));
+    return 1;
+  }
+
+  std::vector<tag_t> all_tags, rx_freq_tags;
+  std::vector<double> rx_times;
+  get_tags_in_window(all_tags, 0, 0, in_count);
+
+  for (size_t t = 0; t < all_tags.size(); ++t) {
+    const auto &tag = all_tags[t];
+    if (tag.key == tag_) {
+      rx_freq_tags.push_back(tag);
+      continue;
     }
-
-    std::vector<tag_t> all_tags, rx_freq_tags;
-    std::vector<double> rx_times;
-    get_tags_in_window(all_tags, 0, 0, in_count);
-
-    for (size_t t = 0; t < all_tags.size(); ++t) {
-        const auto& tag = all_tags[t];
-        if (tag.key == tag_) {
-            rx_freq_tags.push_back(tag);
-            continue;
-        }
-        if (tag.key == RX_TIME_KEY) {
-            rx_times.push_back(rx_time_from_tag_(tag));
-            continue;
-        }
+    if (tag.key == RX_TIME_KEY) {
+      rx_times.push_back(rx_time_from_tag_(tag));
+      continue;
     }
+  }
 
-    if (rx_freq_tags.size() != rx_times.size()) {
-        rx_times.clear();
-        for (size_t t = 0; t < rx_freq_tags.size(); ++t) {
-            rx_times.push_back(host_now_());
-        }
-    }
-
-    if (rx_freq_tags.empty()) {
-        process_items_(in_count, in);
-        return 0;
-    }
-
+  if (rx_freq_tags.size() != rx_times.size()) {
+    rx_times.clear();
     for (size_t t = 0; t < rx_freq_tags.size(); ++t) {
-        const auto& tag = rx_freq_tags[t];
-        const double rx_time = rx_times[t];
-        const auto rel = tag.offset - in_first;
-        in_first += rel;
+      rx_times.push_back(host_now_());
+    }
+  }
 
-        if (rel > 0) {
-            process_items_(rel, in);
-        }
+  if (rx_freq_tags.empty()) {
+    process_items_(in_count, in);
+    return 0;
+  }
 
-        uint64_t rx_freq = (uint64_t)pmt::to_double(tag.value);
+  for (size_t t = 0; t < rx_freq_tags.size(); ++t) {
+    const auto &tag = rx_freq_tags[t];
+    const double rx_time = rx_times[t];
+    const auto rel = tag.offset - in_first;
+    in_first += rel;
 
-        if (rx_freq != last_rx_freq_) {
-            create_image_();
-            last_rx_freq_ = rx_freq;
-            last_rx_time_ = rx_time;
-        }
+    if (rel > 0) {
+      process_items_(rel, in);
     }
 
-    process_items_(1, in);
-    return 0;
+    uint64_t rx_freq = (uint64_t)pmt::to_double(tag.value);
+
+    if (rx_freq != last_rx_freq_) {
+      create_image_();
+      last_rx_freq_ = rx_freq;
+      last_rx_time_ = rx_time;
+    }
+  }
+
+  process_items_(1, in);
+  return 0;
 }
 
-void image_inference_impl::forecast(int noutput_items, gr_vector_int& ninput_items_required)
-{
-    ninput_items_required[0] = 1;
+void image_inference_impl::forecast(int noutput_items,
+                                    gr_vector_int &ninput_items_required) {
+  ninput_items_required[0] = 1;
 }
 
 } /* namespace iqtlabs */

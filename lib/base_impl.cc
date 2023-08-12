@@ -202,89 +202,95 @@
  *    limitations under the License.
  */
 
+#include "base_impl.h"
+#include <boost/algorithm/string.hpp>
+#include <boost/filesystem.hpp>
 #include <chrono>
 #include <fstream>
 #include <iomanip>
-#include <boost/algorithm/string.hpp>
-#include <boost/filesystem.hpp>
 #include <pmt/pmt.h>
 #include <sigmf/sigmf.h>
-#include "base_impl.h"
 
 namespace gr {
 namespace iqtlabs {
-        std::string base_impl::get_prefix_file_(const std::string &file, const std::string &prefix) {
-            boost::filesystem::path orig_path(file);
-            std::string basename(orig_path.filename().c_str());
-            std::string dirname(boost::filesystem::canonical(orig_path.parent_path()).c_str());
-            return dirname + "/" + prefix + basename;
-        }
+std::string base_impl::get_prefix_file_(const std::string &file,
+                                        const std::string &prefix) {
+  boost::filesystem::path orig_path(file);
+  std::string basename(orig_path.filename().c_str());
+  std::string dirname(
+      boost::filesystem::canonical(orig_path.parent_path()).c_str());
+  return dirname + "/" + prefix + basename;
+}
 
-        std::string base_impl::get_dotfile_(const std::string &file) {
-            return get_prefix_file_(file, ".");
-        }
+std::string base_impl::get_dotfile_(const std::string &file) {
+  return get_prefix_file_(file, ".");
+}
 
-        double base_impl::host_now_()
-        {
-            const auto now_millis = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now().time_since_epoch());
-            double now = double(now_millis.count()) / 1e3;
-            return now;
-        }
+double base_impl::host_now_() {
+  const auto now_millis = std::chrono::duration_cast<std::chrono::milliseconds>(
+      std::chrono::high_resolution_clock::now().time_since_epoch());
+  double now = double(now_millis.count()) / 1e3;
+  return now;
+}
 
-        std::string base_impl::host_now_str_(double host_now)
-        {
-            std::ostringstream ss;
-            ss << std::fixed << std::setprecision(3) << host_now;
-            return ss.str();
-        }
+std::string base_impl::host_now_str_(double host_now) {
+  std::ostringstream ss;
+  ss << std::fixed << std::setprecision(3) << host_now;
+  return ss.str();
+}
 
-        pmt::pmt_t base_impl::make_rx_time_key_(double now)
-        {
-            uint64_t now_sec = uint64_t(now);
-            return pmt::make_tuple(pmt::from_uint64(now_sec), pmt::from_double(now - now_sec));
-        }
+pmt::pmt_t base_impl::make_rx_time_key_(double now) {
+  uint64_t now_sec = uint64_t(now);
+  return pmt::make_tuple(pmt::from_uint64(now_sec),
+                         pmt::from_double(now - now_sec));
+}
 
-        double base_impl::rx_time_from_tag_(const gr::tag_t tag)
-        {
-            return pmt::to_uint64(pmt::tuple_ref(tag.value, 0)) +
-                pmt::to_double(pmt::tuple_ref(tag.value, 1));
-        }
+double base_impl::rx_time_from_tag_(const gr::tag_t tag) {
+  return pmt::to_uint64(pmt::tuple_ref(tag.value, 0)) +
+         pmt::to_double(pmt::tuple_ref(tag.value, 1));
+}
 
-        std::string base_impl::secs_dir(const std::string &dir, uint64_t rotate_secs)
-        {
-            if (rotate_secs) {
-                const auto now = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::high_resolution_clock::now().time_since_epoch());
-                uint64_t ts = now.count() / rotate_secs * rotate_secs;
-                const std::string ts_dir = dir + "/" + std::to_string(ts);
-                boost::filesystem::create_directories(ts_dir);
-                return ts_dir + "/";
-            }
-            return dir + "/";
-        }
+std::string base_impl::secs_dir(const std::string &dir, uint64_t rotate_secs) {
+  if (rotate_secs) {
+    const auto now = std::chrono::duration_cast<std::chrono::seconds>(
+        std::chrono::high_resolution_clock::now().time_since_epoch());
+    uint64_t ts = now.count() / rotate_secs * rotate_secs;
+    const std::string ts_dir = dir + "/" + std::to_string(ts);
+    boost::filesystem::create_directories(ts_dir);
+    return ts_dir + "/";
+  }
+  return dir + "/";
+}
 
-        void base_impl::write_sigmf(const std::string &filename, const std::string &source_file, double timestamp, const std::string &datatype, double sample_rate, double frequency, double gain)
-        {
-             sigmf::SigMF<sigmf::Global<sigmf::core::DescrT>,
-                 sigmf::Capture<sigmf::core::DescrT, sigmf::capture_details::DescrT>,
-                 sigmf::Annotation<sigmf::core::DescrT> > record;
-             record.global.access<sigmf::core::GlobalT>().datatype = datatype;
-             record.global.access<sigmf::core::GlobalT>().sample_rate = sample_rate;
-             auto capture = sigmf::Capture<sigmf::core::DescrT, sigmf::capture_details::DescrT>();
-             capture.get<sigmf::core::DescrT>().sample_start = 0;
-             capture.get<sigmf::core::DescrT>().global_index = 0;
-             capture.get<sigmf::core::DescrT>().frequency = frequency;
-             std::ostringstream ts_ss;
-             time_t timestamp_t = static_cast<time_t>(timestamp);
-             ts_ss << std::put_time(gmtime(&timestamp_t), "%FT%TZ");
-             capture.get<sigmf::core::DescrT>().datetime = ts_ss.str();
-             capture.get<sigmf::capture_details::DescrT>().source_file = basename(source_file.c_str());
-             capture.get<sigmf::capture_details::DescrT>().gain = gain;
-             record.captures.emplace_back(capture);
-             std::string dotfilename = get_dotfile_(filename);
-             std::ofstream jsonfile(dotfilename);
-             jsonfile << record.to_json();
-             jsonfile.close();
-             rename(dotfilename.c_str(), filename.c_str());
-        }
-    } /* namespace iqtlabs */
+void base_impl::write_sigmf(const std::string &filename,
+                            const std::string &source_file, double timestamp,
+                            const std::string &datatype, double sample_rate,
+                            double frequency, double gain) {
+  sigmf::SigMF<
+      sigmf::Global<sigmf::core::DescrT>,
+      sigmf::Capture<sigmf::core::DescrT, sigmf::capture_details::DescrT>,
+      sigmf::Annotation<sigmf::core::DescrT>>
+      record;
+  record.global.access<sigmf::core::GlobalT>().datatype = datatype;
+  record.global.access<sigmf::core::GlobalT>().sample_rate = sample_rate;
+  auto capture =
+      sigmf::Capture<sigmf::core::DescrT, sigmf::capture_details::DescrT>();
+  capture.get<sigmf::core::DescrT>().sample_start = 0;
+  capture.get<sigmf::core::DescrT>().global_index = 0;
+  capture.get<sigmf::core::DescrT>().frequency = frequency;
+  std::ostringstream ts_ss;
+  time_t timestamp_t = static_cast<time_t>(timestamp);
+  ts_ss << std::put_time(gmtime(&timestamp_t), "%FT%TZ");
+  capture.get<sigmf::core::DescrT>().datetime = ts_ss.str();
+  capture.get<sigmf::capture_details::DescrT>().source_file =
+      basename(source_file.c_str());
+  capture.get<sigmf::capture_details::DescrT>().gain = gain;
+  record.captures.emplace_back(capture);
+  std::string dotfilename = get_dotfile_(filename);
+  std::ofstream jsonfile(dotfilename);
+  jsonfile << record.to_json();
+  jsonfile.close();
+  rename(dotfilename.c_str(), filename.c_str());
+}
+} /* namespace iqtlabs */
 } /* namespace gr */
