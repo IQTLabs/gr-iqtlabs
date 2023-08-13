@@ -202,11 +202,11 @@
  *    limitations under the License.
  */
 
+#include "vector_to_json_impl.h"
 #include <cstdint>
 #include <cstdio>
-#include <iostream>
-#include "vector_to_json_impl.h"
 #include <gnuradio/io_signature.h>
+#include <iostream>
 
 namespace gr {
 namespace iqtlabs {
@@ -217,106 +217,100 @@ template class vector_to_json<float>;
 template class vector_to_json<gr_complex>;
 
 template <class T>
-typename vector_to_json<T>::sptr vector_to_json<T>::make(int vlen)
-{
-    return gnuradio::make_block_sptr<vector_to_json_impl<T>>(vlen);
+typename vector_to_json<T>::sptr vector_to_json<T>::make(int vlen) {
+  return gnuradio::make_block_sptr<vector_to_json_impl<T>>(vlen);
 }
 
 template <class T>
 vector_to_json_impl<T>::vector_to_json_impl(int vlen)
-    : gr::block("vector_to_json",
-                     gr::io_signature::make(
-                         1 /* min inputs */, 1 /* max inputs */, sizeof(T) * vlen),
-                     gr::io_signature::make(
-                         1 /* min outputs */, 1 /*max outputs */, 1)),
-      vlen_(vlen)
-{
-}
+    : gr::block(
+          "vector_to_json",
+          gr::io_signature::make(1 /* min inputs */, 1 /* max inputs */,
+                                 sizeof(T) * vlen),
+          gr::io_signature::make(1 /* min outputs */, 1 /*max outputs */, 1)),
+      vlen_(vlen) {}
 
 template <>
-std::string vector_to_json_impl<gr_complex>::item_str_(gr_complex item)
-{
-    return "\"" + std::to_string(item.real()) + "." + std::to_string(item.imag()) + "j\"";
+std::string vector_to_json_impl<gr_complex>::item_str_(gr_complex item) {
+  return "\"" + std::to_string(item.real()) + "." +
+         std::to_string(item.imag()) + "j\"";
 }
 
-template <class T>
-std::string vector_to_json_impl<T>::item_str_(T item)
-{
-    return std::to_string(item);
+template <class T> std::string vector_to_json_impl<T>::item_str_(T item) {
+  return std::to_string(item);
 }
 
 template <class T>
 int vector_to_json_impl<T>::general_work(int noutput_items,
-                                         gr_vector_int& ninput_items,
-                                         gr_vector_const_void_star& input_items,
-                                         gr_vector_void_star& output_items)
-{
-    if (!out_buf_.empty()) {
-        auto out = static_cast<char*>(output_items[0]);
-        const size_t leftover = std::min(out_buf_.size(), (size_t)noutput_items);
-        auto from = out_buf_.begin();
-        auto to = from + leftover;
-        std::copy(from, to, out);
-        out_buf_.erase(from, to);
-        return leftover;
+                                         gr_vector_int &ninput_items,
+                                         gr_vector_const_void_star &input_items,
+                                         gr_vector_void_star &output_items) {
+  if (!out_buf_.empty()) {
+    auto out = static_cast<char *>(output_items[0]);
+    const size_t leftover = std::min(out_buf_.size(), (size_t)noutput_items);
+    auto from = out_buf_.begin();
+    auto to = from + leftover;
+    std::copy(from, to, out);
+    out_buf_.erase(from, to);
+    return leftover;
+  }
+
+  auto out = static_cast<u_char *>(output_items[0]);
+  const T *in = static_cast<const T *>(input_items[0]);
+  size_t in_count = ninput_items[0];
+  size_t in_first = this->nitems_read(0);
+  std::vector<tag_t> all_tags;
+  gr::block::get_tags_in_window(all_tags, 0, 0, in_count);
+  std::reverse(all_tags.begin(), all_tags.end());
+
+  std::stringstream ss("", std::ios_base::app | std::ios_base::out);
+
+  for (size_t i = 0; i < in_count; ++i, in += vlen_) {
+    std::vector<tag_t> current_tags;
+
+    while (!all_tags.empty() && (all_tags.back().offset - in_first == i)) {
+      current_tags.push_back(all_tags.back());
+      all_tags.pop_back();
     }
 
-    auto out = static_cast<u_char*>(output_items[0]);
-    const T *in = static_cast<const T*>(input_items[0]);
-    size_t in_count = ninput_items[0];
-    size_t in_first = this->nitems_read(0);
-    std::vector<tag_t> all_tags;
-    gr::block::get_tags_in_window(all_tags, 0, 0, in_count);
-    std::reverse(all_tags.begin(), all_tags.end());
-
-    std::stringstream ss("", std::ios_base::app | std::ios_base::out);
-
-    for (size_t i = 0; i < in_count; ++i, in += vlen_) {
-        std::vector<tag_t> current_tags;
-
-        while (!all_tags.empty() && (all_tags.back().offset - in_first == i)) {
-            current_tags.push_back(all_tags.back());
-            all_tags.pop_back();
-        }
-
-        if (current_tags.empty()) {
-            continue;
-        }
-
-        ss << "{\"tags\": {";
-        for (std::vector<tag_t>::iterator it = current_tags.begin(); it != current_tags.end(); ++it) {
-            if (it != current_tags.begin()) {
-                ss << ", ";
-            }
-            ss << "\"" << it->key << "\": \"";
-
-            if (it->key == RX_TIME_KEY) {
-                ss << std::to_string(pmt::to_uint64(pmt::tuple_ref(it->value, 0)) +
-                          pmt::to_double(pmt::tuple_ref(it->value, 1)));
-            } else {
-                ss << it->value;
-            }
-
-            ss << "\"";
-        }
-        ss << "}, \"values\": [";
-        const T *current_in = in;
-        for (size_t j = 0; j < vlen_; ++j, ++current_in) {
-            if (j) {
-                ss << ", ";
-            }
-            ss << this->item_str_(*in);
-        }
-        ss << "]}\n";
+    if (current_tags.empty()) {
+      continue;
     }
 
-    const std::string s = ss.str();
-    out_buf_.insert(out_buf_.end(), s.begin(), s.end());
-    this->consume_each(in_count);
+    ss << "{\"tags\": {";
+    for (std::vector<tag_t>::iterator it = current_tags.begin();
+         it != current_tags.end(); ++it) {
+      if (it != current_tags.begin()) {
+        ss << ", ";
+      }
+      ss << "\"" << it->key << "\": \"";
 
-    return 0;
+      if (it->key == RX_TIME_KEY) {
+        ss << std::to_string(pmt::to_uint64(pmt::tuple_ref(it->value, 0)) +
+                             pmt::to_double(pmt::tuple_ref(it->value, 1)));
+      } else {
+        ss << it->value;
+      }
+
+      ss << "\"";
+    }
+    ss << "}, \"values\": [";
+    const T *current_in = in;
+    for (size_t j = 0; j < vlen_; ++j, ++current_in) {
+      if (j) {
+        ss << ", ";
+      }
+      ss << this->item_str_(*in);
+    }
+    ss << "]}\n";
+  }
+
+  const std::string s = ss.str();
+  out_buf_.insert(out_buf_.end(), s.begin(), s.end());
+  this->consume_each(in_count);
+
+  return 0;
 }
-
 
 } /* namespace iqtlabs */
 } /* namespace gr */

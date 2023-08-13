@@ -205,8 +205,8 @@
 #ifndef INCLUDED_IQTLABS_IMAGE_INFERENCE_H
 #define INCLUDED_IQTLABS_IMAGE_INFERENCE_H
 
-#include <gnuradio/iqtlabs/api.h>
 #include <gnuradio/block.h>
+#include <gnuradio/iqtlabs/api.h>
 
 namespace gr {
 namespace iqtlabs {
@@ -216,20 +216,22 @@ namespace iqtlabs {
  * \ingroup iqtlabs
  *
  */
-class IQTLABS_API image_inference : virtual public gr::block
-{
+class IQTLABS_API image_inference : virtual public gr::block {
 public:
-    typedef std::shared_ptr<image_inference> sptr;
+  typedef std::shared_ptr<image_inference> sptr;
 
-    /*!
-     * \brief Return a shared_ptr to a new instance of iqtlabs::image_inference.
-     *
-     * To avoid accidental use of raw pointers, iqtlabs::image_inference's
-     * constructor is in a private implementation
-     * class. iqtlabs::image_inference::make is the public interface for
-     * creating new instances.
-     */
-    static sptr make(const std::string &tag, int vlen, int x, int y, const std::string &image_dir, double convert_alpha, double norm_alpha, double norm_beta, int norm_type, int colormap, int interpolation, int flip);
+  /*!
+   * \brief Return a shared_ptr to a new instance of iqtlabs::image_inference.
+   *
+   * To avoid accidental use of raw pointers, iqtlabs::image_inference's
+   * constructor is in a private implementation
+   * class. iqtlabs::image_inference::make is the public interface for
+   * creating new instances.
+   */
+  static sptr make(const std::string &tag, int vlen, int x, int y,
+                   const std::string &image_dir, double convert_alpha,
+                   double norm_alpha, double norm_beta, int norm_type,
+                   int colormap, int interpolation, int flip);
 };
 
 } // namespace iqtlabs

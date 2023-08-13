@@ -216,20 +216,20 @@ namespace iqtlabs {
  * \ingroup iqtlabs
  *
  */
-class IQTLABS_API tuneable_test_source : virtual public gr::sync_block
-{
+class IQTLABS_API tuneable_test_source : virtual public gr::sync_block {
 public:
-    typedef std::shared_ptr<tuneable_test_source> sptr;
+  typedef std::shared_ptr<tuneable_test_source> sptr;
 
-    /*!
-     * \brief Return a shared_ptr to a new instance of iqtlabs::tuneable_test_source.
-     *
-     * To avoid accidental use of raw pointers, iqtlabs::tuneable_test_source's
-     * constructor is in a private implementation
-     * class. iqtlabs::tuneable_test_source::make is the public interface for
-     * creating new instances.
-     */
-    static sptr make(float divisor);
+  /*!
+   * \brief Return a shared_ptr to a new instance of
+   * iqtlabs::tuneable_test_source.
+   *
+   * To avoid accidental use of raw pointers, iqtlabs::tuneable_test_source's
+   * constructor is in a private implementation
+   * class. iqtlabs::tuneable_test_source::make is the public interface for
+   * creating new instances.
+   */
+  static sptr make(float divisor);
 };
 
 } // namespace iqtlabs

@@ -205,81 +205,90 @@
 #ifndef INCLUDED_IQTLABS_RETUNE_FFT_IMPL_H
 #define INCLUDED_IQTLABS_RETUNE_FFT_IMPL_H
 
+#include "base_impl.h"
 #include <boost/filesystem.hpp>
 #include <boost/iostreams/device/file.hpp>
-#include <boost/iostreams/filtering_stream.hpp>
 #include <boost/iostreams/filter/zstd.hpp>
+#include <boost/iostreams/filtering_stream.hpp>
 #include <boost/scoped_ptr.hpp>
 #include <gnuradio/iqtlabs/retune_fft.h>
-#include "base_impl.h"
 
 namespace gr {
-  namespace iqtlabs {
-    using input_type = float;
-    using output_type = char;
+namespace iqtlabs {
+using input_type = float;
+using output_type = char;
 
-    class retune_fft_impl : public retune_fft, base_impl
-    {
-     private:
-      void retune_now_();
-      void write_items_(const input_type* in);
-      void sum_items_(const input_type* in);
-      void process_items_(size_t c, const input_type* &in);
-      void output_buckets_(const std::string &name, const std::list<std::pair<double, double>> &buckets, std::stringstream &ss);
-      void reopen_(double host_now, uint64_t rx_freq);
-      void write_buckets_(double host_now, uint64_t rx_freq);
-      void process_tags_(const input_type *in, size_t in_count, size_t in_first);
-      void write_(const char *data, size_t len);
-      void open_(const std::string &file);
-      void close_();
+class retune_fft_impl : public retune_fft, base_impl {
+private:
+  void retune_now_();
+  void write_items_(const input_type *in);
+  void sum_items_(const input_type *in);
+  void process_items_(size_t c, const input_type *&in);
+  void output_buckets_(const std::string &name,
+                       const std::list<std::pair<double, double>> &buckets,
+                       std::stringstream &ss);
+  void reopen_(double host_now, uint64_t rx_freq);
+  void write_buckets_(double host_now, uint64_t rx_freq);
+  void process_tags_(const input_type *in, size_t in_count, size_t in_first);
+  void write_(const char *data, size_t len);
+  void open_(const std::string &file);
+  void close_();
 
-      pmt::pmt_t tag_;
-      size_t vlen_;
-      size_t nfft_;
-      uint64_t samp_rate_;
-      uint64_t freq_start_;
-      uint64_t freq_end_;
-      uint64_t tune_step_hz_;
-      uint64_t tune_step_fft_;
-      uint64_t skip_tune_step_fft_;
-      uint64_t write_step_fft_;
-      uint64_t rotate_secs_;
-      double bucket_range_;
-      std::string sdir_;
-      std::string description_;
+  pmt::pmt_t tag_;
+  size_t vlen_;
+  size_t nfft_;
+  uint64_t samp_rate_;
+  uint64_t freq_start_;
+  uint64_t freq_end_;
+  uint64_t tune_step_hz_;
+  uint64_t tune_step_fft_;
+  uint64_t skip_tune_step_fft_;
+  uint64_t write_step_fft_;
+  uint64_t rotate_secs_;
+  double bucket_range_;
+  std::string sdir_;
+  std::string description_;
 
-      bool fft_roll_;
-      double fft_min_;
-      double fft_max_;
+  bool fft_roll_;
+  double fft_min_;
+  double fft_max_;
 
-      std::deque<output_type> out_buf_;
-      std::vector<double> sample_;
-      size_t sample_count_;
-      uint64_t tune_freq_;
-      uint64_t last_rx_freq_;
-      double last_rx_time_;
-      uint64_t fft_count_;
-      double last_sweep_start_;
-      uint64_t skip_fft_count_;
-      uint64_t total_tune_count_;
-      uint64_t pending_retune_;
-      uint64_t write_step_fft_count_;
-      size_t bucket_offset_;
-      std::vector<std::pair<uint64_t, uint64_t>> tuning_ranges_;
-      size_t tuning_range_;
-      size_t last_tuning_range_;
+  std::deque<output_type> out_buf_;
+  std::vector<double> sample_;
+  size_t sample_count_;
+  uint64_t tune_freq_;
+  uint64_t last_rx_freq_;
+  double last_rx_time_;
+  uint64_t fft_count_;
+  double last_sweep_start_;
+  uint64_t skip_fft_count_;
+  uint64_t total_tune_count_;
+  uint64_t pending_retune_;
+  uint64_t write_step_fft_count_;
+  size_t bucket_offset_;
+  std::vector<std::pair<uint64_t, uint64_t>> tuning_ranges_;
+  size_t tuning_range_;
+  size_t last_tuning_range_;
 
-      boost::scoped_ptr<boost::iostreams::filtering_ostream> outbuf_p;
-      std::string file_;
+  boost::scoped_ptr<boost::iostreams::filtering_ostream> outbuf_p;
+  std::string file_;
 
-     public:
-      retune_fft_impl(const std::string &tag, int vlen, int nfft, uint64_t samp_rate, uint64_t freq_start, uint64_t freq_end, int tune_step_hz, int tune_step_fft, int skip_tune_step_fft, bool fft_roll, double fft_min, double fft_max, const std::string &sdir, uint64_t write_step_fft, double bucket_range, const std::string &tuning_ranges, const std::string &description, uint64_t rotate_secs);
-      ~retune_fft_impl();
-      void forecast(int noutput_items, gr_vector_int& ninput_items_required);
-      int general_work(int noutput_items, gr_vector_int& ninput_items, gr_vector_const_void_star& input_items, gr_vector_void_star& output_items);
-    };
+public:
+  retune_fft_impl(const std::string &tag, int vlen, int nfft,
+                  uint64_t samp_rate, uint64_t freq_start, uint64_t freq_end,
+                  int tune_step_hz, int tune_step_fft, int skip_tune_step_fft,
+                  bool fft_roll, double fft_min, double fft_max,
+                  const std::string &sdir, uint64_t write_step_fft,
+                  double bucket_range, const std::string &tuning_ranges,
+                  const std::string &description, uint64_t rotate_secs);
+  ~retune_fft_impl();
+  void forecast(int noutput_items, gr_vector_int &ninput_items_required);
+  int general_work(int noutput_items, gr_vector_int &ninput_items,
+                   gr_vector_const_void_star &input_items,
+                   gr_vector_void_star &output_items);
+};
 
-  } // namespace iqtlabs
+} // namespace iqtlabs
 } // namespace gr
 
 #endif /* INCLUDED_IQTLABS_RETUNE_FFT_IMPL_H */

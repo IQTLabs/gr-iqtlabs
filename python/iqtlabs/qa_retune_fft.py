@@ -435,17 +435,14 @@ class qa_retune_fft_base:
                 # must have plausible unscaled dB value
                 self.assertTrue(fft_min <= df["v"].min() <= 1, df["v"].min())
                 self.assertTrue(50 <= df["v"].max() <= 61, df["v"].max())
-                df["u"] = df.groupby("f")["v"].transform("nunique")
-                df["m"] = df.groupby("f")["v"].transform("diff")
-                df["m"] = df["m"].abs().max()
+                df["m"] = df.groupby("f")["v"].apply(lambda x: x.max() - x.min())
                 non_unique_v = df[df["m"] > 2]
                 # every frequency must have power values within 1-2dB (accounts for precision loss in FFT block)
                 self.assertTrue(non_unique_v.empty, non_unique_v)
-                f_count = df.groupby("f").count()
                 # pd.set_option("display.max_rows", None)
-                f_count_min = f_count["u"].min()
                 # every frequency must be observed more than once.
-                self.assertGreater(f_count_min, 1, df[df["u"] == 1])
+                df["u"] = df.groupby("f")["f"].transform("count")
+                self.assertGreater(df["u"].min(), 1, df[df["u"] == 1])
                 # must have even frequency coverage within the range
                 df["d"] = df["f"].diff()
                 df = df[(df["d"] != 0) & (df["d"].notna())]

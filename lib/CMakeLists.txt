@@ -2,48 +2,52 @@
 # SPDX-License-Identifier: Apache-2.0
 #
 
-########################################################################
+# ##############################################################################
 # Setup library
-########################################################################
-include(GrPlatform) #define LIB_SUFFIX
+# ##############################################################################
+include(GrPlatform) # define LIB_SUFFIX
 
-list(APPEND iqtlabs_sources
-    tuneable_test_source_impl.cc
-    retune_fft_impl.cc
-    write_freq_samples_impl.cc
-    image_inference_impl.cc
-    base_impl.cc
-    vector_to_json_impl.cc
-)
+list(
+  APPEND
+  iqtlabs_sources
+  tuneable_test_source_impl.cc
+  retune_fft_impl.cc
+  write_freq_samples_impl.cc
+  image_inference_impl.cc
+  base_impl.cc
+  vector_to_json_impl.cc)
 
-set(iqtlabs_sources "${iqtlabs_sources}" PARENT_SCOPE)
+set(iqtlabs_sources
+    "${iqtlabs_sources}"
+    PARENT_SCOPE)
 if(NOT iqtlabs_sources)
-    MESSAGE(STATUS "No C++ sources... skipping lib/")
-    return()
+  message(STATUS "No C++ sources... skipping lib/")
+  return()
 endif(NOT iqtlabs_sources)
 
 add_library(gnuradio-iqtlabs SHARED ${iqtlabs_sources})
-target_link_libraries(gnuradio-iqtlabs ${Boost_LIBRARIES} ${OpenCV_LIBS} libsigmf::libsigmf gnuradio::gnuradio-runtime )
-target_include_directories(gnuradio-iqtlabs
-    PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/../include>
-    PUBLIC $<INSTALL_INTERFACE:include>
-  )
-set_target_properties(gnuradio-iqtlabs PROPERTIES DEFINE_SYMBOL "gnuradio_iqtlabs_EXPORTS")
+target_link_libraries(gnuradio-iqtlabs ${Boost_LIBRARIES} ${OpenCV_LIBS}
+                      libsigmf::libsigmf gnuradio::gnuradio-runtime)
+target_include_directories(
+  gnuradio-iqtlabs
+  PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/../include>
+  PUBLIC $<INSTALL_INTERFACE:include>)
+set_target_properties(gnuradio-iqtlabs PROPERTIES DEFINE_SYMBOL
+                                                  "gnuradio_iqtlabs_EXPORTS")
 
 if(APPLE)
-    set_target_properties(gnuradio-iqtlabs PROPERTIES
-        INSTALL_NAME_DIR "${CMAKE_INSTALL_PREFIX}/lib"
-    )
+  set_target_properties(
+    gnuradio-iqtlabs PROPERTIES INSTALL_NAME_DIR "${CMAKE_INSTALL_PREFIX}/lib")
 endif(APPLE)
 
-########################################################################
+# ##############################################################################
 # Install built library files
-########################################################################
+# ##############################################################################
 include(GrMiscUtils)
-GR_LIBRARY_FOO(gnuradio-iqtlabs)
+gr_library_foo(gnuradio-iqtlabs)
 
-########################################################################
+# ##############################################################################
 # Print summary
-########################################################################
+# ##############################################################################
 message(STATUS "Using install prefix: ${CMAKE_INSTALL_PREFIX}")
 message(STATUS "Building for version: ${VERSION} / ${LIBVER}")

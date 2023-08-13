@@ -202,28 +202,30 @@
  *    limitations under the License.
  */
 
-#include <string>
 #include <gnuradio/tags.h>
+#include <string>
 
 namespace gr {
 namespace iqtlabs {
-        const pmt::pmt_t CMD_KEY = pmt::mp("cmd");
-        const pmt::pmt_t FREQ_KEY = pmt::mp("freq");
-        const pmt::pmt_t TUNE = pmt::mp("tune");
-        const pmt::pmt_t RX_TIME_KEY = pmt::string_to_symbol("rx_time");
-        const pmt::pmt_t RX_FREQ_KEY = pmt::string_to_symbol("rx_freq");
+const pmt::pmt_t CMD_KEY = pmt::mp("cmd");
+const pmt::pmt_t FREQ_KEY = pmt::mp("freq");
+const pmt::pmt_t TUNE = pmt::mp("tune");
+const pmt::pmt_t RX_TIME_KEY = pmt::string_to_symbol("rx_time");
+const pmt::pmt_t RX_FREQ_KEY = pmt::string_to_symbol("rx_freq");
 
-        class base_impl
-        {
-          public:
-              std::string get_prefix_file_(const std::string &file, const std::string &prefix);
-              std::string get_dotfile_(const std::string &file);
-              double host_now_();
-              std::string host_now_str_(double host_now);
-              pmt::pmt_t make_rx_time_key_(double host_now);
-              double rx_time_from_tag_(const gr::tag_t tag);
-              std::string secs_dir(const std::string &dir, uint64_t rotate_secs);
-              void write_sigmf(const std::string &filename, const std::string &source_file, double timestamp, const std::string &datatype, double sample_rate, double frequency, double gain);
-        };
-    } /* namespace iqtlabs */
+class base_impl {
+public:
+  std::string get_prefix_file_(const std::string &file,
+                               const std::string &prefix);
+  std::string get_dotfile_(const std::string &file);
+  double host_now_();
+  std::string host_now_str_(double host_now);
+  pmt::pmt_t make_rx_time_key_(double host_now);
+  double rx_time_from_tag_(const gr::tag_t tag);
+  std::string secs_dir(const std::string &dir, uint64_t rotate_secs);
+  void write_sigmf(const std::string &filename, const std::string &source_file,
+                   double timestamp, const std::string &datatype,
+                   double sample_rate, double frequency, double gain);
+};
+} /* namespace iqtlabs */
 } /* namespace gr */
