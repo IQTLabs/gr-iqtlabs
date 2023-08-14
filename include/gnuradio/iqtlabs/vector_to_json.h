@@ -216,21 +216,19 @@ namespace iqtlabs {
  * \ingroup iqtlabs
  *
  */
-template <class T>
-class IQTLABS_API vector_to_json : virtual public gr::block
-{
+template <class T> class IQTLABS_API vector_to_json : virtual public gr::block {
 public:
-    typedef std::shared_ptr<vector_to_json<T>> sptr;
+  typedef std::shared_ptr<vector_to_json<T>> sptr;
 
-    /*!
-     * \brief Return a shared_ptr to a new instance of iqtlabs::vector_to_json.
-     *
-     * To avoid accidental use of raw pointers, iqtlabs::vector_to_json's
-     * constructor is in a private implementation
-     * class. iqtlabs::vector_to_json::make is the public interface for
-     * creating new instances.
-     */
-    static sptr make(int vlen);
+  /*!
+   * \brief Return a shared_ptr to a new instance of iqtlabs::vector_to_json.
+   *
+   * To avoid accidental use of raw pointers, iqtlabs::vector_to_json's
+   * constructor is in a private implementation
+   * class. iqtlabs::vector_to_json::make is the public interface for
+   * creating new instances.
+   */
+  static sptr make(int vlen);
 };
 
 typedef vector_to_json<std::int16_t> vector_to_json_ss;

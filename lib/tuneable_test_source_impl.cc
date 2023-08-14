@@ -209,75 +209,69 @@ namespace gr {
 namespace iqtlabs {
 
 using output_type = gr_complex;
-tuneable_test_source::sptr tuneable_test_source::make(float freq_divisor)
-{
-    return gnuradio::make_block_sptr<tuneable_test_source_impl>(freq_divisor);
+tuneable_test_source::sptr tuneable_test_source::make(float freq_divisor) {
+  return gnuradio::make_block_sptr<tuneable_test_source_impl>(freq_divisor);
 }
-
 
 tuneable_test_source_impl::tuneable_test_source_impl(float freq_divisor)
-    : gr::sync_block("tuneable_test_source",
-                     gr::io_signature::make(0, 0, 0),
-                     gr::io_signature::make(
-                         1 /* min outputs */, 1 /*max outputs */, sizeof(output_type)))
-{
-    message_port_register_in(CMD_KEY);
-    set_msg_handler(CMD_KEY, [this](const pmt::pmt_t &msg) { recv_cmd(msg); });
-    d_freq_divisor = freq_divisor;
-    last_freq = 0;
-    last_sample = gr_complex(0, 0);
-    tag_now = false;
+    : gr::sync_block("tuneable_test_source", gr::io_signature::make(0, 0, 0),
+                     gr::io_signature::make(1 /* min outputs */,
+                                            1 /*max outputs */,
+                                            sizeof(output_type))) {
+  message_port_register_in(CMD_KEY);
+  set_msg_handler(CMD_KEY, [this](const pmt::pmt_t &msg) { recv_cmd(msg); });
+  d_freq_divisor = freq_divisor;
+  last_freq = 0;
+  last_sample = gr_complex(0, 0);
+  tag_now = false;
 }
-
 
 tuneable_test_source_impl::~tuneable_test_source_impl() {}
 
-
-void
-tuneable_test_source_impl::recv_cmd(pmt::pmt_t msg)
-{
-    pmt::pmt_t list_of_items;
-    if (pmt::is_dict(msg)) {
-        list_of_items = pmt::dict_items(msg);
-    } else if (pmt::is_pair(msg)) {
-        list_of_items = pmt::list1(msg);
-    } else {
-	d_logger->debug("unhandled PMT message (not dict or pair)");
-        pmt::print(msg);
-        return;
+void tuneable_test_source_impl::recv_cmd(pmt::pmt_t msg) {
+  pmt::pmt_t list_of_items;
+  if (pmt::is_dict(msg)) {
+    list_of_items = pmt::dict_items(msg);
+  } else if (pmt::is_pair(msg)) {
+    list_of_items = pmt::list1(msg);
+  } else {
+    d_logger->debug("unhandled PMT message (not dict or pair)");
+    pmt::print(msg);
+    return;
+  }
+  while (list_of_items != pmt::PMT_NIL) {
+    auto item = pmt::car(list_of_items);
+    auto key = pmt::car(item);
+    auto val = pmt::cdr(item);
+    if (key == FREQ_KEY) {
+      if (pmt::is_number(val)) {
+        last_freq = pmt::to_double(val);
+        tag_now = true;
+      }
     }
-    while (list_of_items != pmt::PMT_NIL) {
-        auto item = pmt::car(list_of_items);
-        auto key = pmt::car(item);
-        auto val = pmt::cdr(item);
-        if (key == FREQ_KEY) {
-            if (pmt::is_number(val)) {
-                last_freq = pmt::to_double(val);
-                tag_now = true;
-            }
-        }
-        list_of_items = pmt::cdr(list_of_items);
-    }
+    list_of_items = pmt::cdr(list_of_items);
+  }
 }
 
-
 int tuneable_test_source_impl::work(int noutput_items,
-                                    gr_vector_const_void_star& input_items,
-                                    gr_vector_void_star& output_items)
-{
-    auto out = static_cast<output_type*>(output_items[0]);
-    if (tag_now) {
-        std::stringstream str;
-        str << name() << unique_id();
-        pmt::pmt_t _id = pmt::string_to_symbol(str.str());
-        this->add_item_tag(0, nitems_written(0), RX_TIME_KEY, make_rx_time_key_(host_now_()), _id);
-        this->add_item_tag(0, nitems_written(0), RX_FREQ_KEY, pmt::from_double(last_freq), _id);
-        last_sample = gr_complex(last_freq / d_freq_divisor, last_freq / d_freq_divisor);
-        tag_now = false;
-        d_logger->debug("tag now with frequency {}", last_freq);
-    }
-    std::fill_n(out, noutput_items, last_sample);
-    return noutput_items;
+                                    gr_vector_const_void_star &input_items,
+                                    gr_vector_void_star &output_items) {
+  auto out = static_cast<output_type *>(output_items[0]);
+  if (tag_now) {
+    std::stringstream str;
+    str << name() << unique_id();
+    pmt::pmt_t _id = pmt::string_to_symbol(str.str());
+    this->add_item_tag(0, nitems_written(0), RX_TIME_KEY,
+                       make_rx_time_key_(host_now_()), _id);
+    this->add_item_tag(0, nitems_written(0), RX_FREQ_KEY,
+                       pmt::from_double(last_freq), _id);
+    last_sample =
+        gr_complex(last_freq / d_freq_divisor, last_freq / d_freq_divisor);
+    tag_now = false;
+    d_logger->debug("tag now with frequency {}", last_freq);
+  }
+  std::fill_n(out, noutput_items, last_sample);
+  return noutput_items;
 }
 
 } /* namespace iqtlabs */

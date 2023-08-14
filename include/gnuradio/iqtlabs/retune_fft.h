@@ -209,30 +209,35 @@
 #include <gnuradio/sync_block.h>
 
 namespace gr {
-  namespace iqtlabs {
+namespace iqtlabs {
 
-    /*!
-     * \brief <+description of block+>
-     * \ingroup iqtlabs
-     *
-     */
-    class IQTLABS_API retune_fft : virtual public gr::block
-    {
-     public:
-      typedef std::shared_ptr<retune_fft> sptr;
+/*!
+ * \brief <+description of block+>
+ * \ingroup iqtlabs
+ *
+ */
+class IQTLABS_API retune_fft : virtual public gr::block {
+public:
+  typedef std::shared_ptr<retune_fft> sptr;
 
-      /*!
-       * \brief Return a shared_ptr to a new instance of iqtlabs::retune_fft.
-       *
-       * To avoid accidental use of raw pointers, iqtlabs::retune_fft's
-       * constructor is in a private implementation
-       * class. iqtlabs::retune_fft::make is the public interface for
-       * creating new instances.
-       */
-      static sptr make(const std::string &tag, int vlen, int nfft, uint64_t samp_rate, uint64_t freq_start, uint64_t freq_end, int tune_step_hz, int tune_step_fft, int skip_tune_step_fft, bool fft_roll, double fft_min, double fft_max, const std::string &sdir, uint64_t write_step_fft, double bucket_range, const std::string &tuning_ranges, const std::string &description, uint64_t rotate_secs);
-    };
+  /*!
+   * \brief Return a shared_ptr to a new instance of iqtlabs::retune_fft.
+   *
+   * To avoid accidental use of raw pointers, iqtlabs::retune_fft's
+   * constructor is in a private implementation
+   * class. iqtlabs::retune_fft::make is the public interface for
+   * creating new instances.
+   */
+  static sptr make(const std::string &tag, int vlen, int nfft,
+                   uint64_t samp_rate, uint64_t freq_start, uint64_t freq_end,
+                   int tune_step_hz, int tune_step_fft, int skip_tune_step_fft,
+                   bool fft_roll, double fft_min, double fft_max,
+                   const std::string &sdir, uint64_t write_step_fft,
+                   double bucket_range, const std::string &tuning_ranges,
+                   const std::string &description, uint64_t rotate_secs);
+};
 
-  } // namespace iqtlabs
+} // namespace iqtlabs
 } // namespace gr
 
 #endif /* INCLUDED_IQTLABS_RETUNE_FFT_H */

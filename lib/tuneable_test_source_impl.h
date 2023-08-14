@@ -205,28 +205,26 @@
 #ifndef INCLUDED_IQTLABS_TUNEABLE_TEST_SOURCE_IMPL_H
 #define INCLUDED_IQTLABS_TUNEABLE_TEST_SOURCE_IMPL_H
 
-#include <gnuradio/iqtlabs/tuneable_test_source.h>
 #include "base_impl.h"
+#include <gnuradio/iqtlabs/tuneable_test_source.h>
 
 namespace gr {
 namespace iqtlabs {
 
-class tuneable_test_source_impl : public tuneable_test_source, base_impl
-{
+class tuneable_test_source_impl : public tuneable_test_source, base_impl {
 private:
-    double d_freq_divisor;
-    double last_freq;
-    gr_complex last_sample;
-    bool tag_now;
+  double d_freq_divisor;
+  double last_freq;
+  gr_complex last_sample;
+  bool tag_now;
 
 public:
-    tuneable_test_source_impl(float freq_divisor);
-    ~tuneable_test_source_impl();
+  tuneable_test_source_impl(float freq_divisor);
+  ~tuneable_test_source_impl();
 
-    int work(int noutput_items,
-             gr_vector_const_void_star& input_items,
-             gr_vector_void_star& output_items);
-    void recv_cmd(pmt::pmt_t msg);
+  int work(int noutput_items, gr_vector_const_void_star &input_items,
+           gr_vector_void_star &output_items);
+  void recv_cmd(pmt::pmt_t msg);
 };
 
 } // namespace iqtlabs

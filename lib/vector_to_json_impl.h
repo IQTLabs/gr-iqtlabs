@@ -205,28 +205,26 @@
 #ifndef INCLUDED_IQTLABS_VECTOR_TO_JSON_IMPL_H
 #define INCLUDED_IQTLABS_VECTOR_TO_JSON_IMPL_H
 
-#include <gnuradio/sync_block.h>
-#include <gnuradio/iqtlabs/vector_to_json.h>
 #include "base_impl.h"
+#include <gnuradio/iqtlabs/vector_to_json.h>
+#include <gnuradio/sync_block.h>
 
 namespace gr {
 namespace iqtlabs {
 
 template <class T>
-class vector_to_json_impl : public vector_to_json<T>, base_impl
-{
+class vector_to_json_impl : public vector_to_json<T>, base_impl {
 private:
-    int vlen_;
-    std::string item_str_(T item);
-    std::deque<char> out_buf_;
+  int vlen_;
+  std::string item_str_(T item);
+  std::deque<char> out_buf_;
 
 public:
-    vector_to_json_impl(int vlen);
+  vector_to_json_impl(int vlen);
 
-    int general_work(int noutput_items,
-                     gr_vector_int& ninput_items,
-                     gr_vector_const_void_star& input_items,
-                     gr_vector_void_star& output_items);
+  int general_work(int noutput_items, gr_vector_int &ninput_items,
+                   gr_vector_const_void_star &input_items,
+                   gr_vector_void_star &output_items);
 };
 
 } // namespace iqtlabs
