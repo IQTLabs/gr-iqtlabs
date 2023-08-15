@@ -44,6 +44,11 @@ include_directories(${CMAKE_SOURCE_DIR}/include ${OpenCV_INCLUDE_DIRS})
 
 find_package(libsigmf REQUIRED)
 
+find_package(Vulkan QUIET)
+if(NOT Vulkan_FOUND)
+  message(INFO ": Vulkan not found, vkfft will not be built")
+endif()
+
 # Set the version information here
 set(VERSION_MAJOR 1)
 set(VERSION_API 0)

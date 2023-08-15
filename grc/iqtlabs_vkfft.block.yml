@@ -1,0 +1,50 @@
+id: iqtlabs_vkfft
+label: vkfft
+category: '[iqtlabs]'
+flags: [python, cpp]
+documentation:
+  This block uses VkFFT to do FFT offload via Vulkan.
+
+  input:
+    vector of complex, representing I/Q samples.
+  output:
+    vector of complex, representing FFT output.
+
+  parameters:
+    vlen: length of FFT vector, as a multiple of FFT to achieve batching.
+    nfft: number of FFT points.
+
+templates:
+  imports: from gnuradio import iqtlabs
+  make: iqtlabs.vkfft(${vlen}, ${nfft})
+
+cpp_templates:
+  includes: ['#include <gnuradio/iqtlabs/vkfft.h>']
+  declarations: 'gr::iqtlabs::vkfft::sptr ${id};'
+  make: 'this->${id} = gr::iqtlabs::vkfft::make(${vlen}, ${nfft});'
+  link: ['libgnuradio-iqtlabs.so']
+
+asserts:
+  - ${ vlen >= nfft }
+  - ${ nfft > 0 }
+
+parameters:
+- id: vlen
+  dtype: int
+- id: nfft
+  dtype: int
+
+inputs:
+- label: input
+  domain: stream
+  dtype: complex
+  vlen: ${ vlen }
+
+outputs:
+- label: output
+  domain: stream
+  dtype: complex
+  vlen: ${ vlen }
+
+
+file_format: 1

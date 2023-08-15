@@ -29,7 +29,7 @@ jobs:
         fetch-depth: 0
     - name: build_test
       run: |
-        bin/apt_get_39.sh && bin/build_test.sh
+        bin/apt_get.sh && bin/apt_get_39.sh && bin/build_test.sh
   test-2004:
     runs-on: ubuntu-20.04
     steps:
