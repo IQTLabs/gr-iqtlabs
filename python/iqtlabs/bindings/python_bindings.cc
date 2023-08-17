@@ -23,6 +23,9 @@ namespace py = pybind11;
     void bind_write_freq_samples(py::module& m);
     void bind_image_inference(py::module& m);
     void bind_vector_to_json(py::module& m);
+#ifdef HAVE_VULKAN
+    void bind_vkfft(py::module& m);
+#endif
 // ) END BINDING_FUNCTION_PROTOTYPES
 
 
@@ -56,5 +59,8 @@ PYBIND11_MODULE(iqtlabs_python, m)
     bind_write_freq_samples(m);
     bind_image_inference(m);
     bind_vector_to_json(m);
+#ifdef HAVE_VULKAN
+    bind_vkfft(m);
+#endif
     // ) END BINDING_FUNCTION_CALLS
 }

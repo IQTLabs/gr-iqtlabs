@@ -1,5 +1,9 @@
 build/
 *pyc
 .venv/
+libsigmf/
+flatbuffers/
+json/
+VkFFT/
 
 test_flow_graphs/test/

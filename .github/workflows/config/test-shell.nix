@@ -1,4 +1,5 @@
 # TODO: use released nix packages when boost/zstd available.
+# TODO: add Vulkan/mesa so vkfft can tested under nix.
 with (import (builtins.fetchGit {
   name = "nixpkgs-03-08-2023";
   url = "https://github.com/nixos/nixpkgs/";

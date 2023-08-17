@@ -7,15 +7,46 @@
 # ##############################################################################
 include(GrPlatform) # define LIB_SUFFIX
 
+set(SRC_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/..")
+if(Vulkan_FOUND)
+  set(VKFFT
+      -Wl,--whole-archive
+      ${SRC_ROOT}/VkFFT/build/glslang-main/glslang/libglslang.a
+      ${SRC_ROOT}/VkFFT/build/glslang-main/glslang/libGenericCodeGen.a
+      ${SRC_ROOT}/VkFFT/build/glslang-main/glslang/libMachineIndependent.a
+      ${SRC_ROOT}/VkFFT/build/glslang-main/glslang/OSDependent/Unix/libOSDependent.a
+      ${SRC_ROOT}/VkFFT/build/glslang-main/OGLCompilersDLL/libOGLCompiler.a
+      ${SRC_ROOT}/VkFFT/build/glslang-main/SPIRV/libSPIRV.a
+      ${SRC_ROOT}/VkFFT/build/CMakeFiles/VkFFT_TestSuite.dir/benchmark_scripts/vkFFT_scripts/src/utils_VkFFT.cpp.o
+      -Wl,--no-whole-archive
+      ${Vulkan_LIBRARIES})
+  set(VKFFT_INCLUDES
+      PUBLIC
+      $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/>
+      PUBLIC
+      $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/../VkFFT/vkFFT>
+      PUBLIC
+      $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/../VkFFT/glslang-main/glslang/Include>
+      PUBLIC
+      $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/../VkFFT/glslang-main/glslang/Public>
+      PUBLIC
+      $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/../VkFFT/benchmark_scripts/vkFFT_scripts/include>
+  )
+endif()
+
 list(
   APPEND
   iqtlabs_sources
-  tuneable_test_source_impl.cc
-  retune_fft_impl.cc
-  write_freq_samples_impl.cc
-  image_inference_impl.cc
   base_impl.cc
+  image_inference_impl.cc
+  retune_fft_impl.cc
+  tuneable_test_source_impl.cc
+  write_freq_samples_impl.cc
   vector_to_json_impl.cc)
+
+if(Vulkan_FOUND)
+  list(APPEND iqtlabs_sources libvkfft.cc vkfft_impl.cc)
+endif()
 
 set(iqtlabs_sources
     "${iqtlabs_sources}"
@@ -26,10 +57,12 @@ if(NOT iqtlabs_sources)
 endif(NOT iqtlabs_sources)
 
 add_library(gnuradio-iqtlabs SHARED ${iqtlabs_sources})
-target_link_libraries(gnuradio-iqtlabs ${Boost_LIBRARIES} ${OpenCV_LIBS}
-                      libsigmf::libsigmf gnuradio::gnuradio-runtime)
+target_link_libraries(
+  gnuradio-iqtlabs ${VKFFT} ${Boost_LIBRARIES} ${OpenCV_LIBS}
+  libsigmf::libsigmf gnuradio::gnuradio-runtime)
+
 target_include_directories(
-  gnuradio-iqtlabs
+  gnuradio-iqtlabs ${VKFFT_INCLUDES}
   PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/../include>
   PUBLIC $<INSTALL_INTERFACE:include>)
 set_target_properties(gnuradio-iqtlabs PROPERTIES DEFINE_SYMBOL
