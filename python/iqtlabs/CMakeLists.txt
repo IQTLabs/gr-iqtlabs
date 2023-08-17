@@ -43,4 +43,3 @@ GR_ADD_TEST(qa_vector_to_json ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/q
 if(Vulkan_FOUND)
 GR_ADD_TEST(qa_vkfft ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/qa_vkfft.py)
 endif(Vulkan_FOUND)
-

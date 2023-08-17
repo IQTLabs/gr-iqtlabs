@@ -13,4 +13,5 @@ install(
         image_inference.h
         vector_to_json.h
         vkfft.h
+        vector_roll.h
   DESTINATION include/gnuradio/iqtlabs)

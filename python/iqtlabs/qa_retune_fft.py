@@ -220,28 +220,13 @@ from gnuradio import fft
 from gnuradio.fft import window
 
 try:
-    from gnuradio.iqtlabs import retune_fft, tuneable_test_source
+    from gnuradio.iqtlabs import retune_fft, tuneable_test_source, vector_roll
 except ImportError:
     import sys
 
     dirname, filename = os.path.split(os.path.abspath(__file__))
     sys.path.append(os.path.join(dirname, "bindings"))
     from gnuradio.iqtlabs import retune_fft, tuneable_test_source
-
-
-class vector_roller(gr.sync_block):
-    def __init__(self, nfft):
-        gr.sync_block.__init__(
-            self,
-            name="vector_roller",
-            in_sig=[(np.complex64, nfft)],
-            out_sig=[(np.complex64, nfft)],
-        )
-        self.nfft = nfft
-
-    def work(self, input_items, output_items):
-        output_items[0][:] = [np.roll(v, int(self.nfft / 2)) for v in input_items[0]]
-        return len(output_items[0])
 
 
 class pdu_decoder(gr.sync_block):
@@ -296,7 +281,6 @@ class qa_retune_fft_base:
                 int(samp_rate),
                 64,
                 2,
-                fft_roll,
                 fft_min,
                 1e9,
                 tmpdir,
@@ -320,7 +304,8 @@ class qa_retune_fft_base:
             blocks_file_sink_0.set_unbuffered(False)
             blocks_complex_to_mag_0 = blocks.complex_to_mag(points)
             blocks_nlog10_ff_0 = blocks.nlog10_ff(20, points, 0)
-            vr = vector_roller(points)
+            vr1 = vector_roll(points)
+            vr2 = vector_roll(points)
 
             self.tb.msg_connect(
                 (iqtlabs_retune_fft_0, "tune"), (iqtlabs_tuneable_test_source_0, "cmd")
@@ -333,8 +318,10 @@ class qa_retune_fft_base:
             self.tb.connect((blocks_stream_to_vector_0, 0), (fft_vxx_0, 0))
             self.tb.connect((blocks_throttle_0, 0), (blocks_stream_to_vector_0, 0))
             if fft_roll:
-                self.tb.connect((fft_vxx_0, 0), (vr, 0))
-                self.tb.connect((vr, 0), (blocks_complex_to_mag_0, 0))
+                # double roll, is a no-op
+                self.tb.connect((fft_vxx_0, 0), (vr1, 0))
+                self.tb.connect((vr1, 0), (vr2, 0))
+                self.tb.connect((vr2, 0), (blocks_complex_to_mag_0, 0))
             else:
                 self.tb.connect((fft_vxx_0, 0), (blocks_complex_to_mag_0, 0))
             self.tb.connect((iqtlabs_retune_fft_0, 0), (blocks_file_sink_0, 0))

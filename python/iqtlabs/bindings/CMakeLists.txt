@@ -38,7 +38,7 @@ if(Vulkan_FOUND)
 endif()
 
 list(APPEND iqtlabs_python_files
-    python_bindings.cc)
+    vector_roll_python.cc python_bindings.cc)
 
 GR_PYBIND_MAKE_OOT(iqtlabs
    ../../..

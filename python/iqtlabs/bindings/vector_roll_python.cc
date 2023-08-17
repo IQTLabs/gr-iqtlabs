@@ -13,8 +13,8 @@
 /* If manual edits are made, the following tags should be modified accordingly.    */
 /* BINDTOOL_GEN_AUTOMATIC(0)                                                       */
 /* BINDTOOL_USE_PYGCCXML(0)                                                        */
-/* BINDTOOL_HEADER_FILE(vkfft.h)                                        */
-/* BINDTOOL_HEADER_FILE_HASH(7f93d3c1f6813d0a4dc4b4d223aea966)                     */
+/* BINDTOOL_HEADER_FILE(vector_roll.h)                                        */
+/* BINDTOOL_HEADER_FILE_HASH(b7ba4db070f39bb2d1513dcfd1928e67)                     */
 /***********************************************************************************/
 
 #include <pybind11/complex.h>
@@ -23,20 +23,23 @@
 
 namespace py = pybind11;
 
-#include <gnuradio/iqtlabs/vkfft.h>
+#include <gnuradio/iqtlabs/vector_roll.h>
 // pydoc.h is automatically generated in the build directory
-#include <vkfft_pydoc.h>
+#include <vector_roll_pydoc.h>
 
-void bind_vkfft(py::module& m)
+void bind_vector_roll(py::module& m)
 {
 
-    using vkfft = ::gr::iqtlabs::vkfft;
+    using vector_roll = ::gr::iqtlabs::vector_roll;
 
 
-    py::class_<vkfft, gr::sync_block, gr::block, gr::basic_block, std::shared_ptr<vkfft>>(
-        m, "vkfft", D(vkfft))
+    py::class_<vector_roll,
+               gr::sync_block,
+               gr::block,
+               gr::basic_block,
+               std::shared_ptr<vector_roll>>(m, "vector_roll", D(vector_roll))
 
-        .def(py::init(&vkfft::make), py::arg("vlen"), py::arg("nfft"), D(vkfft, make))
+        .def(py::init(&vector_roll::make), py::arg("vlen"), D(vector_roll, make))
 
 
         ;
