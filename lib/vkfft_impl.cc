@@ -209,11 +209,11 @@
 namespace gr {
 namespace iqtlabs {
 
-vkfft::sptr vkfft::make(int vlen, int nfft) {
+vkfft::sptr vkfft::make(std::size_t vlen, std::size_t nfft) {
   return gnuradio::make_block_sptr<vkfft_impl>(vlen, nfft);
 }
 
-vkfft_impl::vkfft_impl(int vlen, int nfft)
+vkfft_impl::vkfft_impl(std::size_t vlen, std::size_t nfft)
     : vlen_(vlen),
       nfft_(nfft), gr::sync_block(
                        "vkfft",

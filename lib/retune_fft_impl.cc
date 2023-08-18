@@ -222,21 +222,21 @@ const boost::iostreams::zstd_params zstd_params =
 retune_fft::sptr
 retune_fft::make(const std::string &tag, int vlen, int nfft, uint64_t samp_rate,
                  uint64_t freq_start, uint64_t freq_end, int tune_step_hz,
-                 int tune_step_fft, int skip_tune_step_fft, bool fft_roll,
-                 double fft_min, double fft_max, const std::string &sdir,
+                 int tune_step_fft, int skip_tune_step_fft, double fft_min,
+                 double fft_max, const std::string &sdir,
                  uint64_t write_step_fft, double bucket_range,
                  const std::string &tuning_ranges,
                  const std::string &description, uint64_t rotate_secs) {
   return gnuradio::make_block_sptr<retune_fft_impl>(
       tag, vlen, nfft, samp_rate, freq_start, freq_end, tune_step_hz,
-      tune_step_fft, skip_tune_step_fft, fft_roll, fft_min, fft_max, sdir,
-      write_step_fft, bucket_range, tuning_ranges, description, rotate_secs);
+      tune_step_fft, skip_tune_step_fft, fft_min, fft_max, sdir, write_step_fft,
+      bucket_range, tuning_ranges, description, rotate_secs);
 }
 
 retune_fft_impl::retune_fft_impl(
     const std::string &tag, int vlen, int nfft, uint64_t samp_rate,
     uint64_t freq_start, uint64_t freq_end, int tune_step_hz, int tune_step_fft,
-    int skip_tune_step_fft, bool fft_roll, double fft_min, double fft_max,
+    int skip_tune_step_fft, double fft_min, double fft_max,
     const std::string &sdir, uint64_t write_step_fft, double bucket_range,
     const std::string &tuning_ranges, const std::string &description,
     uint64_t rotate_secs)
@@ -248,13 +248,12 @@ retune_fft_impl::retune_fft_impl(
       tag_(pmt::intern(tag)), vlen_(vlen), nfft_(nfft), samp_rate_(samp_rate),
       freq_start_(freq_start), freq_end_(freq_end), tune_step_hz_(tune_step_hz),
       tune_step_fft_(tune_step_fft), skip_tune_step_fft_(skip_tune_step_fft),
-      skip_fft_count_(skip_tune_step_fft), fft_roll_(fft_roll),
-      fft_min_(fft_min), fft_max_(fft_max), sample_(nfft), sample_count_(0),
-      last_rx_freq_(0), last_rx_time_(0), fft_count_(0), last_sweep_start_(0),
-      pending_retune_(0), total_tune_count_(0), sdir_(sdir),
-      write_step_fft_(write_step_fft), write_step_fft_count_(write_step_fft),
-      bucket_range_(bucket_range), description_(description),
-      rotate_secs_(rotate_secs) {
+      skip_fft_count_(skip_tune_step_fft), fft_min_(fft_min), fft_max_(fft_max),
+      sample_(nfft), sample_count_(0), last_rx_freq_(0), last_rx_time_(0),
+      fft_count_(0), last_sweep_start_(0), pending_retune_(0),
+      total_tune_count_(0), sdir_(sdir), write_step_fft_(write_step_fft),
+      write_step_fft_count_(write_step_fft), bucket_range_(bucket_range),
+      description_(description), rotate_secs_(rotate_secs) {
   outbuf_p.reset(new boost::iostreams::filtering_ostream());
   message_port_register_out(TUNE);
   message_port_register_out(JSON_OUTPUT);
@@ -374,32 +373,14 @@ void retune_fft_impl::retune_now_() {
 
 void retune_fft_impl::write_items_(const input_type *in) {
   if (write_step_fft_count_) {
-    if (fft_roll_) {
-      const size_t fft_half_window_size = (sizeof(input_type) * nfft_) / 2;
-      write_((const char *)in + fft_half_window_size, fft_half_window_size);
-      write_((const char *)in, fft_half_window_size);
-    } else {
-      write_((const char *)in, sizeof(input_type) * nfft_);
-    }
+    write_((const char *)in, sizeof(input_type) * nfft_);
     --write_step_fft_count_;
   }
 }
 
 void retune_fft_impl::sum_items_(const input_type *in) {
-  if (fft_roll_) {
-    const size_t fft_half_window_size = nfft_ / 2;
-    const input_type *lower_in = in + fft_half_window_size;
-    const input_type *upper_in = in;
-    for (size_t k = 0; k < fft_half_window_size; ++k) {
-      sample_[k] += *lower_in++;
-    }
-    for (size_t k = fft_half_window_size; k < nfft_; ++k) {
-      sample_[k] += *upper_in++;
-    }
-  } else {
-    for (size_t k = 0; k < nfft_; ++k) {
-      sample_[k] += *in++;
-    }
+  for (size_t k = 0; k < nfft_; ++k) {
+    sample_[k] += *in++;
   }
 }
 

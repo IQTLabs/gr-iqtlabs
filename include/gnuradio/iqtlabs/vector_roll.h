@@ -202,29 +202,36 @@
  *    limitations under the License.
  */
 
-#ifndef INCLUDED_IQTLABS_VKFFT_IMPL_H
-#define INCLUDED_IQTLABS_VKFFT_IMPL_H
+#ifndef INCLUDED_IQTLABS_VECTOR_ROLL_H
+#define INCLUDED_IQTLABS_VECTOR_ROLL_H
 
-#include "base_impl.h"
-#include <gnuradio/iqtlabs/vkfft.h>
+#include <gnuradio/iqtlabs/api.h>
+#include <gnuradio/sync_block.h>
 
 namespace gr {
 namespace iqtlabs {
 
-class vkfft_impl : public vkfft, base_impl {
-private:
-  std::size_t nfft_;
-  std::size_t vlen_;
-
+/*!
+ * \brief <+description of block+>
+ * \ingroup iqtlabs
+ *
+ */
+class IQTLABS_API vector_roll : virtual public gr::sync_block {
 public:
-  vkfft_impl(std::size_t nfft, std::size_t batch);
-  ~vkfft_impl();
+  typedef std::shared_ptr<vector_roll> sptr;
 
-  int work(int noutput_items, gr_vector_const_void_star &input_items,
-           gr_vector_void_star &output_items);
+  /*!
+   * \brief Return a shared_ptr to a new instance of iqtlabs::vector_roll.
+   *
+   * To avoid accidental use of raw pointers, iqtlabs::vector_roll's
+   * constructor is in a private implementation
+   * class. iqtlabs::vector_roll::make is the public interface for
+   * creating new instances.
+   */
+  static sptr make(std::size_t vlen);
 };
 
 } // namespace iqtlabs
 } // namespace gr
 
-#endif /* INCLUDED_IQTLABS_VKFFT_IMPL_H */
+#endif /* INCLUDED_IQTLABS_VECTOR_ROLL_H */

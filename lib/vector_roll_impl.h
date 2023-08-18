@@ -202,23 +202,21 @@
  *    limitations under the License.
  */
 
-#ifndef INCLUDED_IQTLABS_VKFFT_IMPL_H
-#define INCLUDED_IQTLABS_VKFFT_IMPL_H
+#ifndef INCLUDED_IQTLABS_VECTOR_ROLL_IMPL_H
+#define INCLUDED_IQTLABS_VECTOR_ROLL_IMPL_H
 
-#include "base_impl.h"
-#include <gnuradio/iqtlabs/vkfft.h>
+#include <gnuradio/iqtlabs/vector_roll.h>
 
 namespace gr {
 namespace iqtlabs {
 
-class vkfft_impl : public vkfft, base_impl {
+class vector_roll_impl : public vector_roll {
 private:
-  std::size_t nfft_;
   std::size_t vlen_;
 
 public:
-  vkfft_impl(std::size_t nfft, std::size_t batch);
-  ~vkfft_impl();
+  vector_roll_impl(std::size_t vlen);
+  ~vector_roll_impl();
 
   int work(int noutput_items, gr_vector_const_void_star &input_items,
            gr_vector_void_star &output_items);
@@ -227,4 +225,4 @@ public:
 } // namespace iqtlabs
 } // namespace gr
 
-#endif /* INCLUDED_IQTLABS_VKFFT_IMPL_H */
+#endif /* INCLUDED_IQTLABS_VECTOR_ROLL_IMPL_H */

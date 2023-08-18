@@ -14,7 +14,7 @@
 /* BINDTOOL_GEN_AUTOMATIC(0)                                                       */
 /* BINDTOOL_USE_PYGCCXML(0)                                                        */
 /* BINDTOOL_HEADER_FILE(retune_fft.h)                                        */
-/* BINDTOOL_HEADER_FILE_HASH(13d835d25ed561d4ce333ecc588fcbd8)                     */
+/* BINDTOOL_HEADER_FILE_HASH(8e609f8f86a6291f594a5fc041426761)                     */
 /***********************************************************************************/
 
 #include <pybind11/complex.h>
@@ -46,7 +46,6 @@ void bind_retune_fft(py::module& m)
              py::arg("tune_step_hz"),
              py::arg("tune_step_fft"),
              py::arg("skip_tune_step_fft"),
-             py::arg("fft_roll"),
              py::arg("fft_min"),
              py::arg("fft_max"),
              py::arg("sdir"),

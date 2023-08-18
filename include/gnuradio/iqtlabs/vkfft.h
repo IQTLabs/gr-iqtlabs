@@ -202,8 +202,8 @@
  *    limitations under the License.
  */
 
-#ifndef INCLUDED_IQTLABS_TUNEABLE_TEST_SOURCE_H
-#define INCLUDED_IQTLABS_TUNEABLE_TEST_SOURCE_H
+#ifndef INCLUDED_IQTLABS_VKFFT_H
+#define INCLUDED_IQTLABS_VKFFT_H
 
 #include <gnuradio/iqtlabs/api.h>
 #include <gnuradio/sync_block.h>
@@ -229,10 +229,10 @@ public:
    * class. iqtlabs::vkfft::make is the public interface for
    * creating new instances.
    */
-  static sptr make(int vlen, int nfft);
+  static sptr make(std::size_t vlen, std::size_t nfft);
 };
 
 } // namespace iqtlabs
 } // namespace gr
 
-#endif /* INCLUDED_IQTLABS_TUNEABLE_TEST_SOURCE_H */
+#endif /* INCLUDED_IQTLABS_VKFFT_H */

@@ -26,6 +26,7 @@ namespace py = pybind11;
 #ifdef HAVE_VULKAN
     void bind_vkfft(py::module& m);
 #endif
+    void bind_vector_roll(py::module& m);
 // ) END BINDING_FUNCTION_PROTOTYPES
 
 
@@ -62,5 +63,6 @@ PYBIND11_MODULE(iqtlabs_python, m)
 #ifdef HAVE_VULKAN
     bind_vkfft(m);
 #endif
+    bind_vector_roll(m);
     // ) END BINDING_FUNCTION_CALLS
 }

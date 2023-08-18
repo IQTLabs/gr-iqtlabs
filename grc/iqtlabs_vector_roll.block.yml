@@ -1,0 +1,45 @@
+id: iqtlabs_vector_roll
+label: vector_roll
+category: '[iqtlabs]'
+flags: [python, cpp]
+documentation:
+  This block rolls vectors by one half vector size.
+
+  input:
+    vector of complex.
+  output:
+    vector of complex, rolled.
+
+  parameters:
+    vlen: length of vector
+
+templates:
+  imports: from gnuradio import iqtlabs
+  make: iqtlabs.vector_roll(${vlen})
+
+cpp_templates:
+  includes: ['#include <gnuradio/iqtlabs/vector_roll.h>']
+  declarations: 'gr::iqtlabs::vector_roll::sptr ${id};'
+  make: 'this->${id} = gr::iqtlabs::vector_roll::make(${vlen});'
+  link: ['libgnuradio-iqtlabs.so']
+
+asserts:
+  - ${ vlen > 0 }
+
+parameters:
+- id: vlen
+  dtype: int
+
+inputs:
+- label: input
+  domain: stream
+  dtype: complex
+  vlen: ${ vlen }
+
+outputs:
+- label: output
+  domain: stream
+  dtype: complex
+  vlen: ${ vlen }
+
+file_format: 1

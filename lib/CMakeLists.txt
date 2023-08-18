@@ -34,6 +34,10 @@ if(Vulkan_FOUND)
   )
 endif()
 
+if(Vulkan_FOUND)
+  list(APPEND iqtlabs_sources libvkfft.cc vkfft_impl.cc)
+endif()
+
 list(
   APPEND
   iqtlabs_sources
@@ -42,11 +46,8 @@ list(
   retune_fft_impl.cc
   tuneable_test_source_impl.cc
   write_freq_samples_impl.cc
-  vector_to_json_impl.cc)
-
-if(Vulkan_FOUND)
-  list(APPEND iqtlabs_sources libvkfft.cc vkfft_impl.cc)
-endif()
+  vector_to_json_impl.cc
+  vector_roll_impl.cc)
 
 set(iqtlabs_sources
     "${iqtlabs_sources}"

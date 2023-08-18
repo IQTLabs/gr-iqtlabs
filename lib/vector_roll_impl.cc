@@ -202,29 +202,51 @@
  *    limitations under the License.
  */
 
-#ifndef INCLUDED_IQTLABS_VKFFT_IMPL_H
-#define INCLUDED_IQTLABS_VKFFT_IMPL_H
-
-#include "base_impl.h"
-#include <gnuradio/iqtlabs/vkfft.h>
+#include "vector_roll_impl.h"
+#include <gnuradio/io_signature.h>
 
 namespace gr {
 namespace iqtlabs {
 
-class vkfft_impl : public vkfft, base_impl {
-private:
-  std::size_t nfft_;
-  std::size_t vlen_;
+using vector_type = gr_complex;
+vector_roll::sptr vector_roll::make(std::size_t vlen) {
+  return gnuradio::make_block_sptr<vector_roll_impl>(vlen);
+}
 
-public:
-  vkfft_impl(std::size_t nfft, std::size_t batch);
-  ~vkfft_impl();
+/*
+ * The private constructor
+ */
+vector_roll_impl::vector_roll_impl(std::size_t vlen)
+    : gr::sync_block(
+          "vector_roll",
+          gr::io_signature::make(1 /* min inputs */, 1 /* max inputs */,
+                                 vlen * sizeof(vector_type)),
+          gr::io_signature::make(1 /* min outputs */, 1 /*max outputs */,
+                                 vlen * sizeof(vector_type))),
+      vlen_(vlen) {}
 
-  int work(int noutput_items, gr_vector_const_void_star &input_items,
-           gr_vector_void_star &output_items);
-};
+/*
+ * Our virtual destructor.
+ */
+vector_roll_impl::~vector_roll_impl() {}
 
-} // namespace iqtlabs
-} // namespace gr
+int vector_roll_impl::work(int noutput_items,
+                           gr_vector_const_void_star &input_items,
+                           gr_vector_void_star &output_items) {
+  auto *in = static_cast<const vector_type *>(input_items[0]);
+  auto *out = static_cast<vector_type *>(output_items[0]);
+  const size_t hvlen = vlen_ / 2;
+  const size_t hvlen_size = hvlen * sizeof(vector_type);
 
-#endif /* INCLUDED_IQTLABS_VKFFT_IMPL_H */
+  for (int i = 0; i < noutput_items; ++i) {
+    std::memcpy((void *)(out + hvlen), (const void *)in, hvlen_size);
+    std::memcpy((void *)out, (const void *)(in + hvlen), hvlen_size);
+    in += vlen_;
+    out += vlen_;
+  }
+
+  return noutput_items;
+}
+
+} /* namespace iqtlabs */
+} /* namespace gr */

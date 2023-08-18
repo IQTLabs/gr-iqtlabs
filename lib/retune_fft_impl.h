@@ -249,7 +249,6 @@ private:
   std::string sdir_;
   std::string description_;
 
-  bool fft_roll_;
   double fft_min_;
   double fft_max_;
 
@@ -277,9 +276,9 @@ public:
   retune_fft_impl(const std::string &tag, int vlen, int nfft,
                   uint64_t samp_rate, uint64_t freq_start, uint64_t freq_end,
                   int tune_step_hz, int tune_step_fft, int skip_tune_step_fft,
-                  bool fft_roll, double fft_min, double fft_max,
-                  const std::string &sdir, uint64_t write_step_fft,
-                  double bucket_range, const std::string &tuning_ranges,
+                  double fft_min, double fft_max, const std::string &sdir,
+                  uint64_t write_step_fft, double bucket_range,
+                  const std::string &tuning_ranges,
                   const std::string &description, uint64_t rotate_secs);
   ~retune_fft_impl();
   void forecast(int noutput_items, gr_vector_int &ninput_items_required);

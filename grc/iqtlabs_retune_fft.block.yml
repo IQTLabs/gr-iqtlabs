@@ -26,7 +26,6 @@ documentation: |-
     tune_step_hz: increment frequency by this value each retuning step.
     tune_step_fft: count at least this many FFT vectors between retuning steps.
     skip_tune_step_fft: discard this many FFT vectors before counting (to allow for radio to stabilize after retuning)
-    fft_roll: if True, the consider the center of the FFT window to be at the beginning of the FFT vector.
     fft_min: clip FFT values to this minimum.
     fft_max: clip FFT values to this maximum.
     sdir: directory to write raw FFT points to.
@@ -44,12 +43,12 @@ documentation: |-
 
 templates:
   imports: from gnuradio import iqtlabs
-  make: iqtlabs.retune_fft(${tag}, ${vlen}, ${nfft}, ${samp_rate}, ${freq_start}, ${freq_end}, ${tune_step_hz}, ${tune_step_fft}, ${skip_tune_step_fft}, ${fft_roll}, ${fft_min}, ${fft_max}, ${sdir}, ${write_step_fft}, ${bucket_range}, ${tuning_ranges}, ${description}, ${rotate_secs})
+  make: iqtlabs.retune_fft(${tag}, ${vlen}, ${nfft}, ${samp_rate}, ${freq_start}, ${freq_end}, ${tune_step_hz}, ${tune_step_fft}, ${skip_tune_step_fft}, ${fft_min}, ${fft_max}, ${sdir}, ${write_step_fft}, ${bucket_range}, ${tuning_ranges}, ${description}, ${rotate_secs})
 
 cpp_templates:
   includes: ['#include <gnuradio/iqtlabs/retune_fft.h>']
   declarations: 'gr::iqtlabs::retune_fft::sptr ${id};'
-  make: 'this->${id} = gr::iqtlabs::retune_fft::make(${tag}, ${vlen}, ${nfft}, ${samp_rate}, ${freq_start}, ${freq_end}, ${tune_step_hz}, ${tune_step_fft}, ${skip_tune_step_fft}, ${fft_roll} ${fft_min}, ${fft_max}, ${sdir}, ${write_step_fft}, ${bucket_range}, ${tuning_ranges}, ${description}, ${rotate_secs});'
+  make: 'this->${id} = gr::iqtlabs::retune_fft::make(${tag}, ${vlen}, ${nfft}, ${samp_rate}, ${freq_start}, ${freq_end}, ${tune_step_hz}, ${tune_step_fft}, ${skip_tune_step_fft}, ${fft_min}, ${fft_max}, ${sdir}, ${write_step_fft}, ${bucket_range}, ${tuning_ranges}, ${description}, ${rotate_secs});'
   link: ['libgnuradio-iqtlabs.so']
 
 asserts:
@@ -80,8 +79,6 @@ parameters:
   dtype: int
 - id: skip_tune_step_fft
   dtype: int
-- id: fft_roll
-  dtype: bool
 - id: fft_min
   dtype: raw
 - id: fft_max
