@@ -132,6 +132,9 @@ void free_vkfft() {
 }
 
 void vkfft_offload(char *in, char *out, std::size_t buffer_size) {
+  // TODO: perhaps we can reuse the staging buffers dynamically allocated by
+  // transferDataFromCPU() and transferDataToCPU()
+  // TODO: implement roll function via reordering memcpys
   transferDataFromCPU(&vkGPU, in, &vkConfiguration.buffer[0], buffer_size);
   performVulkanFFT(&vkGPU, &vkApp, &vkLaunchParams, -1, 1);
   transferDataToCPU(&vkGPU, out, &vkConfiguration.buffer[0], buffer_size);
