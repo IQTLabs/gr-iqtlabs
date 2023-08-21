@@ -220,7 +220,8 @@ vkfft_impl::vkfft_impl(std::size_t vlen, std::size_t nfft)
                        gr::io_signature::make(1, 1, sizeof(gr_complex) * vlen),
                        gr::io_signature::make(1, 1,
                                               sizeof(gr_complex) * vlen)) {
-  init_vkfft(vlen / nfft, 1, nfft, sizeof(gr_complex));
+  // sample_id must always be 0 for Pi4 compatibility.
+  init_vkfft(vlen / nfft, 0, nfft, sizeof(gr_complex));
 }
 
 vkfft_impl::~vkfft_impl() { free_vkfft(); }
