@@ -3,7 +3,8 @@ label: vector_roll
 category: '[iqtlabs]'
 flags: [python, cpp]
 documentation:
-  This block rolls vectors by one half vector size.
+  This block rolls vectors by one half vector size (equivalent
+  to numpy np.roll(x, int(len(x) / 2))
 
   input:
     vector of complex.
