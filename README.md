@@ -4,15 +4,15 @@
 
 This repo contains gnuradio OOT blocks, used by IQTLabs projects (including [gamutRF](https://github.com/iqtlabs/gamutRF)).
 
-### [image_inference](grc/image_inference.block.yml)
+### [image_inference](grc/iqtlabs_image_inference.block.yml)
 
 Produce a spectrogram like image that may be used by machine learning pipelines to infer the presence of signals in FFT output.
 
-### [retune_fft](grc/retune_fft.block.yml)
+### [retune_fft](grc/iqtlabs_retune_fft.block.yml)
 
 Command a source block with PMT tuning messages to sweep over a set of frequency ranges, retuning after a configurable nunber of FFT points are received over a configurable threshold.
 
-### [tuneable_test_source](grc/tuneable_test_source.block.yml)
+### [tuneable_test_source](grc/iqtlabs_tuneable_test_source.block.yml)
 
 Accepts PMT tuning requests and produces samples related to the requested frequency (typically used in test flowgraphs that require the source to be dynamically tuned and annotated with *rx_time* and *rx_freq* tags).
 
