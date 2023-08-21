@@ -216,8 +216,8 @@ class qa_vkfft(gr_unittest.TestCase):
         self.tb = None
 
     def test_instance(self):
-        # TODO: find workaround lavapipe simulated gpu crashes under CI testing
-        instance = vkfft(1024, 1)
+        # TODO: find workaround llvmpipe simulated gpu crashes under CI testing
+        instance = vkfft(1024, 1, True)
 
 
 if __name__ == '__main__':
