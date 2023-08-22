@@ -304,14 +304,15 @@ void image_inference_impl::output_image_(output_type *out) {
       "image_" + host_now_str_(output_item.ts) + "_" +
       std::to_string(uint64_t(x_)) + "x" + std::to_string(uint64_t(y_)) + "_" +
       std::to_string(uint64_t(output_item.rx_freq)) + "Hz";
-  std::string image_file = image_file_base + ".bin";
-  std::string dot_image_file = image_dir_ + "/." + image_file;
-  std::string full_image_file = image_dir_ + "/" + image_file;
-  std::ofstream image_out;
-  image_out.open(dot_image_file, std::ios::binary | std::ios::out);
-  image_out.write((const char *)resized_buffer_p, buffer_size);
-  image_out.close();
-  rename(dot_image_file.c_str(), full_image_file.c_str());
+  // TODO: re-enable if non-PNG image required.
+  // std::string image_file = image_file_base + ".bin";
+  // std::string dot_image_file = image_dir_ + "/." + image_file;
+  // std::string full_image_file = image_dir_ + "/" + image_file;
+  // std::ofstream image_out;
+  // image_out.open(dot_image_file, std::ios::binary | std::ios::out);
+  // image_out.write((const char *)resized_buffer_p, buffer_size);
+  // image_out.close();
+  // rename(dot_image_file.c_str(), full_image_file.c_str());
   std::string image_file_png = image_file_base + ".png";
   std::string dot_image_file_png = image_dir_ + "/." + image_file_png;
   std::string full_image_file_png = image_dir_ + "/" + image_file_png;
