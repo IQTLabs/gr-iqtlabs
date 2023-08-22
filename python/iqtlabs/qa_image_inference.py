@@ -269,11 +269,11 @@ class qa_image_inference(gr_unittest.TestCase):
             time.sleep(test_time)
             self.tb.stop()
             self.tb.wait()
-            image_files = glob.glob(f"{tmpdir}/image*bin")
+            image_files = glob.glob(f"{tmpdir}/image*png")
             self.assertTrue(image_files)
             for image_file in image_files:
                 stat = os.stat(image_file)
-                self.assertEqual(stat.st_size, output_vlen)
+                self.assertTrue(stat.st_size)
             self.assertTrue(os.stat(test_file).st_size)
 
 
