@@ -14,7 +14,7 @@
 /* BINDTOOL_GEN_AUTOMATIC(0)                                                       */
 /* BINDTOOL_USE_PYGCCXML(0)                                                        */
 /* BINDTOOL_HEADER_FILE(vkfft.h)                                        */
-/* BINDTOOL_HEADER_FILE_HASH(7f93d3c1f6813d0a4dc4b4d223aea966)                     */
+/* BINDTOOL_HEADER_FILE_HASH(6cb25f3bb6a1c44ef9863a98b7e83c77)                     */
 /***********************************************************************************/
 
 #include <pybind11/complex.h>
@@ -36,7 +36,11 @@ void bind_vkfft(py::module& m)
     py::class_<vkfft, gr::sync_block, gr::block, gr::basic_block, std::shared_ptr<vkfft>>(
         m, "vkfft", D(vkfft))
 
-        .def(py::init(&vkfft::make), py::arg("vlen"), py::arg("nfft"), D(vkfft, make))
+        .def(py::init(&vkfft::make),
+             py::arg("vlen"),
+             py::arg("nfft"),
+             py::arg("shift"),
+             D(vkfft, make))
 
 
         ;

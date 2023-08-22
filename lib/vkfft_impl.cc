@@ -209,19 +209,18 @@
 namespace gr {
 namespace iqtlabs {
 
-vkfft::sptr vkfft::make(std::size_t vlen, std::size_t nfft) {
-  return gnuradio::make_block_sptr<vkfft_impl>(vlen, nfft);
+vkfft::sptr vkfft::make(std::size_t vlen, std::size_t nfft, bool shift) {
+  return gnuradio::make_block_sptr<vkfft_impl>(vlen, nfft, shift);
 }
 
-vkfft_impl::vkfft_impl(std::size_t vlen, std::size_t nfft)
+vkfft_impl::vkfft_impl(std::size_t vlen, std::size_t nfft, bool shift)
     : vlen_(vlen),
       nfft_(nfft), gr::sync_block(
                        "vkfft",
                        gr::io_signature::make(1, 1, sizeof(gr_complex) * vlen),
                        gr::io_signature::make(1, 1,
                                               sizeof(gr_complex) * vlen)) {
-  // sample_id must always be 0 for Pi4 compatibility.
-  init_vkfft(vlen / nfft, 0, nfft, sizeof(gr_complex));
+  init_vkfft((vlen / nfft), nfft, sizeof(gr_complex), shift);
 }
 
 vkfft_impl::~vkfft_impl() { free_vkfft(); }
@@ -234,8 +233,7 @@ int vkfft_impl::work(int noutput_items, gr_vector_const_void_star &input_items,
 
   for (int i = 0; i < noutput_items; ++i) {
     const int buffer_index = i * vlen_;
-    vkfft_offload((char *)&in[buffer_index], (char *)&out[buffer_index],
-                  vlen_ * sizeof(gr_complex));
+    vkfft_offload((char *)&in[buffer_index], (char *)&out[buffer_index]);
   }
 
   return noutput_items;

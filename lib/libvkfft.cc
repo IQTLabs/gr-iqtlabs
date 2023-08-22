@@ -5,14 +5,132 @@
 #include "vkFFT.h"
 
 const uint64_t kVkNumBuf = 1;
+// sample_id must always be 0 for Pi4 compatibility.
+const uint64_t sample_id = 0;
 static VkGPU vkGPU = {};
 static VkFFTConfiguration vkConfiguration = {};
 static VkDeviceMemory *vkBufferDeviceMemory = NULL;
 static VkFFTApplication vkApp = {};
 static VkFFTLaunchParams vkLaunchParams = {};
+static VkBuffer stagingBuffer = {0};
+static VkDeviceMemory stagingBufferMemory = {0};
+static uint64_t fftBufferSize = 0;
+static uint64_t stagingBufferSize = 0;
+static bool _shift = false;
 
-int64_t init_vkfft(std::size_t batches, std::size_t sample_id, std::size_t nfft,
-                   std::size_t size) {
+VkFFTResult _transferDataFromCPU(char *cpu_arr) {
+  VkResult res = VK_SUCCESS;
+  VkBuffer *buffer = &vkConfiguration.buffer[0];
+  char *data;
+  res = vkMapMemory(vkGPU.device, stagingBufferMemory, 0, stagingBufferSize, 0,
+                    (void **)&data);
+  if (res != VK_SUCCESS)
+    return VKFFT_ERROR_MALLOC_FAILED;
+  memcpy(data, cpu_arr, stagingBufferSize);
+  vkUnmapMemory(vkGPU.device, stagingBufferMemory);
+  VkCommandBufferAllocateInfo commandBufferAllocateInfo = {
+      VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO};
+  commandBufferAllocateInfo.commandPool = vkGPU.commandPool;
+  commandBufferAllocateInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+  commandBufferAllocateInfo.commandBufferCount = 1;
+  VkCommandBuffer commandBuffer = {0};
+  res = vkAllocateCommandBuffers(vkGPU.device, &commandBufferAllocateInfo,
+                                 &commandBuffer);
+  if (res != VK_SUCCESS)
+    return VKFFT_ERROR_FAILED_TO_ALLOCATE_COMMAND_BUFFERS;
+  VkCommandBufferBeginInfo commandBufferBeginInfo = {
+      VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO};
+  commandBufferBeginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+  res = vkBeginCommandBuffer(commandBuffer, &commandBufferBeginInfo);
+  if (res != VK_SUCCESS)
+    return VKFFT_ERROR_FAILED_TO_BEGIN_COMMAND_BUFFER;
+  VkBufferCopy copyRegion = {0};
+  copyRegion.srcOffset = 0;
+  copyRegion.dstOffset = 0;
+  copyRegion.size = stagingBufferSize;
+  vkCmdCopyBuffer(commandBuffer, stagingBuffer, buffer[0], 1, &copyRegion);
+  res = vkEndCommandBuffer(commandBuffer);
+  if (res != VK_SUCCESS)
+    return VKFFT_ERROR_FAILED_TO_END_COMMAND_BUFFER;
+  VkSubmitInfo submitInfo = {VK_STRUCTURE_TYPE_SUBMIT_INFO};
+  submitInfo.commandBufferCount = 1;
+  submitInfo.pCommandBuffers = &commandBuffer;
+  res = vkQueueSubmit(vkGPU.queue, 1, &submitInfo, vkGPU.fence);
+  if (res != VK_SUCCESS)
+    return VKFFT_ERROR_FAILED_TO_SUBMIT_QUEUE;
+  res = vkWaitForFences(vkGPU.device, 1, &vkGPU.fence, VK_TRUE, 100000000000);
+  if (res != VK_SUCCESS)
+    return VKFFT_ERROR_FAILED_TO_WAIT_FOR_FENCES;
+  res = vkResetFences(vkGPU.device, 1, &vkGPU.fence);
+  if (res != VK_SUCCESS)
+    return VKFFT_ERROR_FAILED_TO_RESET_FENCES;
+  vkFreeCommandBuffers(vkGPU.device, vkGPU.commandPool, 1, &commandBuffer);
+  return VKFFT_SUCCESS;
+}
+
+VkFFTResult _transferDataToCPU(char *cpu_arr) {
+  // a function that transfers data from the GPU to the CPU using staging
+  // buffer, because the GPU memory is not host-coherent
+  VkResult res = VK_SUCCESS;
+  VkBuffer *buffer = &vkConfiguration.buffer[0];
+  VkCommandBufferAllocateInfo commandBufferAllocateInfo = {
+      VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO};
+  commandBufferAllocateInfo.commandPool = vkGPU.commandPool;
+  commandBufferAllocateInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+  commandBufferAllocateInfo.commandBufferCount = 1;
+  VkCommandBuffer commandBuffer = {0};
+  res = vkAllocateCommandBuffers(vkGPU.device, &commandBufferAllocateInfo,
+                                 &commandBuffer);
+  if (res != VK_SUCCESS)
+    return VKFFT_ERROR_FAILED_TO_ALLOCATE_COMMAND_BUFFERS;
+  VkCommandBufferBeginInfo commandBufferBeginInfo = {
+      VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO};
+  commandBufferBeginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+  res = vkBeginCommandBuffer(commandBuffer, &commandBufferBeginInfo);
+  if (res != VK_SUCCESS)
+    return VKFFT_ERROR_FAILED_TO_BEGIN_COMMAND_BUFFER;
+  VkBufferCopy copyRegion = {0};
+  copyRegion.srcOffset = 0;
+  copyRegion.dstOffset = 0;
+  copyRegion.size = stagingBufferSize;
+  vkCmdCopyBuffer(commandBuffer, buffer[0], stagingBuffer, 1, &copyRegion);
+  res = vkEndCommandBuffer(commandBuffer);
+  if (res != VK_SUCCESS)
+    return VKFFT_ERROR_FAILED_TO_END_COMMAND_BUFFER;
+  VkSubmitInfo submitInfo = {VK_STRUCTURE_TYPE_SUBMIT_INFO};
+  submitInfo.commandBufferCount = 1;
+  submitInfo.pCommandBuffers = &commandBuffer;
+  res = vkQueueSubmit(vkGPU.queue, 1, &submitInfo, vkGPU.fence);
+  if (res != VK_SUCCESS)
+    return VKFFT_ERROR_FAILED_TO_SUBMIT_QUEUE;
+  res = vkWaitForFences(vkGPU.device, 1, &vkGPU.fence, VK_TRUE, 100000000000);
+  if (res != VK_SUCCESS)
+    return VKFFT_ERROR_FAILED_TO_WAIT_FOR_FENCES;
+  res = vkResetFences(vkGPU.device, 1, &vkGPU.fence);
+  if (res != VK_SUCCESS)
+    return VKFFT_ERROR_FAILED_TO_RESET_FENCES;
+  vkFreeCommandBuffers(vkGPU.device, vkGPU.commandPool, 1, &commandBuffer);
+  char *data;
+  res = vkMapMemory(vkGPU.device, stagingBufferMemory, 0, stagingBufferSize, 0,
+                    (void **)&data);
+  if (res != VK_SUCCESS)
+    return VKFFT_ERROR_MALLOC_FAILED;
+  if (_shift) {
+    for (int i = 0; i < vkConfiguration.numberBatches; ++i) {
+      memcpy(cpu_arr + fftBufferSize / 2, data, fftBufferSize / 2);
+      memcpy(cpu_arr, data + fftBufferSize / 2, fftBufferSize / 2);
+      cpu_arr += fftBufferSize;
+      cpu_arr += fftBufferSize;
+    }
+  } else {
+    memcpy(cpu_arr, data, stagingBufferSize);
+  }
+  vkUnmapMemory(vkGPU.device, stagingBufferMemory);
+  return VKFFT_SUCCESS;
+}
+
+int64_t init_vkfft(std::size_t batches, std::size_t nfft,
+                   std::size_t sample_size, bool shift) {
   vkGPU.enableValidationLayers = 0;
 
   VkResult res = VK_SUCCESS;
@@ -66,9 +184,13 @@ int64_t init_vkfft(std::size_t batches, std::size_t sample_id, std::size_t nfft,
   vkConfiguration.isCompilerInitialized = true;
   vkConfiguration.doublePrecision = false;
   vkConfiguration.numberBatches = batches;
+  fftBufferSize = nfft * sample_size;
+  stagingBufferSize = fftBufferSize * vkConfiguration.numberBatches;
+  _shift = shift;
 
   std::cerr << "using vkFFT batch size " << vkConfiguration.numberBatches
-            << " on " << vkGPU.physicalDeviceProperties.deviceName << std::endl;
+            << " on " << vkGPU.physicalDeviceProperties.deviceName
+            << " with shift: " << _shift << std::endl;
 
   vkConfiguration.bufferSize =
       (uint64_t *)aligned_alloc(sizeof(uint64_t), sizeof(uint64_t) * kVkNumBuf);
@@ -79,17 +201,17 @@ int64_t init_vkfft(std::size_t batches, std::size_t sample_id, std::size_t nfft,
       vkConfiguration.size[0] * vkConfiguration.size[1] *
       vkConfiguration.size[2] * vkConfiguration.numberBatches / kVkNumBuf;
   for (uint64_t i = 0; i < kVkNumBuf; ++i) {
-    vkConfiguration.bufferSize[i] = (uint64_t)size * buffer_size_f;
+    vkConfiguration.bufferSize[i] = (uint64_t)sample_size * buffer_size_f;
   }
 
   vkConfiguration.bufferNum = kVkNumBuf;
 
   vkConfiguration.buffer =
-      (VkBuffer *)aligned_alloc(size, kVkNumBuf * sizeof(VkBuffer));
+      (VkBuffer *)aligned_alloc(sample_size, kVkNumBuf * sizeof(VkBuffer));
   if (!vkConfiguration.buffer)
     return VKFFT_ERROR_MALLOC_FAILED;
-  vkBufferDeviceMemory =
-      (VkDeviceMemory *)aligned_alloc(size, kVkNumBuf * sizeof(VkDeviceMemory));
+  vkBufferDeviceMemory = (VkDeviceMemory *)aligned_alloc(
+      sample_size, kVkNumBuf * sizeof(VkDeviceMemory));
   if (!vkBufferDeviceMemory)
     return VKFFT_ERROR_MALLOC_FAILED;
 
@@ -111,10 +233,20 @@ int64_t init_vkfft(std::size_t batches, std::size_t sample_id, std::size_t nfft,
   if (resFFT != VKFFT_SUCCESS)
     return resFFT;
 
+  resFFT = allocateBuffer(&vkGPU, &stagingBuffer, &stagingBufferMemory,
+                          VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+                          VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
+                              VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+                          stagingBufferSize);
+  if (resFFT != VKFFT_SUCCESS)
+    return VKFFT_ERROR_MALLOC_FAILED;
+
   return VKFFT_SUCCESS;
 }
 
 void free_vkfft() {
+  vkDestroyBuffer(vkGPU.device, stagingBuffer, NULL);
+  vkFreeMemory(vkGPU.device, stagingBufferMemory, NULL);
   for (uint64_t i = 0; i < kVkNumBuf; i++) {
     vkDestroyBuffer(vkGPU.device, vkConfiguration.buffer[i], NULL);
     vkFreeMemory(vkGPU.device, vkBufferDeviceMemory[i], NULL);
@@ -131,11 +263,8 @@ void free_vkfft() {
   glslang_finalize_process();
 }
 
-void vkfft_offload(char *in, char *out, std::size_t buffer_size) {
-  // TODO: perhaps we can reuse the staging buffers dynamically allocated by
-  // transferDataFromCPU() and transferDataToCPU()
-  // TODO: implement roll function via reordering memcpys
-  transferDataFromCPU(&vkGPU, in, &vkConfiguration.buffer[0], buffer_size);
+void vkfft_offload(char *in, char *out) {
+  _transferDataFromCPU(in);
   performVulkanFFT(&vkGPU, &vkApp, &vkLaunchParams, -1, 1);
-  transferDataToCPU(&vkGPU, out, &vkConfiguration.buffer[0], buffer_size);
+  _transferDataToCPU(out);
 }

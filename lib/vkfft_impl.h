@@ -217,7 +217,7 @@ private:
   std::size_t vlen_;
 
 public:
-  vkfft_impl(std::size_t nfft, std::size_t batch);
+  vkfft_impl(std::size_t nfft, std::size_t batch, bool shift);
   ~vkfft_impl();
 
   int work(int noutput_items, gr_vector_const_void_star &input_items,
