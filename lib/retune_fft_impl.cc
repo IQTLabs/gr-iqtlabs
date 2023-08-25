@@ -220,12 +220,12 @@ const boost::iostreams::zstd_params zstd_params =
     boost::iostreams::zstd_params(boost::iostreams::zstd::default_compression);
 
 retune_fft::sptr
-retune_fft::make(const std::string &tag, int vlen, int nfft, uint64_t samp_rate,
-                 uint64_t freq_start, uint64_t freq_end, int tune_step_hz,
-                 int tune_step_fft, int skip_tune_step_fft, double fft_min,
-                 double fft_max, const std::string &sdir,
-                 uint64_t write_step_fft, double bucket_range,
-                 const std::string &tuning_ranges,
+retune_fft::make(const std::string &tag, size_t vlen, size_t nfft,
+                 uint64_t samp_rate, uint64_t freq_start, uint64_t freq_end,
+                 uint64_t tune_step_hz, uint64_t tune_step_fft,
+                 uint64_t skip_tune_step_fft, double fft_min, double fft_max,
+                 const std::string &sdir, uint64_t write_step_fft,
+                 double bucket_range, const std::string &tuning_ranges,
                  const std::string &description, uint64_t rotate_secs) {
   return gnuradio::make_block_sptr<retune_fft_impl>(
       tag, vlen, nfft, samp_rate, freq_start, freq_end, tune_step_hz,
@@ -234,12 +234,12 @@ retune_fft::make(const std::string &tag, int vlen, int nfft, uint64_t samp_rate,
 }
 
 retune_fft_impl::retune_fft_impl(
-    const std::string &tag, int vlen, int nfft, uint64_t samp_rate,
-    uint64_t freq_start, uint64_t freq_end, int tune_step_hz, int tune_step_fft,
-    int skip_tune_step_fft, double fft_min, double fft_max,
-    const std::string &sdir, uint64_t write_step_fft, double bucket_range,
-    const std::string &tuning_ranges, const std::string &description,
-    uint64_t rotate_secs)
+    const std::string &tag, size_t vlen, size_t nfft, uint64_t samp_rate,
+    uint64_t freq_start, uint64_t freq_end, uint64_t tune_step_hz,
+    uint64_t tune_step_fft, uint64_t skip_tune_step_fft, double fft_min,
+    double fft_max, const std::string &sdir, uint64_t write_step_fft,
+    double bucket_range, const std::string &tuning_ranges,
+    const std::string &description, uint64_t rotate_secs)
     : gr::block("retune_fft",
                 gr::io_signature::make(1 /* min inputs */, 1 /* max inputs */,
                                        vlen * sizeof(input_type)),
@@ -265,8 +265,7 @@ retune_fft_impl::retune_fft_impl(
     }
     d_logger->debug("tuning_ranges empty, will scan from {} to {}", freq_start_,
                     freq_end_);
-    tuning_ranges_.push_back(
-        std::pair<uint64_t, uint64_t>(freq_start_, freq_end_));
+    add_range_(freq_start_, freq_end_);
   } else {
     std::vector<std::string> tuning_ranges_raw;
     boost::split(tuning_ranges_raw, tuning_ranges, boost::is_any_of(","),
@@ -296,7 +295,7 @@ retune_fft_impl::retune_fft_impl(
             "invalid tuning_range (max must be greater than min)");
       }
       if (i) {
-        if (tuning_ranges_.back().second >= tuning_range_freq_start) {
+        if (tuning_ranges_.back().freq_end >= tuning_range_freq_start) {
           throw std::invalid_argument("tuning_ranges must be sorted - cannot "
                                       "have overlapping tuning ranges");
         }
@@ -305,8 +304,7 @@ retune_fft_impl::retune_fft_impl(
       freq_end_ = std::max(freq_end_, tuning_range_freq_end);
       d_logger->debug("tuning range {} will scan from {} to {}", i,
                       tuning_range_freq_start, tuning_range_freq_end);
-      tuning_ranges_.push_back(std::pair<uint64_t, uint64_t>(
-          tuning_range_freq_start, tuning_range_freq_end));
+      add_range_(tuning_range_freq_start, tuning_range_freq_end);
     }
     d_logger->debug(
         "resetting freq_start to {} and freq_end to {} from tuning_ranges",
@@ -314,8 +312,15 @@ retune_fft_impl::retune_fft_impl(
   }
   tuning_range_ = 0;
   last_tuning_range_ = 0;
-  tune_freq_ = tuning_ranges_[0].first;
+  tune_freq_ = tuning_ranges_[0].freq_start;
+  tuning_range_step_ = 0;
   d_logger->debug("bucket_offset {}", bucket_offset_);
+}
+
+void retune_fft_impl::add_range_(uint64_t freq_start, uint64_t freq_end) {
+  uint64_t steps = (freq_end - freq_start) / tune_step_hz_ + 1;
+  tuning_ranges_.push_back({freq_start, freq_end, steps});
+  d_logger->debug("add range {} to {} step {}", freq_start, freq_end, steps);
 }
 
 retune_fft_impl::~retune_fft_impl() { close_(); }
@@ -343,27 +348,36 @@ void retune_fft_impl::close_() {
   }
 }
 
-void retune_fft_impl::retune_now_() {
-  const double host_now = host_now_();
-
-  d_logger->debug("retuning to {}", tune_freq_);
+void retune_fft_impl::send_retune_(uint64_t tune_freq) {
+  d_logger->debug("retuning to {}", tune_freq);
   ++total_tune_count_;
   ++pending_retune_;
   pmt::pmt_t tune_rx = pmt::make_dict();
-  tune_rx = pmt::dict_add(tune_rx, pmt::mp("freq"), pmt::from_long(tune_freq_));
+  tune_rx = pmt::dict_add(tune_rx, pmt::mp("freq"), pmt::from_long(tune_freq));
   tune_rx = pmt::dict_add(tune_rx, pmt::mp("tag"), pmt::mp("now"));
   message_port_pub(TUNE, tune_rx);
+}
+
+void retune_fft_impl::retune_now_() {
+  const double host_now = host_now_();
+  send_retune_(tune_freq_);
   last_tuning_range_ = tuning_range_;
-  tune_freq_ += tune_step_hz_;
+  size_t range_steps = tuning_ranges_[tuning_range_].steps;
+  if (range_steps == 1) {
+    last_sweep_start_ = host_now;
+    return;
+  }
+  tune_freq_ = std::min(tune_freq_ + tune_step_hz_,
+                        tuning_ranges_[tuning_range_].freq_end);
+  ++tuning_range_step_;
   if (last_sweep_start_ == 0) {
     last_sweep_start_ = host_now;
   } else {
-    auto range_end = tuning_ranges_[tuning_range_].second;
-    if ((tune_freq_ > range_end) ||
-        (tune_freq_ - (samp_rate_ / 2) > range_end)) {
+    if (tuning_range_step_ == range_steps) {
+      tuning_range_step_ = 0;
       tuning_range_ = (tuning_range_ + 1) % tuning_ranges_.size();
       d_logger->debug("moving to tuning range {}", tuning_range_);
-      tune_freq_ = tuning_ranges_[tuning_range_].first;
+      tune_freq_ = tuning_ranges_[tuning_range_].freq_start;
       if (tuning_range_ == 0) {
         last_sweep_start_ = host_now;
       }
@@ -447,17 +461,14 @@ void retune_fft_impl::write_buckets_(double host_now, uint64_t rx_freq) {
   std::list<std::pair<double, double>> buckets;
   const double bucket_size = samp_rate_ / vlen_;
   const double bucket_freq_start = last_rx_freq_ - (samp_rate_ / 2);
-  const uint64_t tuning_range_freq_start =
-      tuning_ranges_[last_tuning_range_].first;
-  const uint64_t tuning_range_freq_end =
-      tuning_ranges_[last_tuning_range_].second;
+  const tuning_range_t &last_range = tuning_ranges_[last_tuning_range_];
   for (size_t i = bucket_offset_; i < (vlen_ - bucket_offset_); ++i) {
-    double tuning_range_freq = bucket_freq_start + (i * bucket_size);
-    if (tuning_range_freq < tuning_range_freq_start ||
-        tuning_range_freq > tuning_range_freq_end) {
+    double bucket_freq = bucket_freq_start + (i * bucket_size);
+    if (bucket_freq < last_range.freq_start ||
+        bucket_freq > last_range.freq_end) {
       continue;
     }
-    buckets.push_back(std::pair<double, double>(tuning_range_freq, sample_[i]));
+    buckets.push_back(std::pair<double, double>(bucket_freq, sample_[i]));
   }
   if (buckets.size() == 0) {
     return;
@@ -469,8 +480,8 @@ void retune_fft_impl::write_buckets_(double host_now, uint64_t rx_freq) {
      << ", \"config\": {"
      << "\"description\": \"" << description_ << "\""
      << ", \"tuning_range\": " << last_tuning_range_
-     << ", \"tuning_range_freq_start\": " << tuning_range_freq_start
-     << ", \"tuning_range_freq_end\": " << tuning_range_freq_end
+     << ", \"tuning_range_freq_start\": " << last_range.freq_start
+     << ", \"tuning_range_freq_end\": " << last_range.freq_end
      << ", \"freq_start\": " << freq_start_ << ", \"freq_end\": " << freq_end_
      << ", \"sample_rate\": " << samp_rate_ << ", \"nfft\": " << nfft_
      << ", \"tune_step_fft\": " << tune_step_fft_
@@ -494,6 +505,25 @@ void retune_fft_impl::write_buckets_(double host_now, uint64_t rx_freq) {
                 pmt::init_u8vector(compressed_s.length(),
                                    (const uint8_t *)compressed_s.c_str()));
   message_port_pub(JSON_OUTPUT, pdu);
+}
+
+void retune_fft_impl::process_buckets_(uint64_t rx_freq, double rx_time) {
+  if (last_rx_freq_ && sample_count_) {
+    std::transform(
+        sample_.begin(), sample_.end(), sample_.begin(), [=](double &c) {
+          return std::max(fft_min_, std::min(c / sample_count_, fft_max_));
+        });
+    reopen_(rx_time, rx_freq);
+    write_buckets_(rx_time, rx_freq);
+  }
+  std::transform(sample_.begin(), sample_.end(), sample_.begin(),
+                 [](double &c) { return 0; });
+  sample_count_ = 0;
+  fft_count_ = 0;
+  skip_fft_count_ = skip_tune_step_fft_;
+  write_step_fft_count_ = write_step_fft_;
+  last_rx_freq_ = rx_freq;
+  last_rx_time_ = rx_time;
 }
 
 void retune_fft_impl::process_tags_(const input_type *in, size_t in_count,
@@ -539,26 +569,13 @@ void retune_fft_impl::process_tags_(const input_type *in, size_t in_count,
     }
 
     const uint64_t rx_freq = (uint64_t)pmt::to_double(tag.value);
+    size_t range_steps = tuning_ranges_[tuning_range_].steps;
 
-    if (rx_freq != last_rx_freq_) {
+    if (rx_freq != last_rx_freq_ ||
+        (range_steps == 1 && fft_count_ >= tune_step_fft_)) {
       d_logger->debug("new rx_freq tag: {}, last {}", rx_freq, last_rx_freq_);
-      if (last_rx_freq_ && sample_count_) {
-        std::transform(
-            sample_.begin(), sample_.end(), sample_.begin(), [=](double &c) {
-              return std::max(fft_min_, std::min(c / sample_count_, fft_max_));
-            });
-        reopen_(rx_time, rx_freq);
-        write_buckets_(rx_time, rx_freq);
-      }
-      std::transform(sample_.begin(), sample_.end(), sample_.begin(),
-                     [](double &c) { return 0; });
       --pending_retune_;
-      sample_count_ = 0;
-      fft_count_ = 0;
-      skip_fft_count_ = skip_tune_step_fft_;
-      write_step_fft_count_ = write_step_fft_;
-      last_rx_freq_ = rx_freq;
-      last_rx_time_ = rx_time;
+      process_buckets_(rx_freq, rx_time);
     }
   }
 
