@@ -218,8 +218,15 @@ namespace iqtlabs {
 using input_type = float;
 using output_type = char;
 
+typedef struct {
+  uint64_t freq_start;
+  uint64_t freq_end;
+  size_t steps;
+} tuning_range_t;
+
 class retune_fft_impl : public retune_fft, base_impl {
 private:
+  void add_range_(uint64_t freq_start, uint64_t freq_end);
   void retune_now_();
   void write_items_(const input_type *in);
   void sum_items_(const input_type *in);
@@ -228,6 +235,8 @@ private:
                        const std::list<std::pair<double, double>> &buckets,
                        std::stringstream &ss);
   void reopen_(double host_now, uint64_t rx_freq);
+  void send_retune_(uint64_t tune_freq);
+  void process_buckets_(uint64_t rx_freq, double rx_time);
   void write_buckets_(double host_now, uint64_t rx_freq);
   void process_tags_(const input_type *in, size_t in_count, size_t in_first);
   void write_(const char *data, size_t len);
@@ -265,20 +274,21 @@ private:
   uint64_t pending_retune_;
   uint64_t write_step_fft_count_;
   size_t bucket_offset_;
-  std::vector<std::pair<uint64_t, uint64_t>> tuning_ranges_;
+  std::vector<tuning_range_t> tuning_ranges_;
   size_t tuning_range_;
   size_t last_tuning_range_;
+  size_t tuning_range_step_;
 
   boost::scoped_ptr<boost::iostreams::filtering_ostream> outbuf_p;
   std::string file_;
 
 public:
-  retune_fft_impl(const std::string &tag, int vlen, int nfft,
+  retune_fft_impl(const std::string &tag, size_t vlen, size_t nfft,
                   uint64_t samp_rate, uint64_t freq_start, uint64_t freq_end,
-                  int tune_step_hz, int tune_step_fft, int skip_tune_step_fft,
-                  double fft_min, double fft_max, const std::string &sdir,
-                  uint64_t write_step_fft, double bucket_range,
-                  const std::string &tuning_ranges,
+                  uint64_t tune_step_hz, uint64_t tune_step_fft,
+                  uint64_t skip_tune_step_fft, double fft_min, double fft_max,
+                  const std::string &sdir, uint64_t write_step_fft,
+                  double bucket_range, const std::string &tuning_ranges,
                   const std::string &description, uint64_t rotate_secs);
   ~retune_fft_impl();
   void forecast(int noutput_items, gr_vector_int &ninput_items_required);
