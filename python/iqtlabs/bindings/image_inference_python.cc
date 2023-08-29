@@ -14,7 +14,7 @@
 /* BINDTOOL_GEN_AUTOMATIC(0)                                                       */
 /* BINDTOOL_USE_PYGCCXML(0)                                                        */
 /* BINDTOOL_HEADER_FILE(image_inference.h)                                        */
-/* BINDTOOL_HEADER_FILE_HASH(2a46160a0c1ffc9c39e00ce808dc08b9)                     */
+/* BINDTOOL_HEADER_FILE_HASH(8b70b8d06de725d327d7d86b793e4360)                     */
 /***********************************************************************************/
 
 #include <pybind11/complex.h>
@@ -51,6 +51,7 @@ void bind_image_inference(py::module& m)
              py::arg("colormap"),
              py::arg("interpolation"),
              py::arg("flip"),
+             py::arg("min_peak_points"),
              D(image_inference, make))
 
 

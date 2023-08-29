@@ -227,7 +227,8 @@ class image_inference_impl : public image_inference, base_impl {
 private:
   int x_, y_, vlen_, norm_type_, colormap_, interpolation_, flip_;
   uint64_t last_rx_freq_;
-  double convert_alpha_, norm_alpha_, norm_beta_, last_rx_time_;
+  double convert_alpha_, norm_alpha_, norm_beta_, last_rx_time_,
+      min_peak_points_;
   std::vector<output_item_type> output_q_;
   boost::scoped_ptr<cv::Mat> points_buffer_, cmapped_buffer_;
   std::string image_dir_;
@@ -242,7 +243,8 @@ public:
   image_inference_impl(const std::string &tag, int vlen, int x, int y,
                        const std::string &image_dir, double convert_alpha,
                        double norm_alpha, double norm_beta, int norm_type,
-                       int colormap, int interpolation, int flip);
+                       int colormap, int interpolation, int flip,
+                       double min_peak_points);
   ~image_inference_impl();
   int general_work(int noutput_items, gr_vector_int &ninput_items,
                    gr_vector_const_void_star &input_items,
