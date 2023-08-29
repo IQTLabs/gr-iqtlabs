@@ -46,6 +46,8 @@ parameters:
 - id: flip
   dtype: int
   default: 99 # https://docs.opencv.org/3.4/d2/de8/group__core__array.html (default no flip)
+- id: min_peak_points
+  dtype: float
 
 asserts:
   - ${ tag != "" }

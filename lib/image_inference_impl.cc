@@ -215,16 +215,18 @@ image_inference::sptr
 image_inference::make(const std::string &tag, int vlen, int x, int y,
                       const std::string &image_dir, double convert_alpha,
                       double norm_alpha, double norm_beta, int norm_type,
-                      int colormap, int interpolation, int flip) {
+                      int colormap, int interpolation, int flip,
+                      double min_peak_points) {
   return gnuradio::make_block_sptr<image_inference_impl>(
       tag, vlen, x, y, image_dir, convert_alpha, norm_alpha, norm_beta,
-      norm_type, colormap, interpolation, flip);
+      norm_type, colormap, interpolation, flip, min_peak_points);
 }
 
 image_inference_impl::image_inference_impl(
     const std::string &tag, int vlen, int x, int y,
     const std::string &image_dir, double convert_alpha, double norm_alpha,
-    double norm_beta, int norm_type, int colormap, int interpolation, int flip)
+    double norm_beta, int norm_type, int colormap, int interpolation, int flip,
+    double min_peak_points)
     : gr::block("image_inference",
                 gr::io_signature::make(1 /* min inputs */, 1 /* max inputs */,
                                        vlen * sizeof(input_type)),
@@ -233,7 +235,8 @@ image_inference_impl::image_inference_impl(
       tag_(pmt::intern(tag)), x_(x), y_(y), vlen_(vlen), last_rx_freq_(0),
       last_rx_time_(0), image_dir_(image_dir), convert_alpha_(convert_alpha),
       norm_alpha_(norm_alpha), norm_beta_(norm_beta), norm_type_(norm_type),
-      colormap_(colormap), interpolation_(interpolation), flip_(flip) {
+      colormap_(colormap), interpolation_(interpolation), flip_(flip),
+      min_peak_points_(min_peak_points) {
   points_buffer_.reset(
       new cv::Mat(cv::Size(vlen, 0), CV_32F, cv::Scalar::all(0)));
   cmapped_buffer_.reset(
@@ -264,24 +267,28 @@ void image_inference_impl::process_items_(size_t c, const input_type *&in) {
 
 void image_inference_impl::create_image_() {
   if (!points_buffer_->empty()) {
-    output_item_type output_item;
-    output_item.rx_freq = last_rx_freq_;
-    output_item.ts = last_rx_time_;
-    output_item.buffer =
-        new cv::Mat(cv::Size(x_, y_), CV_8UC3, cv::Scalar::all(0));
-    this->d_logger->debug("rx_freq {} rx_time {} rows {}", last_rx_freq_,
-                          last_rx_time_, points_buffer_->rows);
-    cv::normalize(*points_buffer_, *points_buffer_, norm_alpha_, norm_beta_,
-                  norm_type_);
-    points_buffer_->convertTo(*cmapped_buffer_, CV_8UC3, convert_alpha_, 0);
-    cv::applyColorMap(*cmapped_buffer_, *cmapped_buffer_, colormap_);
-    cv::cvtColor(*cmapped_buffer_, *cmapped_buffer_, cv::COLOR_BGR2RGB);
-    cv::resize(*cmapped_buffer_, *output_item.buffer, cv::Size(x_, y_),
-               interpolation_);
-    if (flip_ == -1 || flip_ == 0 || flip_ == 1) {
-      cv::flip(*output_item.buffer, *output_item.buffer, flip_);
+    double points_min, points_max;
+    cv::minMaxLoc(*points_buffer_, &points_min, &points_max);
+    if (points_max > min_peak_points_) {
+      output_item_type output_item;
+      output_item.rx_freq = last_rx_freq_;
+      output_item.ts = last_rx_time_;
+      output_item.buffer =
+          new cv::Mat(cv::Size(x_, y_), CV_8UC3, cv::Scalar::all(0));
+      this->d_logger->debug("rx_freq {} rx_time {} rows {}", last_rx_freq_,
+                            last_rx_time_, points_buffer_->rows);
+      cv::normalize(*points_buffer_, *points_buffer_, norm_alpha_, norm_beta_,
+                    norm_type_);
+      points_buffer_->convertTo(*cmapped_buffer_, CV_8UC3, convert_alpha_, 0);
+      cv::applyColorMap(*cmapped_buffer_, *cmapped_buffer_, colormap_);
+      cv::cvtColor(*cmapped_buffer_, *cmapped_buffer_, cv::COLOR_BGR2RGB);
+      cv::resize(*cmapped_buffer_, *output_item.buffer, cv::Size(x_, y_),
+                 interpolation_);
+      if (flip_ == -1 || flip_ == 0 || flip_ == 1) {
+        cv::flip(*output_item.buffer, *output_item.buffer, flip_);
+      }
+      output_q_.insert(output_q_.begin(), output_item);
     }
-    output_q_.insert(output_q_.begin(), output_item);
     points_buffer_->resize(0);
   }
 }

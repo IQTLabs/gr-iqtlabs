@@ -248,7 +248,7 @@ class qa_image_inference(gr_unittest.TestCase):
             )
 
             image_inf = image_inference(
-                "rx_freq", fft_size, x, y, tmpdir, 255, 0, 1, 32, 20, 2, flip=0
+                "rx_freq", fft_size, x, y, tmpdir, 255, 0, 1, 32, 20, 2, 0, -1e9,
             )
             c2r = blocks.complex_to_real(1)
             stream2vector = blocks.stream_to_vector(gr.sizeof_float, fft_size)

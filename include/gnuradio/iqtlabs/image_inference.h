@@ -231,7 +231,8 @@ public:
   static sptr make(const std::string &tag, int vlen, int x, int y,
                    const std::string &image_dir, double convert_alpha,
                    double norm_alpha, double norm_beta, int norm_type,
-                   int colormap, int interpolation, int flip);
+                   int colormap, int interpolation, int flip,
+                   double min_peak_points);
 };
 
 } // namespace iqtlabs
