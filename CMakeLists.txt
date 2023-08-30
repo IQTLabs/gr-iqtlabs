@@ -45,8 +45,16 @@ include_directories(${CMAKE_SOURCE_DIR}/include ${OpenCV_INCLUDE_DIRS})
 find_package(libsigmf REQUIRED)
 
 find_package(Vulkan QUIET)
-if(NOT Vulkan_FOUND)
-  message(INFO ": Vulkan not found, vkfft will not be built")
+find_package(UHD QUIET)
+if(Vulkan_FOUND)
+  if(UHD_FOUND)
+    set(VKFFT 1)
+    message(INFO ": Vulkan and UHD found, vkfft will be built")
+  else()
+    message(INFO ": UHD NOT found, vkfft will NOT be built")
+  endif()
+else()
+  message(INFO ": Vulkan NOT found, vkfft will NOT be built")
 endif()
 
 # Set the version information here

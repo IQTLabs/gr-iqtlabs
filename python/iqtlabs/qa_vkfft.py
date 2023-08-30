@@ -204,11 +204,12 @@
 #
 
 from gnuradio import gr, gr_unittest
+
 # from gnuradio import blocks
 from gnuradio.iqtlabs import vkfft
 
-class qa_vkfft(gr_unittest.TestCase):
 
+class qa_vkfft(gr_unittest.TestCase):
     def setUp(self):
         self.tb = gr.top_block()
 
@@ -220,5 +221,5 @@ class qa_vkfft(gr_unittest.TestCase):
         instance = vkfft(1024, 1, True)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     gr_unittest.run(qa_vkfft)

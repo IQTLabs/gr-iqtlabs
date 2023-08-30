@@ -8,8 +8,8 @@
 include(GrPlatform) # define LIB_SUFFIX
 
 set(SRC_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/..")
-if(Vulkan_FOUND)
-  set(VKFFT
+if(VKFFT)
+  set(VKFFT_LIB
       -Wl,--whole-archive
       ${SRC_ROOT}/VkFFT/build/glslang-main/glslang/libglslang.a
       ${SRC_ROOT}/VkFFT/build/glslang-main/glslang/libGenericCodeGen.a
@@ -19,7 +19,8 @@ if(Vulkan_FOUND)
       ${SRC_ROOT}/VkFFT/build/glslang-main/SPIRV/libSPIRV.a
       ${SRC_ROOT}/VkFFT/build/CMakeFiles/VkFFT_TestSuite.dir/benchmark_scripts/vkFFT_scripts/src/utils_VkFFT.cpp.o
       -Wl,--no-whole-archive
-      ${Vulkan_LIBRARIES})
+      ${Vulkan_LIBRARIES}
+      ${UHD_LIBRARIES})
   set(VKFFT_INCLUDES
       PUBLIC
       $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/>
@@ -34,8 +35,8 @@ if(Vulkan_FOUND)
   )
 endif()
 
-if(Vulkan_FOUND)
-  list(APPEND iqtlabs_sources libvkfft.cc vkfft_impl.cc)
+if(VKFFT)
+  list(APPEND iqtlabs_sources libvkfft.cc vkfft_impl.cc vkfft_short_impl.cc)
 endif()
 
 list(
@@ -59,7 +60,7 @@ endif(NOT iqtlabs_sources)
 
 add_library(gnuradio-iqtlabs SHARED ${iqtlabs_sources})
 target_link_libraries(
-  gnuradio-iqtlabs ${VKFFT} ${Boost_LIBRARIES} ${OpenCV_LIBS}
+  gnuradio-iqtlabs ${VKFFT_LIB} ${Boost_LIBRARIES} ${OpenCV_LIBS}
   libsigmf::libsigmf gnuradio::gnuradio-runtime)
 
 target_include_directories(

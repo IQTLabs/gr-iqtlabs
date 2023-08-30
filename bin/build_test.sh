@@ -1,6 +1,6 @@
 #!/bin/sh
 set -e
-cppcheck --verbose --language=c++ --error-exitcode=1 --enable=performance,portability lib/*.h lib/*.cc include/iqtlabs/*h && \
+cppcheck --verbose --language=c++ --error-exitcode=1 --inline-suppr --enable=performance,portability lib/*.h lib/*.cc include/iqtlabs/*h && \
   pip3 install --user -r codecheck-requirements.txt && \
   black python/iqtlabs/qa_* && \
   ./bin/clonedeps.sh && \

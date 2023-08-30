@@ -6,7 +6,7 @@
 # Install public header files
 # ##############################################################################
 if(Vulkan_FOUND)
-  install(FILES vkfft.h DESTINATION include/gnuradio/iqtlabs)
+  install(FILES vkfft.h vkfft_short.h DESTINATION include/gnuradio/iqtlabs)
 endif()
 install(
   FILES api.h

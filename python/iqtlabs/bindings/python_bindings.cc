@@ -18,14 +18,15 @@ namespace py = pybind11;
 // Please do not delete
 /**************************************/
 // BINDING_FUNCTION_PROTOTYPES(
+#ifdef HAVE_VULKAN
+    void bind_vkfft(py::module& m);
+    void bind_vkfft_short(py::module& m);
+#endif
     void bind_tuneable_test_source(py::module& m);
     void bind_retune_fft(py::module& m);
     void bind_write_freq_samples(py::module& m);
     void bind_image_inference(py::module& m);
     void bind_vector_to_json(py::module& m);
-#ifdef HAVE_VULKAN
-    void bind_vkfft(py::module& m);
-#endif
     void bind_vector_roll(py::module& m);
 // ) END BINDING_FUNCTION_PROTOTYPES
 
@@ -55,14 +56,15 @@ PYBIND11_MODULE(iqtlabs_python, m)
     // Please do not delete
     /**************************************/
     // BINDING_FUNCTION_CALLS(
+#ifdef HAVE_VULKAN
+    bind_vkfft(m);
+    bind_vkfft_short(m);
+#endif
     bind_tuneable_test_source(m);
     bind_retune_fft(m);
     bind_write_freq_samples(m);
     bind_image_inference(m);
     bind_vector_to_json(m);
-#ifdef HAVE_VULKAN
-    bind_vkfft(m);
-#endif
     bind_vector_roll(m);
     // ) END BINDING_FUNCTION_CALLS
 }

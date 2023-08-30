@@ -2,7 +2,7 @@ id: iqtlabs_vector_roll
 label: vector_roll
 category: '[iqtlabs]'
 flags: [python, cpp]
-documentation:
+documentation: |-
   This block rolls vectors by one half vector size (equivalent
   to numpy np.roll(x, int(len(x) / 2))
 
