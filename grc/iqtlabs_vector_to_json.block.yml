@@ -1,9 +1,11 @@
+---
 id: iqtlabs_vector_to_json
 label: vector_to_json
 category: '[iqtlabs]'
 flags: [python, cpp]
 documentation: |-
-  This block writes vectors as JSON arrays with accompanying tags (vectors without tags are skipped).
+  This block writes vectors as JSON arrays with
+  accompanying tags (vectors without tags are skipped).
 
   input:
     vector of complex, float, int or short.
@@ -27,26 +29,26 @@ cpp_templates:
   link: ['libgnuradio-iqtlabs.so']
 
 parameters:
-- id: vlen
-  dtype: int
-- id: type
-  label: IO Type
-  dtype: enum
-  options: [complex, float, int, short]
-  option_attributes:
-    fcn: [cc, ff, ii, ss]
-    const_type: [complex, float, int, int]
-  hide: part
+  - id: vlen
+    dtype: int
+  - id: type
+    label: IO Type
+    dtype: enum
+    options: [complex, float, int, short]
+    option_attributes:
+      fcn: [cc, ff, ii, ss]
+      const_type: [complex, float, int, int]
+    hide: part
 
 inputs:
-- domain: stream
-  dtype: ${ type }
-  vlen: ${ vlen }
+  - domain: stream
+    dtype: ${ type }
+    vlen: ${ vlen }
 
 outputs:
-- label: output
-  domain: stream
-  dtype: byte
-  vlen: 1
+  - label: output
+    domain: stream
+    dtype: byte
+    vlen: 1
 
 file_format: 1
