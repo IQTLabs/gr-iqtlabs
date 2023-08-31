@@ -1,12 +1,12 @@
-id: iqtlabs_vkfft
-label: vkfft
+id: iqtlabs_vkfft_short
+label: vkfft_short
 category: '[iqtlabs]'
 flags: [python, cpp]
 documentation: |-
-  This block uses VkFFT to do FFT offload via Vulkan.
+  This block uses VkFFT to do FFT offload via Vulkan (short dtype version)
 
   input:
-    vector of complex, representing I/Q samples.
+    vector of short, representing I/Q samples.
   output:
     vector of complex, representing FFT output.
 
@@ -40,7 +40,7 @@ parameters:
 inputs:
 - label: input
   domain: stream
-  dtype: complex
+  dtype: short
   vlen: ${ vlen }
 
 outputs:
@@ -48,6 +48,5 @@ outputs:
   domain: stream
   dtype: complex
   vlen: ${ vlen }
-
 
 file_format: 1

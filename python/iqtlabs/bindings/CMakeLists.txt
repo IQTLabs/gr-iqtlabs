@@ -25,20 +25,19 @@ include(GrPybind)
 # Python Bindings
 ########################################################################
 
+if(VKFFT)
+    add_compile_definitions(HAVE_VULKAN)
+    list(APPEND iqtlabs_python_files vkfft_python.cc vkfft_short_python.cc)
+endif()
+
 list(APPEND iqtlabs_python_files
     tuneable_test_source_python.cc
     retune_fft_python.cc
     write_freq_samples_python.cc
     image_inference_python.cc
-    vector_to_json_python.cc)
-
-if(Vulkan_FOUND)
-    add_compile_definitions(HAVE_VULKAN)
-    list(APPEND iqtlabs_python_files vkfft_python.cc)
-endif()
-
-list(APPEND iqtlabs_python_files
-    vector_roll_python.cc python_bindings.cc)
+    vector_to_json_python.cc
+    vector_roll_python.cc
+    python_bindings.cc)
 
 GR_PYBIND_MAKE_OOT(iqtlabs
    ../../..
