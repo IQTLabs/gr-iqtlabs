@@ -1,3 +1,4 @@
+---
 id: iqtlabs_tuneable_test_source
 label: tuneable_test_source
 category: '[iqtlabs]'
@@ -27,18 +28,18 @@ cpp_templates:
   link: ['libgnuradio-iqtlabs.so']
 
 parameters:
-- id: freq_divisor
-  label: freq_divisor
-  dtype: float
-  default: 1e9
+  - id: freq_divisor
+    label: freq_divisor
+    dtype: float
+    default: 1e9
 
 inputs:
-- label: cmd
-  domain: message
-  optional: true
+  - label: cmd
+    domain: message
+    optional: true
 
 outputs:
-- label: samples
-  dtype: complex
+  - label: samples
+    dtype: complex
 
 file_format: 1

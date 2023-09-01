@@ -1,3 +1,4 @@
+---
 id: iqtlabs_vkfft_short
 label: vkfft_short
 category: '[iqtlabs]'
@@ -13,7 +14,8 @@ documentation: |-
   parameters:
     vlen: length of FFT vector, as a multiple of nfft to achieve batching.
     nfft: number of FFT points.
-    shift: if true, move DC component to center of output (see gnuradio fft shift parameter).
+    shift: if true, move DC component to center of output
+           (see gnuradio fft shift parameter).
 
 templates:
   imports: from gnuradio import iqtlabs
@@ -30,23 +32,23 @@ asserts:
   - ${ nfft > 0 }
 
 parameters:
-- id: vlen
-  dtype: int
-- id: nfft
-  dtype: int
-- id: shift
-  dtype: bool
+  - id: vlen
+    dtype: int
+  - id: nfft
+    dtype: int
+  - id: shift
+    dtype: bool
 
 inputs:
-- label: input
-  domain: stream
-  dtype: short
-  vlen: ${ vlen }
+  - label: input
+    domain: stream
+    dtype: short
+    vlen: ${ vlen }
 
 outputs:
-- label: output
-  domain: stream
-  dtype: complex
-  vlen: ${ vlen }
+  - label: output
+    domain: stream
+    dtype: complex
+    vlen: ${ vlen }
 
 file_format: 1

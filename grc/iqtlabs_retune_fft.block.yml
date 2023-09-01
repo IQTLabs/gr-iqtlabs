@@ -1,3 +1,4 @@
+---
 id: iqtlabs_retune_fft
 label: retune_fft
 category: '[iqtlabs]'
@@ -10,45 +11,64 @@ documentation: |-
   increments.
 
   input:
-    vector of floats, representing FFT bucket values, tagged with center frequency.
+    vector of floats, representing FFT bucket values,
+    tagged with center frequency.
   output:
-    JSON scan summaries, one per line, containing "bucket" keys (with frequency: mean values), and "config" keys (representing block config).
+    JSON scan summaries, one per line, containing "bucket" keys
+    (with frequency: mean values), and "config" keys
+    (representing block config).
   tune:
     connect to radio command port, generally "cmd".
 
   parameters:
-    tag: expected PMT tag containing center frequency (generally "rx_freq" for Soapy or UHD sources).
-    vlen: length of FFT vector (generally same as number of FFT points - can be different when receiving multiple vectors at once).
+    tag: expected PMT tag containing center frequency
+         (generally "rx_freq" for Soapy or UHD sources).
+    vlen: length of FFT vector (generally same as number of FFT points -
+          can be different when receiving multiple vectors at once).
     nfft: number of FFT points.
     samp_rate: sample rate.
     freq_start: frequency to start scan at in Hz (overridden by tuning_ranges).
     freq_end: frequency to end scan at in Hz (overridden by tuning_ranges).
     tune_step_hz: increment frequency by this value each retuning step.
     tune_step_fft: count at least this many FFT vectors between retuning steps.
-    skip_tune_step_fft: discard this many FFT vectors before counting (to allow for radio to stabilize after retuning)
+    skip_tune_step_fft: discard this many FFT vectors before counting
+                        (to allow for radio to stabilize after retuning)
     fft_min: clip FFT values to this minimum.
     fft_max: clip FFT values to this maximum.
     sdir: directory to write raw FFT points to.
     write_step_fft: if > 0, write N vectors of FFT points at each retune step.
     bucket_range: proportion of buckets to write out, at center frequency.
-    tuning_ranges: if not empty, a comma separated list of tuning ranges in ascending order (non-linear scan), e.g. "2.2e9-2.4e9,5.1e9-5.9e9".
+    tuning_ranges: if not empty, a comma separated list of tuning ranges
+                   in ascending order (non-linear scan), e.g.
+                   "2.2e9-2.4e9,5.1e9-5.9e9".
     description: a string description to be included with each update.
     rotate_secs: if > 0, use a new epoch timestamped directory every N seconds.
 
   example JSON output:
-    { "ts": <epoch time>, "sweep start": <epoch time>, "config": { "description": "...", "freq_start": 10e6, "freq_end": 20e6, ... }, "buckets": { "10e6": 1, "10.1e6", ... } }
+    { "ts": <epoch time>, "sweep start": <epoch time>,
+      "config": { "description": "...", "freq_start": 10e6,
+      "freq_end": 20e6, ... }, "buckets": { "10e6": 1, "10.1e6", ... } }
 
-    if tuning_ranges is used, freq_start and freq_end will be the minimum and maximum of all ranges.
+    if tuning_ranges is used, freq_start and freq_end will be the
+    minimum and maximum of all ranges.
 
 
 templates:
   imports: from gnuradio import iqtlabs
-  make: iqtlabs.retune_fft(${tag}, ${vlen}, ${nfft}, ${samp_rate}, ${freq_start}, ${freq_end}, ${tune_step_hz}, ${tune_step_fft}, ${skip_tune_step_fft}, ${fft_min}, ${fft_max}, ${sdir}, ${write_step_fft}, ${bucket_range}, ${tuning_ranges}, ${description}, ${rotate_secs})
+  make: >
+    iqtlabs.retune_fft(${tag}, ${vlen}, ${nfft}, ${samp_rate}, ${freq_start},
+    ${freq_end}, ${tune_step_hz}, ${tune_step_fft}, ${skip_tune_step_fft},
+    ${fft_min}, ${fft_max}, ${sdir}, ${write_step_fft}, ${bucket_range},
+    ${tuning_ranges}, ${description}, ${rotate_secs})
 
 cpp_templates:
   includes: ['#include <gnuradio/iqtlabs/retune_fft.h>']
   declarations: 'gr::iqtlabs::retune_fft::sptr ${id};'
-  make: 'this->${id} = gr::iqtlabs::retune_fft::make(${tag}, ${vlen}, ${nfft}, ${samp_rate}, ${freq_start}, ${freq_end}, ${tune_step_hz}, ${tune_step_fft}, ${skip_tune_step_fft}, ${fft_min}, ${fft_max}, ${sdir}, ${write_step_fft}, ${bucket_range}, ${tuning_ranges}, ${description}, ${rotate_secs});'
+  make: >
+    this->${id} = gr::iqtlabs::retune_fft::make(${tag}, ${vlen}, ${nfft},
+    ${samp_rate}, ${freq_start}, ${freq_end}, ${tune_step_hz}, ${tune_step_fft},
+    ${skip_tune_step_fft}, ${fft_min}, ${fft_max}, ${sdir}, ${write_step_fft},
+    ${bucket_range}, ${tuning_ranges}, ${description}, ${rotate_secs});
   link: ['libgnuradio-iqtlabs.so']
 
 asserts:
@@ -60,54 +80,54 @@ asserts:
   - ${ (tune_step_hz > 0) or (tune_step_fft > 0) }
 
 parameters:
-- id: tag
-  dtype: string
-  default: 'rx_freq'
-- id: vlen
-  dtype: int
-- id: nfft
-  dtype: int
-- id: samp_rate
-  dtype: int
-- id: freq_start
-  dtype: raw
-- id: freq_end
-  dtype: raw
-- id: tune_step_hz
-  dtype: int
-- id: tune_step_fft
-  dtype: int
-- id: skip_tune_step_fft
-  dtype: int
-- id: fft_min
-  dtype: raw
-- id: fft_max
-  dtype: raw
-- id: sdir
-  dtype: string
-- id: write_step_fft
-  dtype: int
-- id: bucket_range
-  dtype: float
-- id: tuning_ranges
-  dtype: string
-- id: description
-  dtype: string
-- id: rotate_secs
-  dtype: int
+  - id: tag
+    dtype: string
+    default: 'rx_freq'
+  - id: vlen
+    dtype: int
+  - id: nfft
+    dtype: int
+  - id: samp_rate
+    dtype: int
+  - id: freq_start
+    dtype: raw
+  - id: freq_end
+    dtype: raw
+  - id: tune_step_hz
+    dtype: int
+  - id: tune_step_fft
+    dtype: int
+  - id: skip_tune_step_fft
+    dtype: int
+  - id: fft_min
+    dtype: raw
+  - id: fft_max
+    dtype: raw
+  - id: sdir
+    dtype: string
+  - id: write_step_fft
+    dtype: int
+  - id: bucket_range
+    dtype: float
+  - id: tuning_ranges
+    dtype: string
+  - id: description
+    dtype: string
+  - id: rotate_secs
+    dtype: int
 
 inputs:
-- label: input
-  domain: stream
-  dtype: float
-  vlen: ${ vlen }
+  - label: input
+    domain: stream
+    dtype: float
+    vlen: ${ vlen }
 
 outputs:
-- label: output
-  domain: stream
-  dtype: byte
-  vlen: 1
-- label: tune
-  domain: message
+  - label: output
+    domain: stream
+    dtype: byte
+    vlen: 1
+  - label: tune
+    domain: message
 
 file_format: 1

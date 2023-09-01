@@ -3,6 +3,15 @@ name: test
 on: [push, pull_request]
 
 jobs:
+  yamllint:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    - name: yaml-lint
+      uses: ibiqlik/action-yamllint@v3
+      with:
+        config_data: "{extends: default}"
+        file_or_dir: grc/*yml
   test-clang-format:
     runs-on: ubuntu-latest
     steps:

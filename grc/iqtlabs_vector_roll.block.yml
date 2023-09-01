@@ -1,3 +1,4 @@
+---
 id: iqtlabs_vector_roll
 label: vector_roll
 category: '[iqtlabs]'
@@ -28,19 +29,19 @@ asserts:
   - ${ vlen > 0 }
 
 parameters:
-- id: vlen
-  dtype: int
+  - id: vlen
+    dtype: int
 
 inputs:
-- label: input
-  domain: stream
-  dtype: complex
-  vlen: ${ vlen }
+  - label: input
+    domain: stream
+    dtype: complex
+    vlen: ${ vlen }
 
 outputs:
-- label: output
-  domain: stream
-  dtype: complex
-  vlen: ${ vlen }
+  - label: output
+    domain: stream
+    dtype: complex
+    vlen: ${ vlen }
 
 file_format: 1

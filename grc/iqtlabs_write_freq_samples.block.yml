@@ -1,3 +1,4 @@
+---
 id: iqtlabs_write_freq_samples
 label: write_freq_samples
 category: '[iqtlabs]'
@@ -10,7 +11,8 @@ documentation: |-
     vector of gr_complex, samples.
 
   parameters:
-    tag: expected PMT tag containing center frequency (generally "rx_freq" for Soapy or UHD sources).
+    tag: expected PMT tag containing center frequency
+         (generally "rx_freq" for Soapy or UHD sources).
     itemsize: length of samples.
     vlen: length of sample vector.
     sdir: directory to write samples to.
@@ -23,49 +25,56 @@ documentation: |-
 
 templates:
   imports: from gnuradio import iqtlabs
-  make: iqtlabs.write_freq_samples(${tag}, ${type.size}, ${vlen}, ${sdir}, ${prefix}, ${write_step_samples}, ${skip_tune_step_samples})
+  make: >
+    iqtlabs.write_freq_samples(${tag}, ${type.size}, ${vlen}, ${sdir},
+    ${prefix}, ${write_step_samples}, ${skip_tune_step_samples})
 
 cpp_templates:
   includes: ['#include <gnuradio/iqtlabs/write_freq_samples.h>']
   declarations: 'gr::iqtlabs::write_freq_samples::sptr ${id};'
-  make: 'this->${id} = gr::iqtlabs::write_freq_samples::make(${tag}, ${type.size}, "${type.datatype}", ${vlen}, ${sdir}, ${prefix}, ${write_step_samples}, ${skip_tune_step_samples}, ${samp_rate}, ${rotate_secs}, ${gain}, ${sigmf});'
+  make: >
+    this->${id} = gr::iqtlabs::write_freq_samples::make(${tag}, ${type.size},
+    "${type.datatype}", ${vlen}, ${sdir}, ${prefix}, ${write_step_samples},
+    ${skip_tune_step_samples}, ${samp_rate}, ${rotate_secs}, ${gain},
+    ${sigmf});
   link: ['libgnuradio-iqtlabs.so']
 
 parameters:
-- id: tag
-  dtype: string
-  default: 'rx_freq'
-- id: type
-  label: IO Type
-  dtype: enum
-  options: [complex, float, int, short, byte]
-  option_attributes:
-    datatype: [cf32, f32, i32, i16, c8]
-    size: [gr.sizeof_gr_complex, gr.sizeof_float, gr.sizeof_int, gr.sizeof_short, gr.sizeof_char]
-  hide: part
-- id: vlen
-  dtype: int
-- id: sdir
-  dtype: string
-- id: prefix
-  dtype: string
-- id: write_step_samples
-  dtype: int
-- id: skip_tune_step_samples
-  dtype: int
-- id: samp_rate
-  dtype: int
-- id: rotate_secs
-  dtype: int
-- id: gain
-  dtype: float
-- id: sigmf
-  dtype: bool
+  - id: tag
+    dtype: string
+    default: 'rx_freq'
+  - id: type
+    label: IO Type
+    dtype: enum
+    options: [complex, float, int, short, byte]
+    option_attributes:
+      datatype: [cf32, f32, i32, i16, c8]
+      size: [gr.sizeof_gr_complex, gr.sizeof_float, gr.sizeof_int,
+             gr.sizeof_short, gr.sizeof_char]
+    hide: part
+  - id: vlen
+    dtype: int
+  - id: sdir
+    dtype: string
+  - id: prefix
+    dtype: string
+  - id: write_step_samples
+    dtype: int
+  - id: skip_tune_step_samples
+    dtype: int
+  - id: samp_rate
+    dtype: int
+  - id: rotate_secs
+    dtype: int
+  - id: gain
+    dtype: float
+  - id: sigmf
+    dtype: bool
 
 inputs:
-- label: input
-  domain: stream
-  dtype: ${ type }
-  vlen: ${ vlen }
+  - label: input
+    domain: stream
+    dtype: ${ type }
+    vlen: ${ vlen }
 
 file_format: 1
