@@ -292,5 +292,29 @@ void base_impl::write_sigmf(const std::string &filename,
   jsonfile.close();
   rename(dotfilename.c_str(), filename.c_str());
 }
+
+void base_impl::get_tags(const pmt::pmt_t want_tag,
+                         const std::vector<tag_t> &all_tags,
+                         std::vector<tag_t> &rx_freq_tags,
+                         std::vector<double> &rx_times, size_t in_count) {
+  for (size_t t = 0; t < all_tags.size(); ++t) {
+    const auto &tag = all_tags[t];
+    if (tag.key == want_tag) {
+      rx_freq_tags.push_back(tag);
+      continue;
+    }
+    if (tag.key == RX_TIME_KEY) {
+      rx_times.push_back(rx_time_from_tag_(tag));
+      continue;
+    }
+  }
+
+  if (rx_freq_tags.size() != rx_times.size()) {
+    rx_times.clear();
+    for (size_t t = 0; t < rx_freq_tags.size(); ++t) {
+      rx_times.push_back(host_now_());
+    }
+  }
+}
 } /* namespace iqtlabs */
 } /* namespace gr */

@@ -318,14 +318,11 @@ int write_freq_samples_impl::general_work(
     }
 
     const uint64_t rx_freq = (uint64_t)pmt::to_double(tag.value);
-
-    if (rx_freq != last_rx_freq_) {
-      d_logger->debug("new rx_freq tag: {}, last {}", rx_freq, last_rx_freq_);
-      last_rx_freq_ = rx_freq;
-      skip_tune_step_samples_count_ = skip_tune_step_samples_;
-      write_step_samples_count_ = write_step_samples_;
-      open_(1);
-    }
+    d_logger->debug("new rx_freq tag: {}, last {}", rx_freq, last_rx_freq_);
+    last_rx_freq_ = rx_freq;
+    skip_tune_step_samples_count_ = skip_tune_step_samples_;
+    write_step_samples_count_ = write_step_samples_;
+    open_(1);
   }
 
   write_samples_(1, in);
