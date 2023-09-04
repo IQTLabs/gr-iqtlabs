@@ -277,7 +277,7 @@ class qa_image_inference(gr_unittest.TestCase):
             self.tb.stop()
             self.tb.wait()
             image_files = [f for f in glob.glob(f"{tmpdir}/image*png")]
-            self.assertGreater(2, len(image_files))
+            self.assertGreater(len(image_files), 2)
             for image_file in image_files:
                 stat = os.stat(image_file)
                 self.assertTrue(stat.st_size)
