@@ -228,11 +228,39 @@ except ImportError:
 
 
 class qa_write_freq_samples(gr_unittest.TestCase):
-    def setUp(self):
-        self.tb = gr.top_block()
-
-    def tearDown(self):
-        self.tb = None
+    def run_flowgraph(
+        self, freq, tune_freq, samp_rate, points, samples_write_count, tmpdir
+    ):
+        strobe = blocks.message_strobe(pmt.to_pmt({"freq": tune_freq}), 1000)
+        iqtlabs_tuneable_test_source_0 = tuneable_test_source(freq)
+        write_freq_samples_0 = write_freq_samples(
+            "rx_freq",
+            gr.sizeof_gr_complex * 1,
+            "cf32",
+            points,
+            tmpdir,
+            "samples",
+            samples_write_count,
+            samples_write_count,
+            samp_rate,
+            3600,
+            25,
+            True,
+        )
+        blocks_throttle_0 = blocks.throttle(gr.sizeof_gr_complex * 1, samp_rate, True)
+        blocks_stream_to_vector_0 = blocks.stream_to_vector(
+            gr.sizeof_gr_complex * 1, points
+        )
+        tb = gr.top_block()
+        tb.msg_connect((strobe, "strobe"), (iqtlabs_tuneable_test_source_0, "cmd"))
+        tb.connect((iqtlabs_tuneable_test_source_0, 0), (blocks_throttle_0, 0))
+        tb.connect((blocks_throttle_0, 0), (blocks_stream_to_vector_0, 0))
+        tb.connect((blocks_stream_to_vector_0, 0), (write_freq_samples_0, 0))
+        tb.start()
+        sleep_time = 10
+        time.sleep(sleep_time)
+        tb.stop()
+        tb.wait()
 
     def test_write_freq_samples(self):
         points = int(1024)
@@ -242,41 +270,9 @@ class qa_write_freq_samples(gr_unittest.TestCase):
         samples_write_count = 2
 
         with tempfile.TemporaryDirectory() as tmpdir:
-            strobe = blocks.message_strobe(pmt.to_pmt({"freq": tune_freq}), 1000)
-            iqtlabs_tuneable_test_source_0 = tuneable_test_source(freq)
-            write_freq_samples_0 = write_freq_samples(
-                "rx_freq",
-                gr.sizeof_gr_complex * 1,
-                "cf32",
-                points,
-                tmpdir,
-                "samples",
-                samples_write_count,
-                samples_write_count,
-                samp_rate,
-                3600,
-                25,
-                True,
+            self.run_flowgraph(
+                freq, tune_freq, samp_rate, points, samples_write_count, tmpdir
             )
-            blocks_throttle_0 = blocks.throttle(
-                gr.sizeof_gr_complex * 1, samp_rate, True
-            )
-            blocks_stream_to_vector_0 = blocks.stream_to_vector(
-                gr.sizeof_gr_complex * 1, points
-            )
-
-            self.tb.msg_connect(
-                (strobe, "strobe"), (iqtlabs_tuneable_test_source_0, "cmd")
-            )
-            self.tb.connect((iqtlabs_tuneable_test_source_0, 0), (blocks_throttle_0, 0))
-            self.tb.connect((blocks_throttle_0, 0), (blocks_stream_to_vector_0, 0))
-            self.tb.connect((blocks_stream_to_vector_0, 0), (write_freq_samples_0, 0))
-
-            self.tb.start()
-            sleep_time = 10
-            time.sleep(sleep_time)
-            self.tb.stop()
-            self.tb.wait()
 
             zst_file = glob.glob(f"{tmpdir}/*/*zst")[0]
             sigmf_file = zst_file.replace("zst", "sigmf-meta")
