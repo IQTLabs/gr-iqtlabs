@@ -6,7 +6,7 @@ jobs:
   yamllint:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
     - name: yaml-lint
       uses: ibiqlik/action-yamllint@v3
       with:
@@ -15,7 +15,7 @@ jobs:
   test-clang-format:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
       with:
         fetch-depth: 0
     - name: clang-format
@@ -24,7 +24,7 @@ jobs:
   test-latest:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
       with:
         fetch-depth: 0
     - name: build_test 
@@ -33,7 +33,7 @@ jobs:
   test-2004-gnuradio39:
     runs-on: ubuntu-20.04
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
       with:
         fetch-depth: 0
     - name: build_test
@@ -42,7 +42,7 @@ jobs:
   test-2004:
     runs-on: ubuntu-20.04
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
       with:
         fetch-depth: 0
     - name: build_test
