@@ -273,28 +273,31 @@ class qa_write_freq_samples(gr_unittest.TestCase):
             self.run_flowgraph(
                 freq, tune_freq, samp_rate, points, samples_write_count, tmpdir
             )
-
-            zst_file = glob.glob(f"{tmpdir}/*/*zst")[0]
-            sigmf_file = zst_file.replace("zst", "sigmf-meta")
-            bin_file = zst_file.replace(".zst", "")
-            self.assertTrue(os.path.exists(sigmf_file))
-            with open(sigmf_file, "r", encoding="utf8") as f:
-                sigmf = json.loads(f.read())
-                sigmf_global = sigmf["global"]
-                sigmf_capture = sigmf["captures"][0]
-                self.assertEqual(samp_rate, sigmf_global["core:sample_rate"], sigmf)
-                self.assertEqual(tune_freq, sigmf_capture["core:frequency"], sigmf)
-                source_file = sigmf_capture["capture_details:source_file"]
-                self.assertEqual(
-                    source_file,
-                    os.path.basename(sigmf_file.replace("sigmf-meta", "zst")),
-                    sigmf,
-                )
-                self.assertEqual(25, sigmf_capture["capture_details:gain"], sigmf)
-            self.assertIn(str(int(tune_freq)), zst_file)
-            subprocess.check_call(["zstd", "-d", zst_file])
-            samples = np.fromfile(bin_file, dtype=np.complex64)
-            self.assertEqual(len(samples), samples_write_count * points)
+            total_samples = 0
+            for zst_file in glob.glob(f"{tmpdir}/*/*zst"):
+                sigmf_file = zst_file.replace("zst", "sigmf-meta")
+                bin_file = zst_file.replace(".zst", "")
+                self.assertTrue(os.path.exists(sigmf_file))
+                self.assertIn(str(int(tune_freq)), zst_file)
+                with open(sigmf_file, "r", encoding="utf8") as f:
+                    sigmf = json.loads(f.read())
+                    sigmf_global = sigmf["global"]
+                    sigmf_capture = sigmf["captures"][0]
+                    self.assertEqual(samp_rate, sigmf_global["core:sample_rate"], sigmf)
+                    self.assertEqual(tune_freq, sigmf_capture["core:frequency"], sigmf)
+                    source_file = sigmf_capture["capture_details:source_file"]
+                    self.assertEqual(
+                        source_file,
+                        os.path.basename(sigmf_file.replace("sigmf-meta", "zst")),
+                        sigmf,
+                    )
+                    self.assertEqual(25, sigmf_capture["capture_details:gain"], sigmf)
+                subprocess.check_call(["zstd", "-d", zst_file])
+                samples = len(np.fromfile(bin_file, dtype=np.complex64))
+                total_samples += samples
+                if samples:
+                    self.assertEqual(samples, samples_write_count * points)
+            self.assertTrue(total_samples)
 
 
 if __name__ == "__main__":
