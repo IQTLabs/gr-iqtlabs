@@ -477,7 +477,7 @@ void retune_fft_impl::write_buckets_(double host_now, uint64_t rx_freq) {
   ss << "{"
      << "\"ts\": " << host_now_str_(host_now)
      << ", \"sweep_start\": " << host_now_str_(last_sweep_start_)
-     << ", \"config\": {"
+     << ", \"total_tune_count\": " << total_tune_count_ << ", \"config\": {"
      << "\"description\": \"" << description_ << "\""
      << ", \"tuning_range\": " << last_tuning_range_
      << ", \"tuning_range_freq_start\": " << last_range.freq_start
@@ -551,12 +551,11 @@ void retune_fft_impl::process_tags_(const input_type *in, size_t in_count,
     const uint64_t rx_freq = (uint64_t)pmt::to_double(tag.value);
     size_t range_steps = tuning_ranges_[tuning_range_].steps;
 
-    if (rx_freq != last_rx_freq_ ||
-        (range_steps == 1 && fft_count_ >= tune_step_fft_)) {
-      d_logger->debug("new rx_freq tag: {}, last {}", rx_freq, last_rx_freq_);
+    d_logger->debug("new rx_freq tag: {}, last {}", rx_freq, last_rx_freq_);
+    if (pending_retune_) {
       --pending_retune_;
-      process_buckets_(rx_freq, rx_time);
     }
+    process_buckets_(rx_freq, rx_time);
   }
 
   process_items_(1, in);
