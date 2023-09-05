@@ -243,10 +243,6 @@ class qa_image_inference(gr_unittest.TestCase):
             source = tuneable_test_source(freq_divisor)
 
             strobe = blocks.message_strobe(pmt.to_pmt({"freq": new_freq}), delay)
-            strobe2 = blocks.message_strobe(
-                pmt.to_pmt({"freq": new_freq * 3}), int(delay * 1.5)
-            )
-
             image_inf = image_inference(
                 "rx_freq",
                 fft_size,
@@ -270,7 +266,6 @@ class qa_image_inference(gr_unittest.TestCase):
             )
 
             self.tb.msg_connect((strobe, "strobe"), (source, "cmd"))
-            self.tb.msg_connect((strobe2, "strobe"), (source, "cmd"))
             self.tb.connect((source, 0), (c2r, 0))
             self.tb.connect((c2r, 0), (throttle, 0))
             self.tb.connect((throttle, 0), (stream2vector, 0))
@@ -281,8 +276,8 @@ class qa_image_inference(gr_unittest.TestCase):
             time.sleep(test_time)
             self.tb.stop()
             self.tb.wait()
-            image_files = glob.glob(f"{tmpdir}/image*png")
-            self.assertTrue(image_files)
+            image_files = [f for f in glob.glob(f"{tmpdir}/image*png")]
+            self.assertGreater(len(image_files), 2)
             for image_file in image_files:
                 stat = os.stat(image_file)
                 self.assertTrue(stat.st_size)

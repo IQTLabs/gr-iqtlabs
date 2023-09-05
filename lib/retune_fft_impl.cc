@@ -531,27 +531,7 @@ void retune_fft_impl::process_tags_(const input_type *in, size_t in_count,
   std::vector<tag_t> all_tags, rx_freq_tags;
   std::vector<double> rx_times;
   get_tags_in_window(all_tags, 0, 0, in_count);
-
-  for (size_t t = 0; t < all_tags.size(); ++t) {
-    const auto &tag = all_tags[t];
-    if (tag.key == tag_) {
-      rx_freq_tags.push_back(tag);
-      continue;
-    }
-    if (tag.key == RX_TIME_KEY) {
-      rx_times.push_back(rx_time_from_tag_(tag));
-      continue;
-    }
-  }
-
-  // fall back to host timestamps.
-  if (rx_freq_tags.size() != rx_times.size()) {
-    rx_times.clear();
-    const double host_now = host_now_();
-    for (size_t t = 0; t < rx_freq_tags.size(); ++t) {
-      rx_times.push_back(host_now);
-    }
-  }
+  get_tags(tag_, all_tags, rx_freq_tags, rx_times, in_count);
 
   if (rx_freq_tags.empty()) {
     process_items_(in_count, in);

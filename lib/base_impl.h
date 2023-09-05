@@ -226,6 +226,9 @@ public:
   void write_sigmf(const std::string &filename, const std::string &source_file,
                    double timestamp, const std::string &datatype,
                    double sample_rate, double frequency, double gain);
+  void get_tags(const pmt::pmt_t want_tag, const std::vector<tag_t> &all_tags,
+                std::vector<tag_t> &rx_freq_tags, std::vector<double> &rx_times,
+                size_t in_count);
 };
 } /* namespace iqtlabs */
 } /* namespace gr */
