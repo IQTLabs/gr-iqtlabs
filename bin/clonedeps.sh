@@ -25,7 +25,7 @@ cd ../..
 if [ "$(which vulkaninfo)" != "" ] ; then
   mkdir -p VkFFT/build
   cd VkFFT/build
-  cmake ..
+  cmake -DALLOW_EXTERNAL_SPIRV_TOOLS=ON ..
   make -j $(nproc)
   sudo make install
   cd ../..
