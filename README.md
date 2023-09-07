@@ -32,6 +32,13 @@ Uses [VkFFT](https://github.com/DTolm/VkFFT) to offload FFT computation to a Vul
 
 Write samples to disk as zstandard compressed files, automatically opening new files when new PMT *rx_freq* tags are received.
 
+## Building
+
+On Ubuntu 22.04:
+
+```bin/apt_get.sh && bin/build_test.sh```
+
+
 ## Compability notes
 
 * tested with gnuradio 3.9 and 3.10, and python 3.8, 3.9 and 3.10 (for gnuradio 3.9, log messages will be incomplete though the blocks still function).
