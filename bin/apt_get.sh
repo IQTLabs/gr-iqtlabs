@@ -17,6 +17,5 @@ sudo apt-get update && \
     python3-numpy \
     python3-packaging \
     python3-pandas \
-    spirv-tools \
     vulkan-tools && \
   sudo pip3 install zstandard

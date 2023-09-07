@@ -48,7 +48,6 @@ sudo apt-get -y update && \
 	 python3-yaml \
 	 python3-zmq \
 	 soapysdr-tools \
-	 spirv-tools \
 	 swig \
     && \
     git clone --recursive https://github.com/gnuradio/volk && cd volk && mkdir build && cd build && cmake -DCMAKE_BUILD_TYPE=Release -DPYTHON_EXECUTABLE=/usr/bin/python3 .. && make -j "$(nproc)" && sudo make install && sudo ldconfig && cd ../.. && \
