@@ -23,7 +23,7 @@ sudo make install
 cd ../..
 if [ "$(which vulkaninfo)" != "" ] ; then
   git clone https://github.com/DTolm/VkFFT -b v1.3.1
-  sed -i -E 's/GIT_TAG\s+"origin.main"/GIT_TAG "origin\/13.0.0"/g' VkFFT/CMakeLists.txt && \
+  sed -i -E 's/GIT_TAG\s+"origin.main"/GIT_TAG "13.0.0"/g' VkFFT/CMakeLists.txt && \
   git clone https://github.com/KhronosGroup/SPIRV-Tools -b v2023.2
   cd SPIRV-Tools/external && git clone https://github.com/KhronosGroup/SPIRV-Headers -b sdk-1.3.246.1 spirv-headers && cd ../..
   cd SPIRV-Tools && mkdir build && cd build && cmake .. && make -j $(nproc) && sudo make install && cd ../..
