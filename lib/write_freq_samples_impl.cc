@@ -290,7 +290,6 @@ void write_freq_samples_impl::write_samples_(size_t c, const char *&in) {
     }
     in += vlen_;
   }
-  consume_each(c);
 }
 
 int write_freq_samples_impl::general_work(
@@ -305,27 +304,26 @@ int write_freq_samples_impl::general_work(
 
   if (tags.empty()) {
     write_samples_(in_count, in);
-    return 0;
-  }
+  } else {
+    for (size_t t = 0; t < tags.size(); ++t) {
+      const auto &tag = tags[t];
+      const auto rel = tag.offset - in_first;
+      in_first += rel;
 
-  for (size_t t = 0; t < tags.size(); ++t) {
-    const auto &tag = tags[t];
-    const auto rel = tag.offset - in_first;
-    in_first += rel;
+      if (rel > 0) {
+        write_samples_(rel, in);
+      }
 
-    if (rel > 0) {
-      write_samples_(rel, in);
+      const uint64_t rx_freq = (uint64_t)pmt::to_double(tag.value);
+      d_logger->debug("new rx_freq tag: {}, last {}", rx_freq, last_rx_freq_);
+      last_rx_freq_ = rx_freq;
+      skip_tune_step_samples_count_ = skip_tune_step_samples_;
+      write_step_samples_count_ = write_step_samples_;
+      open_(1);
     }
-
-    const uint64_t rx_freq = (uint64_t)pmt::to_double(tag.value);
-    d_logger->debug("new rx_freq tag: {}, last {}", rx_freq, last_rx_freq_);
-    last_rx_freq_ = rx_freq;
-    skip_tune_step_samples_count_ = skip_tune_step_samples_;
-    write_step_samples_count_ = write_step_samples_;
-    open_(1);
   }
 
-  write_samples_(1, in);
+  consume_each(in_count);
   return 0;
 }
 
