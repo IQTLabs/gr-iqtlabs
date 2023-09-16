@@ -234,7 +234,8 @@ public:
                    uint64_t skip_tune_step_fft, double fft_min, double fft_max,
                    const std::string &sdir, uint64_t write_step_fft,
                    double bucket_range, const std::string &tuning_ranges,
-                   const std::string &description, uint64_t rotate_secs);
+                   const std::string &description, uint64_t rotate_secs,
+                   bool pre_fft);
 };
 
 } // namespace iqtlabs

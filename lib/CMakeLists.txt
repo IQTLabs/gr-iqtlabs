@@ -46,8 +46,10 @@ list(
   APPEND
   iqtlabs_sources
   base_impl.cc
+  retuner_impl.cc
   image_inference_impl.cc
   retune_fft_impl.cc
+  retune_pre_fft_impl.cc
   tuneable_test_source_impl.cc
   write_freq_samples_impl.cc
   vector_to_json_impl.cc

@@ -220,13 +220,23 @@ from gnuradio import fft
 from gnuradio.fft import window
 
 try:
-    from gnuradio.iqtlabs import retune_fft, tuneable_test_source, vector_roll
+    from gnuradio.iqtlabs import (
+        retune_fft,
+        retune_pre_fft,
+        tuneable_test_source,
+        vector_roll,
+    )
 except ImportError:
     import sys
 
     dirname, filename = os.path.split(os.path.abspath(__file__))
     sys.path.append(os.path.join(dirname, "bindings"))
-    from gnuradio.iqtlabs import retune_fft, tuneable_test_source
+    from gnuradio.iqtlabs import (
+        retune_fft,
+        retune_pre_fft,
+        tuneable_test_source,
+        vector_roll,
+    )
 
 
 class pdu_decoder(gr.sync_block):
@@ -259,7 +269,10 @@ class qa_retune_fft_base:
 
     def retune_fft(self, fft_roll):
         points = int(2048)
-        samp_rate = points * points
+        samp_rate = int(points * points)
+        tune_step_hz = samp_rate
+        tune_step_fft = int(64)
+        skip_tune_step_fft = int(2)
         freq_start = int(1e9 / samp_rate) * samp_rate
         freq_end = int(1.1e9 / samp_rate) * samp_rate
         freq_mid = ((freq_end - freq_start) / 2) + freq_start
@@ -271,16 +284,29 @@ class qa_retune_fft_base:
         with tempfile.TemporaryDirectory() as tmpdir:
             test_file = os.path.join(tmpdir, "samples.csv")
             iqtlabs_tuneable_test_source_0 = tuneable_test_source(freq_end)
+
+            iqtlabs_retune_pre_fft_0 = retune_pre_fft(
+                points,
+                1,  # fft_batch_size
+                "rx_freq",
+                int(freq_start),
+                int(freq_end),
+                tune_step_hz,
+                tune_step_fft,
+                skip_tune_step_fft,
+                tuning_ranges,
+            )
+
             iqtlabs_retune_fft_0 = retune_fft(
                 "rx_freq",
                 points,
                 points,
-                int(samp_rate),
+                samp_rate,
                 int(freq_start),
                 int(freq_end),
-                int(samp_rate),
-                64,
-                2,
+                tune_step_hz,
+                tune_step_fft,
+                skip_tune_step_fft,
                 fft_min,
                 1e9,
                 tmpdir,
@@ -289,6 +315,7 @@ class qa_retune_fft_base:
                 tuning_ranges,
                 "a text description",
                 3600,
+                True,
             )
             pdu_decoder_0 = pdu_decoder()
             fft_vxx_0 = fft.fft_vcc(
@@ -296,9 +323,6 @@ class qa_retune_fft_base:
             )
             blocks_throttle_0 = blocks.throttle(
                 gr.sizeof_gr_complex * 1, samp_rate, True
-            )
-            blocks_stream_to_vector_0 = blocks.stream_to_vector(
-                gr.sizeof_gr_complex * 1, points
             )
             blocks_file_sink_0 = blocks.file_sink(gr.sizeof_char * 1, test_file, False)
             blocks_file_sink_0.set_unbuffered(False)
@@ -308,15 +332,15 @@ class qa_retune_fft_base:
             vr2 = vector_roll(points)
 
             self.tb.msg_connect(
-                (iqtlabs_retune_fft_0, "tune"), (iqtlabs_tuneable_test_source_0, "cmd")
+                (iqtlabs_retune_pre_fft_0, "tune"),
+                (iqtlabs_tuneable_test_source_0, "cmd"),
             )
             self.tb.msg_connect(
-                (iqtlabs_retune_fft_0, "json_output"), (pdu_decoder_0, "pdu")
+                (iqtlabs_retune_pre_fft_0, "tune"), (iqtlabs_retune_fft_0, "cmd")
             )
+            self.tb.msg_connect((iqtlabs_retune_fft_0, "json"), (pdu_decoder_0, "pdu"))
             self.tb.connect((blocks_complex_to_mag_0, 0), (blocks_nlog10_ff_0, 0))
             self.tb.connect((blocks_nlog10_ff_0, 0), (iqtlabs_retune_fft_0, 0))
-            self.tb.connect((blocks_stream_to_vector_0, 0), (fft_vxx_0, 0))
-            self.tb.connect((blocks_throttle_0, 0), (blocks_stream_to_vector_0, 0))
             if fft_roll:
                 # double roll, is a no-op
                 self.tb.connect((fft_vxx_0, 0), (vr1, 0))
@@ -325,6 +349,8 @@ class qa_retune_fft_base:
             else:
                 self.tb.connect((fft_vxx_0, 0), (blocks_complex_to_mag_0, 0))
             self.tb.connect((iqtlabs_retune_fft_0, 0), (blocks_file_sink_0, 0))
+            self.tb.connect((iqtlabs_retune_pre_fft_0, 0), (fft_vxx_0, 0))
+            self.tb.connect((blocks_throttle_0, 0), (iqtlabs_retune_pre_fft_0, 0))
             self.tb.connect((iqtlabs_tuneable_test_source_0, 0), (blocks_throttle_0, 0))
 
             self.tb.start()
@@ -363,8 +389,8 @@ class qa_retune_fft_base:
                     ts = record["ts"]
                     self.assertGreater(ts, last_ts)
                     last_ts = ts
-                    config = record["config"]
                     self.assertGreaterEqual(ts, record["sweep_start"])
+                    config = record["config"]
                     self.assertEqual("a text description", config["description"]),
                     tuning_range_freq_start = config["tuning_range_freq_start"]
                     tuning_range_freq_end = config["tuning_range_freq_end"]
@@ -473,7 +499,7 @@ class qa_retune_fft_base:
 
 class qa_retune_fft_no_roll(gr_unittest.TestCase, qa_retune_fft_base):
     def setUp(self):
-        self.tb = gr.top_block()
+        self.tb = gr.top_block(catch_exceptions=False)
 
     def tearDown(self):
         self.tb = None
@@ -484,7 +510,7 @@ class qa_retune_fft_no_roll(gr_unittest.TestCase, qa_retune_fft_base):
 
 class qa_retune_fft_roll(gr_unittest.TestCase, qa_retune_fft_base):
     def setUp(self):
-        self.tb = gr.top_block()
+        self.tb = gr.top_block(catch_exceptions=False)
 
     def tearDown(self):
         self.tb = None

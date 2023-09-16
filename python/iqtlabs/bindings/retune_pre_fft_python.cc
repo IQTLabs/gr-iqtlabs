@@ -13,8 +13,8 @@
 /* If manual edits are made, the following tags should be modified accordingly.    */
 /* BINDTOOL_GEN_AUTOMATIC(0)                                                       */
 /* BINDTOOL_USE_PYGCCXML(0)                                                        */
-/* BINDTOOL_HEADER_FILE(retune_fft.h)                                        */
-/* BINDTOOL_HEADER_FILE_HASH(291a634c39f0e6860211913645932d56)                     */
+/* BINDTOOL_HEADER_FILE(retune_pre_fft.h)                                        */
+/* BINDTOOL_HEADER_FILE_HASH(a9b4051c99f17cef5206780055ededed)                     */
 /***********************************************************************************/
 
 #include <pybind11/complex.h>
@@ -23,39 +23,30 @@
 
 namespace py = pybind11;
 
-#include <gnuradio/iqtlabs/retune_fft.h>
+#include <gnuradio/iqtlabs/retune_pre_fft.h>
 // pydoc.h is automatically generated in the build directory
-#include <retune_fft_pydoc.h>
+#include <retune_pre_fft_pydoc.h>
 
-void bind_retune_fft(py::module& m)
+void bind_retune_pre_fft(py::module& m)
 {
 
-    using retune_fft = ::gr::iqtlabs::retune_fft;
+    using retune_pre_fft = ::gr::iqtlabs::retune_pre_fft;
 
 
-    py::class_<retune_fft, gr::block, gr::basic_block, std::shared_ptr<retune_fft>>(
-        m, "retune_fft", D(retune_fft))
+    py::class_<retune_pre_fft, gr::sync_decimator, std::shared_ptr<retune_pre_fft>>(
+        m, "retune_pre_fft", D(retune_pre_fft))
 
-        .def(py::init(&retune_fft::make),
-             py::arg("tag"),
-             py::arg("vlen"),
+        .def(py::init(&retune_pre_fft::make),
              py::arg("nfft"),
-             py::arg("samp_rate"),
+             py::arg("fft_batch_size"),
+             py::arg("tag"),
              py::arg("freq_start"),
              py::arg("freq_end"),
              py::arg("tune_step_hz"),
              py::arg("tune_step_fft"),
              py::arg("skip_tune_step_fft"),
-             py::arg("fft_min"),
-             py::arg("fft_max"),
-             py::arg("sdir"),
-             py::arg("write_step_fft"),
-             py::arg("bucket_range"),
              py::arg("tuning_ranges"),
-             py::arg("description"),
-             py::arg("rotate_secs"),
-             py::arg("pre_fft"),
-             D(retune_fft, make))
+             D(retune_pre_fft, make))
 
 
         ;
