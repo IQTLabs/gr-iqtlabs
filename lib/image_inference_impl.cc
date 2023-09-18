@@ -262,7 +262,6 @@ void image_inference_impl::process_items_(size_t c, const input_type *&in) {
     cv::Mat new_row(cv::Size(vlen_, 1), CV_32F, (void *)in);
     points_buffer_->push_back(new_row);
   }
-  consume_each(c);
 }
 
 void image_inference_impl::create_image_() {
@@ -349,26 +348,25 @@ int image_inference_impl::general_work(int noutput_items,
 
   if (rx_freq_tags.empty()) {
     process_items_(in_count, in);
-    return 0;
-  }
+  } else {
+    for (size_t t = 0; t < rx_freq_tags.size(); ++t) {
+      const auto &tag = rx_freq_tags[t];
+      const double rx_time = rx_times[t];
+      const auto rel = tag.offset - in_first;
+      in_first += rel;
 
-  for (size_t t = 0; t < rx_freq_tags.size(); ++t) {
-    const auto &tag = rx_freq_tags[t];
-    const double rx_time = rx_times[t];
-    const auto rel = tag.offset - in_first;
-    in_first += rel;
+      if (rel > 0) {
+        process_items_(rel, in);
+      }
 
-    if (rel > 0) {
-      process_items_(rel, in);
+      uint64_t rx_freq = (uint64_t)pmt::to_double(tag.value);
+      create_image_();
+      last_rx_freq_ = rx_freq;
+      last_rx_time_ = rx_time;
     }
-
-    uint64_t rx_freq = (uint64_t)pmt::to_double(tag.value);
-    create_image_();
-    last_rx_freq_ = rx_freq;
-    last_rx_time_ = rx_time;
   }
 
-  process_items_(1, in);
+  consume_each(in_count);
   return 0;
 }
 

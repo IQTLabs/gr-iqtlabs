@@ -421,7 +421,6 @@ void retune_fft_impl::process_items_(size_t c, const input_type *&in) {
       }
     }
   }
-  consume_each(c);
 }
 
 void retune_fft_impl::forecast(int noutput_items,
@@ -535,30 +534,26 @@ void retune_fft_impl::process_tags_(const input_type *in, size_t in_count,
 
   if (rx_freq_tags.empty()) {
     process_items_(in_count, in);
-    return;
-  }
+  } else {
+    for (size_t t = 0; t < rx_freq_tags.size(); ++t) {
+      const auto &tag = rx_freq_tags[t];
+      const double rx_time = rx_times[t];
+      const auto rel = tag.offset - in_first;
+      in_first += rel;
 
-  for (size_t t = 0; t < rx_freq_tags.size(); ++t) {
-    const auto &tag = rx_freq_tags[t];
-    const double rx_time = rx_times[t];
-    const auto rel = tag.offset - in_first;
-    in_first += rel;
+      if (rel > 0) {
+        process_items_(rel, in);
+      }
 
-    if (rel > 0) {
-      process_items_(rel, in);
+      const uint64_t rx_freq = (uint64_t)pmt::to_double(tag.value);
+
+      d_logger->debug("new rx_freq tag: {}, last {}", rx_freq, last_rx_freq_);
+      if (pending_retune_) {
+        --pending_retune_;
+      }
+      process_buckets_(rx_freq, rx_time);
     }
-
-    const uint64_t rx_freq = (uint64_t)pmt::to_double(tag.value);
-    size_t range_steps = tuning_ranges_[tuning_range_].steps;
-
-    d_logger->debug("new rx_freq tag: {}, last {}", rx_freq, last_rx_freq_);
-    if (pending_retune_) {
-      --pending_retune_;
-    }
-    process_buckets_(rx_freq, rx_time);
   }
-
-  process_items_(1, in);
 }
 
 int retune_fft_impl::general_work(int noutput_items,
@@ -579,6 +574,7 @@ int retune_fft_impl::general_work(int noutput_items,
   size_t in_count = ninput_items[0];
   size_t in_first = nitems_read(0);
   process_tags_(in, in_count, in_first);
+  consume_each(in_count);
 
   return 0;
 }
