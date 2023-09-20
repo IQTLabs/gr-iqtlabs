@@ -1,0 +1,62 @@
+---
+id: iqtlabs_retune_pre_fft
+label: retune_pre_fft
+category: '[iqtlabs]'
+flags: [python, cpp]
+
+templates:
+  imports: from gnuradio import iqtlabs
+  make: >
+    iqtlabs.retune_pre_fft(
+    ${nfft}, ${fft_batch_size},
+    ${tag}, ${freq_start}, ${freq_end},
+    ${tune_step_hz}, ${tune_step_fft}, ${skip_tune_step_fft},
+    ${tuning_ranges})
+
+cpp_templates:
+  includes: ['#include <gnuradio/iqtlabs/retune_pre_fft.h>']
+  declarations: 'gr::iqtlabs::retune_pre_fft::sptr ${id};'
+  make: >
+    this->${id} = gr::iqtlabs::retune_pre_fft::make(
+    ${nfft}, ${fft_batch_size},
+    ${tag}, {freq_start}, ${freq_end},
+    ${tune_step_hz}, ${tune_step_fft}, ${skip_tune_step_fft},
+    ${tuning_ranges});
+  link: ['libgnuradio-iqtlabs.so']
+
+parameters:
+  - id: nfft
+    dtype: int
+  - id: fft_batch_size
+    dtype: int
+  - id: tag
+    dtype: string
+    default: 'rx_freq'
+  - id: freq_start
+    dtype: raw
+  - id: freq_end
+    dtype: raw
+  - id: tune_step_hz
+    dtype: int
+  - id: tune_step_fft
+    dtype: int
+  - id: skip_tune_step_fft
+    dtype: int
+  - id: tuning_ranges
+    dtype: string
+
+inputs:
+  - label: input
+    domain: stream
+    dtype: complex
+    vlen: 1
+
+outputs:
+  - label: input
+    domain: stream
+    dtype: complex
+    vlen: ${ nfft * fft_batch_size }
+  - label: tune
+    domain: message
+
+file_format: 1

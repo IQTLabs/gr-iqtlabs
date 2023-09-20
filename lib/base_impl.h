@@ -209,7 +209,7 @@ namespace gr {
 namespace iqtlabs {
 const pmt::pmt_t CMD_KEY = pmt::mp("cmd");
 const pmt::pmt_t FREQ_KEY = pmt::mp("freq");
-const pmt::pmt_t TUNE = pmt::mp("tune");
+const pmt::pmt_t TUNE_KEY = pmt::mp("tune");
 const pmt::pmt_t RX_TIME_KEY = pmt::string_to_symbol("rx_time");
 const pmt::pmt_t RX_FREQ_KEY = pmt::string_to_symbol("rx_freq");
 

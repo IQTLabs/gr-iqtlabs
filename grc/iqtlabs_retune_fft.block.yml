@@ -13,12 +13,16 @@ documentation: |-
   input:
     vector of floats, representing FFT bucket values,
     tagged with center frequency.
+      cmd:
+        connection from retune_pre_fft to control tuning (optional).
   output:
     JSON scan summaries, one per line, containing "bucket" keys
     (with frequency: mean values), and "config" keys
     (representing block config).
-  tune:
-    connect to radio command port, generally "cmd".
+      tune:
+        connect to radio command port, generally "cmd".
+      json:
+        output buckets as zstd compressed JSON object (optional).
 
   parameters:
     tag: expected PMT tag containing center frequency
@@ -43,6 +47,7 @@ documentation: |-
                    "2.2e9-2.4e9,5.1e9-5.9e9".
     description: a string description to be included with each update.
     rotate_secs: if > 0, use a new epoch timestamped directory every N seconds.
+    pre_fft: if True, tuning is controlled by the retune_pre_fft block.
 
   example JSON output:
     { "ts": <epoch time>, "sweep start": <epoch time>,
@@ -59,7 +64,7 @@ templates:
     iqtlabs.retune_fft(${tag}, ${vlen}, ${nfft}, ${samp_rate}, ${freq_start},
     ${freq_end}, ${tune_step_hz}, ${tune_step_fft}, ${skip_tune_step_fft},
     ${fft_min}, ${fft_max}, ${sdir}, ${write_step_fft}, ${bucket_range},
-    ${tuning_ranges}, ${description}, ${rotate_secs})
+    ${tuning_ranges}, ${description}, ${rotate_secs}, ${pre_fft})
 
 cpp_templates:
   includes: ['#include <gnuradio/iqtlabs/retune_fft.h>']
@@ -68,7 +73,8 @@ cpp_templates:
     this->${id} = gr::iqtlabs::retune_fft::make(${tag}, ${vlen}, ${nfft},
     ${samp_rate}, ${freq_start}, ${freq_end}, ${tune_step_hz}, ${tune_step_fft},
     ${skip_tune_step_fft}, ${fft_min}, ${fft_max}, ${sdir}, ${write_step_fft},
-    ${bucket_range}, ${tuning_ranges}, ${description}, ${rotate_secs});
+    ${bucket_range}, ${tuning_ranges}, ${description}, ${rotate_secs},
+    ${pre_fft});
   link: ['libgnuradio-iqtlabs.so']
 
 asserts:
@@ -121,6 +127,8 @@ inputs:
     domain: stream
     dtype: float
     vlen: ${ vlen }
+  - label: cmd
+    domain: message
 
 outputs:
   - label: output
@@ -129,5 +137,8 @@ outputs:
     vlen: 1
   - label: tune
     domain: message
+  - label: json
+    domain: message
+
 
 file_format: 1

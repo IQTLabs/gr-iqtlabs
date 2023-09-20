@@ -206,6 +206,7 @@
 #define INCLUDED_IQTLABS_RETUNE_FFT_IMPL_H
 
 #include "base_impl.h"
+#include "retuner_impl.h"
 #include <boost/filesystem.hpp>
 #include <boost/iostreams/device/file.hpp>
 #include <boost/iostreams/filter/zstd.hpp>
@@ -218,15 +219,8 @@ namespace iqtlabs {
 using input_type = float;
 using output_type = char;
 
-typedef struct {
-  uint64_t freq_start;
-  uint64_t freq_end;
-  size_t steps;
-} tuning_range_t;
-
-class retune_fft_impl : public retune_fft, base_impl {
+class retune_fft_impl : public retune_fft, base_impl, retuner_impl {
 private:
-  void add_range_(uint64_t freq_start, uint64_t freq_end);
   void retune_now_();
   void write_items_(const input_type *in);
   void sum_items_(const input_type *in);
@@ -247,16 +241,12 @@ private:
   size_t vlen_;
   size_t nfft_;
   uint64_t samp_rate_;
-  uint64_t freq_start_;
-  uint64_t freq_end_;
-  uint64_t tune_step_hz_;
-  uint64_t tune_step_fft_;
-  uint64_t skip_tune_step_fft_;
   uint64_t write_step_fft_;
   uint64_t rotate_secs_;
   double bucket_range_;
   std::string sdir_;
   std::string description_;
+  bool pre_fft_;
 
   double fft_min_;
   double fft_max_;
@@ -264,20 +254,8 @@ private:
   std::deque<output_type> out_buf_;
   std::vector<double> sample_;
   size_t sample_count_;
-  uint64_t tune_freq_;
-  uint64_t last_rx_freq_;
-  double last_rx_time_;
-  uint64_t fft_count_;
-  double last_sweep_start_;
-  uint64_t skip_fft_count_;
-  uint64_t total_tune_count_;
-  uint64_t pending_retune_;
   uint64_t write_step_fft_count_;
   size_t bucket_offset_;
-  std::vector<tuning_range_t> tuning_ranges_;
-  size_t tuning_range_;
-  size_t last_tuning_range_;
-  size_t tuning_range_step_;
 
   boost::scoped_ptr<boost::iostreams::filtering_ostream> outbuf_p;
   std::string file_;
@@ -289,7 +267,8 @@ public:
                   uint64_t skip_tune_step_fft, double fft_min, double fft_max,
                   const std::string &sdir, uint64_t write_step_fft,
                   double bucket_range, const std::string &tuning_ranges,
-                  const std::string &description, uint64_t rotate_secs);
+                  const std::string &description, uint64_t rotate_secs,
+                  bool pre_fft);
   ~retune_fft_impl();
   void forecast(int noutput_items, gr_vector_int &ninput_items_required);
   int general_work(int noutput_items, gr_vector_int &ninput_items,
