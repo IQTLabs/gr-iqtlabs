@@ -249,7 +249,7 @@ int vkfft_short_impl::work(int noutput_items,
 
   for (int i = 0; i < noutput_items; ++i) {
     const int buffer_index = i * vlen_ * 2;
-    _converter->conv(&in[i], &buffer[0], vlen_);
+    _converter->conv(&in[buffer_index], &buffer[0], vlen_);
     vkfft_offload((char *)&buffer[0], (char *)&out[buffer_index]);
   }
 

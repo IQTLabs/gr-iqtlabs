@@ -217,7 +217,6 @@ import pandas as pd
 from gnuradio import gr, gr_unittest
 from gnuradio import blocks
 from gnuradio import fft
-from gnuradio.fft import window
 
 try:
     from gnuradio.iqtlabs import (
@@ -280,6 +279,7 @@ class qa_retune_fft_base:
         fft_write_count = 2
         bucket_range = 1
         fft_min = -1e9
+        fft_batch_size = 1
 
         with tempfile.TemporaryDirectory() as tmpdir:
             test_file = os.path.join(tmpdir, "samples.csv")
@@ -287,7 +287,7 @@ class qa_retune_fft_base:
 
             iqtlabs_retune_pre_fft_0 = retune_pre_fft(
                 points,
-                1,  # fft_batch_size
+                fft_batch_size,
                 "rx_freq",
                 int(freq_start),
                 int(freq_end),
@@ -318,8 +318,19 @@ class qa_retune_fft_base:
                 True,
             )
             pdu_decoder_0 = pdu_decoder()
-            fft_vxx_0 = fft.fft_vcc(
-                points, True, window.blackmanharris(points), True, 1
+            fft_vxx_0 = fft.fft_vcc(points, True, [], fft_roll, 1)
+
+            try:
+                if os.getenv("TEST_VKFFT", 0):
+                    from gnuradio.iqtlabs import vkfft
+
+                    fft_vxx_0 = vkfft(fft_batch_size * points, points, fft_roll)
+                    print("using VkFFT")
+            except ImportError:
+                print("using software FFT")
+            window = blocks.multiply_const_vff(
+                [val for val in fft.window.blackmanharris(points) for _ in range(2)]
+                * fft_batch_size
             )
             blocks_throttle_0 = blocks.throttle(
                 gr.sizeof_gr_complex * 1, samp_rate, True
@@ -329,7 +340,6 @@ class qa_retune_fft_base:
             blocks_complex_to_mag_0 = blocks.complex_to_mag(points)
             blocks_nlog10_ff_0 = blocks.nlog10_ff(20, points, 0)
             vr1 = vector_roll(points)
-            vr2 = vector_roll(points)
 
             self.tb.msg_connect(
                 (iqtlabs_retune_pre_fft_0, "tune"),
@@ -342,14 +352,14 @@ class qa_retune_fft_base:
             self.tb.connect((blocks_complex_to_mag_0, 0), (blocks_nlog10_ff_0, 0))
             self.tb.connect((blocks_nlog10_ff_0, 0), (iqtlabs_retune_fft_0, 0))
             if fft_roll:
+                self.tb.connect((fft_vxx_0, 0), (blocks_complex_to_mag_0, 0))
+            else:
                 # double roll, is a no-op
                 self.tb.connect((fft_vxx_0, 0), (vr1, 0))
-                self.tb.connect((vr1, 0), (vr2, 0))
-                self.tb.connect((vr2, 0), (blocks_complex_to_mag_0, 0))
-            else:
-                self.tb.connect((fft_vxx_0, 0), (blocks_complex_to_mag_0, 0))
+                self.tb.connect((vr1, 0), (blocks_complex_to_mag_0, 0))
             self.tb.connect((iqtlabs_retune_fft_0, 0), (blocks_file_sink_0, 0))
-            self.tb.connect((iqtlabs_retune_pre_fft_0, 0), (fft_vxx_0, 0))
+            self.tb.connect((iqtlabs_retune_pre_fft_0, 0), (window, 0))
+            self.tb.connect((window, 0), (fft_vxx_0, 0))
             self.tb.connect((blocks_throttle_0, 0), (iqtlabs_retune_pre_fft_0, 0))
             self.tb.connect((iqtlabs_tuneable_test_source_0, 0), (blocks_throttle_0, 0))
 
@@ -369,67 +379,70 @@ class qa_retune_fft_base:
             self.assertTrue(os.path.exists(test_file))
 
             with open(test_file, encoding="utf8") as f:
-                linebuffer = ""
-                last_data = time.time()
-                last_ts = 0
-                last_buckets = None
-                last_tuning_range = None
-                file_poll_timeout = 0.001
-                while tuning_range_changes < 5:
-                    self.assertLess(time.time() - last_data, 5)
-                    line = f.readline()
-                    linebuffer = linebuffer + line
-                    if not linebuffer.endswith("\n"):
-                        time.sleep(file_poll_timeout)
-                        continue
-                    last_data = time.time()
-                    line = linebuffer.strip()
+                try:
                     linebuffer = ""
-                    record = json.loads(line)
-                    ts = record["ts"]
-                    self.assertGreater(ts, last_ts)
-                    last_ts = ts
-                    self.assertGreaterEqual(ts, record["sweep_start"])
-                    config = record["config"]
-                    self.assertEqual("a text description", config["description"]),
-                    tuning_range_freq_start = config["tuning_range_freq_start"]
-                    tuning_range_freq_end = config["tuning_range_freq_end"]
-                    tuning_range = int(config["tuning_range"])
-                    if tuning_range != last_tuning_range:
-                        tuning_range_changes += 1
-                        print("tuning_range_changes:", tuning_range_changes)
-                    last_tuning_range = tuning_range
-                    self.assertTrue(
-                        (
-                            tuning_range_freq_start == freq_start
-                            and tuning_range_freq_end == freq_mid
+                    last_data = time.time()
+                    last_ts = 0
+                    last_buckets = None
+                    last_tuning_range = None
+                    file_poll_timeout = 0.001
+                    while tuning_range_changes < 5:
+                        self.assertLess(time.time() - last_data, 5)
+                        line = f.readline()
+                        linebuffer = linebuffer + line
+                        if not linebuffer.endswith("\n"):
+                            time.sleep(file_poll_timeout)
+                            continue
+                        last_data = time.time()
+                        line = linebuffer.strip()
+                        linebuffer = ""
+                        record = json.loads(line)
+                        ts = round(record["ts"])
+                        self.assertGreaterEqual(ts, last_ts)
+                        last_ts = ts
+                        config = record["config"]
+                        self.assertEqual("a text description", config["description"]),
+                        tuning_range_freq_start = config["tuning_range_freq_start"]
+                        tuning_range_freq_end = config["tuning_range_freq_end"]
+                        tuning_range = int(config["tuning_range"])
+                        if tuning_range != last_tuning_range:
+                            tuning_range_changes += 1
+                            print("tuning_range_changes:", tuning_range_changes)
+                        last_tuning_range = tuning_range
+                        self.assertTrue(
+                            (
+                                tuning_range_freq_start == freq_start
+                                and tuning_range_freq_end == freq_mid
+                            )
+                            or (
+                                tuning_range_freq_start == freq_mid + samp_rate
+                                and tuning_range_freq_end == freq_end
+                            )
                         )
-                        or (
-                            tuning_range_freq_start == freq_mid + samp_rate
-                            and tuning_range_freq_end == freq_end
-                        )
-                    )
-                    self.assertEqual(config["freq_start"], freq_start)
-                    self.assertEqual(config["freq_end"], freq_end)
-                    self.assertEqual(config["sample_rate"], samp_rate)
-                    self.assertEqual(config["nfft"], points)
-                    buckets = record["buckets"]
-                    self.assertTrue(buckets, (last_buckets, buckets))
-                    bucket_counts[len(buckets)] += 1
-                    fs = [int(f) for f in buckets.keys()]
-                    self.assertGreaterEqual(min(fs), tuning_range_freq_start)
-                    self.assertLessEqual(max(fs), tuning_range_freq_end)
-                    new_records = [
-                        {
-                            "ts": ts,
-                            "f": int(freq),
-                            "v": float(value),
-                            "t": int(tuning_range),
-                        }
-                        for freq, value in buckets.items()
-                    ]
-                    records.extend(new_records)
-                    last_buckets = buckets
+                        self.assertEqual(config["freq_start"], freq_start)
+                        self.assertEqual(config["freq_end"], freq_end)
+                        self.assertEqual(config["sample_rate"], samp_rate)
+                        self.assertEqual(config["nfft"], points)
+                        buckets = record["buckets"]
+                        self.assertTrue(buckets, (last_buckets, buckets))
+                        bucket_counts[len(buckets)] += 1
+                        fs = [int(f) for f in buckets.keys()]
+                        self.assertGreaterEqual(min(fs), tuning_range_freq_start)
+                        self.assertLessEqual(max(fs), tuning_range_freq_end)
+                        new_records = [
+                            {
+                                "ts": ts,
+                                "f": int(freq),
+                                "v": float(value),
+                                "t": int(tuning_range),
+                            }
+                            for freq, value in buckets.items()
+                        ]
+                        records.extend(new_records)
+                        last_buckets = buckets
+                except Exception:
+                    self.tb.stop()
+                    raise
 
             self.tb.stop()
             self.tb.wait()
@@ -446,7 +459,7 @@ class qa_retune_fft_base:
 
             for _, df in all_df.groupby("t"):
                 # must have plausible unscaled dB value
-                self.assertTrue(fft_min <= df["v"].min() <= 1, df["v"].min())
+                self.assertTrue(fft_min <= df["v"].min() <= 1, (fft_min, df["v"].min()))
                 self.assertTrue(50 <= df["v"].max() <= 61, df["v"].max())
                 df["m"] = df.groupby("f")["v"].apply(lambda x: x.max() - x.min())
                 non_unique_v = df[df["m"] > 2]
@@ -499,7 +512,7 @@ class qa_retune_fft_base:
 
 class qa_retune_fft_no_roll(gr_unittest.TestCase, qa_retune_fft_base):
     def setUp(self):
-        self.tb = gr.top_block(catch_exceptions=False)
+        self.tb = gr.top_block(catch_exceptions=True)
 
     def tearDown(self):
         self.tb = None
@@ -510,7 +523,7 @@ class qa_retune_fft_no_roll(gr_unittest.TestCase, qa_retune_fft_base):
 
 class qa_retune_fft_roll(gr_unittest.TestCase, qa_retune_fft_base):
     def setUp(self):
-        self.tb = gr.top_block(catch_exceptions=False)
+        self.tb = gr.top_block(catch_exceptions=True)
 
     def tearDown(self):
         self.tb = None

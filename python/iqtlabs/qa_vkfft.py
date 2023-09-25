@@ -203,22 +203,58 @@
 #    limitations under the License.
 #
 
-from gnuradio import gr, gr_unittest
+import os
+import numpy as np
+from gnuradio import blocks, fft, iqtlabs, gr, gr_unittest
 
-# from gnuradio import blocks
-from gnuradio.iqtlabs import vkfft
+
+def run_fft(fft_block, points, fft_roll, input_items):
+    src1 = blocks.vector_source_c(input_items, vlen=len(input_items))
+    dst1 = blocks.vector_sink_c(vlen=len(input_items))
+    tb = gr.top_block()
+    tb.connect(src1, fft_block)
+    tb.connect(fft_block, dst1)
+    tb.run()
+    data = dst1.data()
+    tb.stop()
+    tb.wait()
+    del tb
+    return data
 
 
 class qa_vkfft(gr_unittest.TestCase):
-    def setUp(self):
-        self.tb = gr.top_block()
-
-    def tearDown(self):
-        self.tb = None
-
     def test_instance(self):
-        # TODO: find workaround llvmpipe simulated gpu crashes under CI testing
-        instance = vkfft(1024, 1, True)
+        for fft_roll in (True, False):
+            fft_batch_size = 4
+            points = 8
+
+            batch_input_items = []
+            for i in range(1, fft_batch_size + 1):
+                batch_input_items.extend(
+                    1j * np.arange(points)
+                )  # pytype: disable=wrong-arg-types
+
+            sw_data = []
+            for i in range(1, fft_batch_size + 1):
+                batch = (i - 1) * points
+                sw_data.extend(
+                    run_fft(
+                        fft.fft_vcc(points, True, [], fft_roll, 1),
+                        points,
+                        fft_roll,
+                        batch_input_items[batch : batch + points],
+                    )
+                )
+
+            vkfft_data = run_fft(
+                iqtlabs.vkfft(fft_batch_size * points, points, fft_roll),
+                points,
+                fft_roll,
+                batch_input_items,
+            )
+
+            if os.getenv("TEST_VKFFT", 0):
+                self.assertEqual(vkfft_data, sw_data)
 
 
 if __name__ == "__main__":
