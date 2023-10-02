@@ -235,7 +235,7 @@ public:
                    const std::string &sdir, uint64_t write_step_fft,
                    double bucket_range, const std::string &tuning_ranges,
                    const std::string &description, uint64_t rotate_secs,
-                   bool pre_fft);
+                   bool pre_fft, bool tag_now);
 };
 
 } // namespace iqtlabs

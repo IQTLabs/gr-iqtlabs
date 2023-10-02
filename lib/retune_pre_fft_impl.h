@@ -220,13 +220,14 @@ private:
   size_t nfft_;
   size_t fft_batch_size_;
   pmt::pmt_t tag_;
+  bool tag_now_;
 
 public:
   retune_pre_fft_impl(size_t nfft, size_t fft_batch_size,
                       const std::string &tag, uint64_t freq_start,
                       uint64_t freq_end, uint64_t tune_step_hz,
                       uint64_t tune_step_fft, uint64_t skip_tune_step_fft,
-                      const std::string &tuning_ranges);
+                      const std::string &tuning_ranges, bool tag_now);
   ~retune_pre_fft_impl();
 
   int work(int noutput_items, gr_vector_const_void_star &input_items,

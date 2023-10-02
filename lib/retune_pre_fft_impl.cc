@@ -216,19 +216,17 @@ retune_pre_fft::make(size_t nfft, size_t fft_batch_size, const std::string &tag,
                      uint64_t freq_start, uint64_t freq_end,
                      uint64_t tune_step_hz, uint64_t tune_step_fft,
                      uint64_t skip_tune_step_fft,
-                     const std::string &tuning_ranges) {
+                     const std::string &tuning_ranges, bool tag_now) {
   return gnuradio::make_block_sptr<retune_pre_fft_impl>(
       nfft, fft_batch_size, tag, freq_start, freq_end, tune_step_hz,
-      tune_step_fft, skip_tune_step_fft, tuning_ranges);
+      tune_step_fft, skip_tune_step_fft, tuning_ranges, tag_now);
 }
 
-retune_pre_fft_impl::retune_pre_fft_impl(size_t nfft, size_t fft_batch_size,
-                                         const std::string &tag,
-                                         uint64_t freq_start, uint64_t freq_end,
-                                         uint64_t tune_step_hz,
-                                         uint64_t tune_step_fft,
-                                         uint64_t skip_tune_step_fft,
-                                         const std::string &tuning_ranges)
+retune_pre_fft_impl::retune_pre_fft_impl(
+    size_t nfft, size_t fft_batch_size, const std::string &tag,
+    uint64_t freq_start, uint64_t freq_end, uint64_t tune_step_hz,
+    uint64_t tune_step_fft, uint64_t skip_tune_step_fft,
+    const std::string &tuning_ranges, bool tag_now)
     : gr::sync_decimator(
           "retune_pre_fft",
           gr::io_signature::make(1 /* min inputs */, 1 /* max inputs */,
@@ -238,7 +236,8 @@ retune_pre_fft_impl::retune_pre_fft_impl(size_t nfft, size_t fft_batch_size,
           nfft * fft_batch_size /*<+decimation+>*/),
       retuner_impl(freq_start, freq_end, tune_step_hz, tune_step_fft,
                    skip_tune_step_fft, tuning_ranges),
-      nfft_(nfft), fft_batch_size_(fft_batch_size), tag_(pmt::intern(tag)) {
+      nfft_(nfft), fft_batch_size_(fft_batch_size), tag_(pmt::intern(tag)),
+      tag_now_(tag_now) {
   message_port_register_out(TUNE_KEY);
 }
 
@@ -246,10 +245,7 @@ retune_pre_fft_impl::~retune_pre_fft_impl() {}
 
 void retune_pre_fft_impl::send_retune_(uint64_t tune_freq) {
   d_logger->debug("retuning to {}", tune_freq);
-  pmt::pmt_t tune_rx = pmt::make_dict();
-  tune_rx = pmt::dict_add(tune_rx, pmt::mp("freq"), pmt::from_long(tune_freq));
-  tune_rx = pmt::dict_add(tune_rx, pmt::mp("tag"), pmt::mp("now"));
-  message_port_pub(TUNE_KEY, tune_rx);
+  message_port_pub(TUNE_KEY, tune_rx_msg(tune_freq, tag_now_));
 }
 
 void retune_pre_fft_impl::retune_now_() {

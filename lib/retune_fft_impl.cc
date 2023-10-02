@@ -218,17 +218,19 @@ const pmt::pmt_t JSON_KEY = pmt::mp("json");
 const boost::iostreams::zstd_params zstd_params =
     boost::iostreams::zstd_params(boost::iostreams::zstd::default_compression);
 
-retune_fft::sptr retune_fft::make(
-    const std::string &tag, size_t vlen, size_t nfft, uint64_t samp_rate,
-    uint64_t freq_start, uint64_t freq_end, uint64_t tune_step_hz,
-    uint64_t tune_step_fft, uint64_t skip_tune_step_fft, double fft_min,
-    double fft_max, const std::string &sdir, uint64_t write_step_fft,
-    double bucket_range, const std::string &tuning_ranges,
-    const std::string &description, uint64_t rotate_secs, bool pre_fft) {
+retune_fft::sptr
+retune_fft::make(const std::string &tag, size_t vlen, size_t nfft,
+                 uint64_t samp_rate, uint64_t freq_start, uint64_t freq_end,
+                 uint64_t tune_step_hz, uint64_t tune_step_fft,
+                 uint64_t skip_tune_step_fft, double fft_min, double fft_max,
+                 const std::string &sdir, uint64_t write_step_fft,
+                 double bucket_range, const std::string &tuning_ranges,
+                 const std::string &description, uint64_t rotate_secs,
+                 bool pre_fft, bool tag_now) {
   return gnuradio::make_block_sptr<retune_fft_impl>(
       tag, vlen, nfft, samp_rate, freq_start, freq_end, tune_step_hz,
       tune_step_fft, skip_tune_step_fft, fft_min, fft_max, sdir, write_step_fft,
-      bucket_range, tuning_ranges, description, rotate_secs, pre_fft);
+      bucket_range, tuning_ranges, description, rotate_secs, pre_fft, tag_now);
 }
 
 retune_fft_impl::retune_fft_impl(
@@ -237,7 +239,8 @@ retune_fft_impl::retune_fft_impl(
     uint64_t tune_step_fft, uint64_t skip_tune_step_fft, double fft_min,
     double fft_max, const std::string &sdir, uint64_t write_step_fft,
     double bucket_range, const std::string &tuning_ranges,
-    const std::string &description, uint64_t rotate_secs, bool pre_fft)
+    const std::string &description, uint64_t rotate_secs, bool pre_fft,
+    bool tag_now)
     : gr::block("retune_fft",
                 gr::io_signature::make(1 /* min inputs */, 1 /* max inputs */,
                                        vlen * sizeof(input_type)),
@@ -249,7 +252,8 @@ retune_fft_impl::retune_fft_impl(
       fft_min_(fft_min), fft_max_(fft_max), sample_(nfft), sample_count_(0),
       sdir_(sdir), write_step_fft_(write_step_fft),
       write_step_fft_count_(write_step_fft), bucket_range_(bucket_range),
-      description_(description), rotate_secs_(rotate_secs), pre_fft_(pre_fft) {
+      description_(description), rotate_secs_(rotate_secs), pre_fft_(pre_fft),
+      tag_now_(tag_now) {
   bucket_offset_ = round(float((vlen_ - round(bucket_range_ * vlen_)) / 2));
   outbuf_p.reset(new boost::iostreams::filtering_ostream());
   message_port_register_out(TUNE_KEY);
@@ -286,10 +290,7 @@ void retune_fft_impl::close_() {
 
 void retune_fft_impl::send_retune_(uint64_t tune_freq) {
   d_logger->debug("retuning to {}", tune_freq);
-  pmt::pmt_t tune_rx = pmt::make_dict();
-  tune_rx = pmt::dict_add(tune_rx, pmt::mp("freq"), pmt::from_long(tune_freq));
-  tune_rx = pmt::dict_add(tune_rx, pmt::mp("tag"), pmt::mp("now"));
-  message_port_pub(TUNE_KEY, tune_rx);
+  message_port_pub(TUNE_KEY, tune_rx_msg(tune_freq, tag_now_));
 }
 
 void retune_fft_impl::retune_now_() {

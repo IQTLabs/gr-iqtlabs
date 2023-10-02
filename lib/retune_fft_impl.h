@@ -247,6 +247,7 @@ private:
   std::string sdir_;
   std::string description_;
   bool pre_fft_;
+  bool tag_now_;
 
   double fft_min_;
   double fft_max_;
@@ -268,7 +269,7 @@ public:
                   const std::string &sdir, uint64_t write_step_fft,
                   double bucket_range, const std::string &tuning_ranges,
                   const std::string &description, uint64_t rotate_secs,
-                  bool pre_fft);
+                  bool pre_fft, bool tag_now);
   ~retune_fft_impl();
   void forecast(int noutput_items, gr_vector_int &ninput_items_required);
   int general_work(int noutput_items, gr_vector_int &ninput_items,
