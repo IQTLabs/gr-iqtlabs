@@ -295,6 +295,7 @@ class qa_retune_fft_base:
                 tune_step_fft,
                 skip_tune_step_fft,
                 tuning_ranges,
+                False,
             )
 
             iqtlabs_retune_fft_0 = retune_fft(
@@ -316,6 +317,7 @@ class qa_retune_fft_base:
                 "a text description",
                 3600,
                 True,
+                False,
             )
             pdu_decoder_0 = pdu_decoder()
             fft_vxx_0 = fft.fft_vcc(points, True, [], fft_roll, 1)

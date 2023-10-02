@@ -14,7 +14,7 @@
 /* BINDTOOL_GEN_AUTOMATIC(0)                                                       */
 /* BINDTOOL_USE_PYGCCXML(0)                                                        */
 /* BINDTOOL_HEADER_FILE(retune_pre_fft.h)                                        */
-/* BINDTOOL_HEADER_FILE_HASH(a9b4051c99f17cef5206780055ededed)                     */
+/* BINDTOOL_HEADER_FILE_HASH(8b85264423963500dfd62650d0c0055a)                     */
 /***********************************************************************************/
 
 #include <pybind11/complex.h>
@@ -46,6 +46,7 @@ void bind_retune_pre_fft(py::module& m)
              py::arg("tune_step_fft"),
              py::arg("skip_tune_step_fft"),
              py::arg("tuning_ranges"),
+             py::arg("tag_now"),
              D(retune_pre_fft, make))
 
 

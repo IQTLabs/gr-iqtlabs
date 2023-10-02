@@ -48,6 +48,7 @@ documentation: |-
     description: a string description to be included with each update.
     rotate_secs: if > 0, use a new epoch timestamped directory every N seconds.
     pre_fft: if True, tuning is controlled by the retune_pre_fft block.
+    tag_now: if True, send "tag:now" tag along with tuning message.
 
   example JSON output:
     { "ts": <epoch time>, "sweep start": <epoch time>,
@@ -64,7 +65,7 @@ templates:
     iqtlabs.retune_fft(${tag}, ${vlen}, ${nfft}, ${samp_rate}, ${freq_start},
     ${freq_end}, ${tune_step_hz}, ${tune_step_fft}, ${skip_tune_step_fft},
     ${fft_min}, ${fft_max}, ${sdir}, ${write_step_fft}, ${bucket_range},
-    ${tuning_ranges}, ${description}, ${rotate_secs}, ${pre_fft})
+    ${tuning_ranges}, ${description}, ${rotate_secs}, ${pre_fft}, ${tag_now})
 
 cpp_templates:
   includes: ['#include <gnuradio/iqtlabs/retune_fft.h>']
@@ -74,7 +75,7 @@ cpp_templates:
     ${samp_rate}, ${freq_start}, ${freq_end}, ${tune_step_hz}, ${tune_step_fft},
     ${skip_tune_step_fft}, ${fft_min}, ${fft_max}, ${sdir}, ${write_step_fft},
     ${bucket_range}, ${tuning_ranges}, ${description}, ${rotate_secs},
-    ${pre_fft});
+    ${pre_fft}, ${tag_now});
   link: ['libgnuradio-iqtlabs.so']
 
 asserts:
@@ -121,6 +122,8 @@ parameters:
     dtype: string
   - id: rotate_secs
     dtype: int
+  - id: tag_now
+    dtype: bool
 
 inputs:
   - label: input

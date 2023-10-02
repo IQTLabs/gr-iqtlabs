@@ -229,6 +229,7 @@ public:
   void get_tags(const pmt::pmt_t want_tag, const std::vector<tag_t> &all_tags,
                 std::vector<tag_t> &rx_freq_tags, std::vector<double> &rx_times,
                 size_t in_count);
+  pmt::pmt_t tune_rx_msg(uint64_t tune_freq, bool tag_now);
 };
 } /* namespace iqtlabs */
 } /* namespace gr */

@@ -316,5 +316,14 @@ void base_impl::get_tags(const pmt::pmt_t want_tag,
     }
   }
 }
+
+pmt::pmt_t base_impl::tune_rx_msg(uint64_t tune_freq, bool tag_now) {
+  pmt::pmt_t tune_rx = pmt::make_dict();
+  tune_rx = pmt::dict_add(tune_rx, pmt::mp("freq"), pmt::from_long(tune_freq));
+  if (tag_now) {
+    tune_rx = pmt::dict_add(tune_rx, pmt::mp("tag"), pmt::mp("now"));
+  }
+  return tune_rx;
+}
 } /* namespace iqtlabs */
 } /* namespace gr */

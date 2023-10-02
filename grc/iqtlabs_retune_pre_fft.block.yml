@@ -11,7 +11,7 @@ templates:
     ${nfft}, ${fft_batch_size},
     ${tag}, ${freq_start}, ${freq_end},
     ${tune_step_hz}, ${tune_step_fft}, ${skip_tune_step_fft},
-    ${tuning_ranges})
+    ${tuning_ranges}, ${tag_now})
 
 cpp_templates:
   includes: ['#include <gnuradio/iqtlabs/retune_pre_fft.h>']
@@ -21,7 +21,7 @@ cpp_templates:
     ${nfft}, ${fft_batch_size},
     ${tag}, {freq_start}, ${freq_end},
     ${tune_step_hz}, ${tune_step_fft}, ${skip_tune_step_fft},
-    ${tuning_ranges});
+    ${tuning_ranges}, ${tag_now});
   link: ['libgnuradio-iqtlabs.so']
 
 parameters:
@@ -44,6 +44,8 @@ parameters:
     dtype: int
   - id: tuning_ranges
     dtype: string
+  - id: tag_now
+    dtype: bool
 
 inputs:
   - label: input
