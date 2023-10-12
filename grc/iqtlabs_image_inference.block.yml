@@ -9,7 +9,7 @@ templates:
   make: >
     iqtlabs.image_inference(${tag}, ${vlen}, ${x}, ${y}, ${image_dir},
     ${convert_alpha}, ${norm_alpha}, ${norm_beta}, ${norm_type}, ${colormap},
-    ${interpolation})
+    ${interpolation}, ${model_server}, ${model_name})
 
 cpp_templates:
   includes: ['#include <gnuradio/iqtlabs/image_inference.h>']
@@ -17,7 +17,8 @@ cpp_templates:
   make: >
     this->${id} = gr::iqtlabs::image_inference::make(${tag}, ${vlen},
     ${x}, ${y}, ${image_dir}, ${convert_alpha}, ${norm_alpha}, ${norm_beta},
-    ${norm_type}, ${colormap}, ${interpolation});
+    ${norm_type}, ${colormap}, ${interpolation}, ${model_server},
+    ${model_name});
   link: ['libgnuradio-iqtlabs.so']
 
 
@@ -56,10 +57,15 @@ parameters:
     default: 99  # cv::flip(), or 99 for no flip
   - id: min_peak_points
     dtype: float
+  - id: model_name
+    dtype: str
+  - id: model_server
+    dtype: str
 
 asserts:
   - ${ tag != "" }
   - ${ vlen > 0 }
+  - ${ !model_server || (model_server && model_name) }
 
 inputs:
   - label: input
@@ -71,6 +77,6 @@ outputs:
   - label: input
     domain: stream
     dtype: byte
-    vlen: ${ x * y }
+    vlen: 1
 
 file_format: 1

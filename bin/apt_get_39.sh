@@ -33,6 +33,7 @@ sudo apt-get -y update && \
 	 pybind11-dev \
 	 python3-click \
 	 python3-click-plugins \
+     python3-flask \
 	 python3-gi \
 	 python3-gi-cairo \
 	 python3-lxml \

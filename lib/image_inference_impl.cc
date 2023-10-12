@@ -203,6 +203,8 @@
  */
 
 #include "image_inference_impl.h"
+#include <boost/algorithm/string.hpp>
+#include <boost/lexical_cast.hpp>
 #include <fstream>
 #include <gnuradio/io_signature.h>
 #include <ios>
@@ -216,27 +218,39 @@ image_inference::make(const std::string &tag, int vlen, int x, int y,
                       const std::string &image_dir, double convert_alpha,
                       double norm_alpha, double norm_beta, int norm_type,
                       int colormap, int interpolation, int flip,
-                      double min_peak_points) {
+                      double min_peak_points, const std::string &model_server,
+                      const std::string &model_name) {
   return gnuradio::make_block_sptr<image_inference_impl>(
       tag, vlen, x, y, image_dir, convert_alpha, norm_alpha, norm_beta,
-      norm_type, colormap, interpolation, flip, min_peak_points);
+      norm_type, colormap, interpolation, flip, min_peak_points, model_server,
+      model_name);
 }
 
 image_inference_impl::image_inference_impl(
     const std::string &tag, int vlen, int x, int y,
     const std::string &image_dir, double convert_alpha, double norm_alpha,
     double norm_beta, int norm_type, int colormap, int interpolation, int flip,
-    double min_peak_points)
+    double min_peak_points, const std::string &model_server,
+    const std::string &model_name)
     : gr::block("image_inference",
                 gr::io_signature::make(1 /* min inputs */, 1 /* max inputs */,
                                        vlen * sizeof(input_type)),
                 gr::io_signature::make(1 /* min outputs */, 1 /*max outputs */,
-                                       x * y * sizeof(output_type) * 3)),
+                                       sizeof(output_type))),
       tag_(pmt::intern(tag)), x_(x), y_(y), vlen_(vlen), last_rx_freq_(0),
       last_rx_time_(0), image_dir_(image_dir), convert_alpha_(convert_alpha),
       norm_alpha_(norm_alpha), norm_beta_(norm_beta), norm_type_(norm_type),
       colormap_(colormap), interpolation_(interpolation), flip_(flip),
-      min_peak_points_(min_peak_points) {
+      min_peak_points_(min_peak_points), model_name_(model_name) {
+  // TODO: IPv6 IP addresses
+  std::vector<std::string> model_server_parts_;
+  boost::split(model_server_parts_, model_server, boost::is_any_of(":"),
+               boost::token_compress_on);
+  if (model_server_parts_.size() == 2) {
+    host_ = model_server_parts_[0];
+    port_ = model_server_parts_[1];
+  }
+  image_buffer_.reset(new std::vector<unsigned char>());
   points_buffer_.reset(
       new cv::Mat(cv::Size(vlen, 0), CV_32F, cv::Scalar::all(0)));
   cmapped_buffer_.reset(
@@ -286,45 +300,66 @@ void image_inference_impl::create_image_() {
       if (flip_ == -1 || flip_ == 0 || flip_ == 1) {
         cv::flip(*output_item.buffer, *output_item.buffer, flip_);
       }
+      cv::cvtColor(*output_item.buffer, *output_item.buffer, cv::COLOR_RGB2BGR);
       output_q_.insert(output_q_.begin(), output_item);
     }
     points_buffer_->resize(0);
   }
 }
 
-void image_inference_impl::output_image_(output_type *out) {
+void image_inference_impl::output_image_() {
   output_item_type output_item = output_q_.back();
-  void *resized_buffer_p = output_item.buffer->ptr(0);
-  std::stringstream str;
-  str << name() << unique_id();
-  pmt::pmt_t _id = pmt::string_to_symbol(str.str());
-  // TODO: add more metadata as needed for inference.
-  this->add_item_tag(0, nitems_written(0), RX_TIME_KEY,
-                     make_rx_time_key_(output_item.ts), _id);
-  this->add_item_tag(0, nitems_written(0), RX_FREQ_KEY,
-                     pmt::from_double(output_item.rx_freq), _id);
-  const size_t buffer_size =
-      output_item.buffer->total() * output_item.buffer->elemSize();
-  std::memcpy(out, resized_buffer_p, buffer_size);
+  // write image file
   std::string image_file_base =
       "image_" + host_now_str_(output_item.ts) + "_" +
       std::to_string(uint64_t(x_)) + "x" + std::to_string(uint64_t(y_)) + "_" +
       std::to_string(uint64_t(output_item.rx_freq)) + "Hz";
-  // TODO: re-enable if non-PNG image required.
-  // std::string image_file = image_file_base + ".bin";
-  // std::string dot_image_file = image_dir_ + "/." + image_file;
-  // std::string full_image_file = image_dir_ + "/" + image_file;
-  // std::ofstream image_out;
-  // image_out.open(dot_image_file, std::ios::binary | std::ios::out);
-  // image_out.write((const char *)resized_buffer_p, buffer_size);
-  // image_out.close();
-  // rename(dot_image_file.c_str(), full_image_file.c_str());
-  std::string image_file_png = image_file_base + ".png";
+  std::string image_file_png = image_file_base + IMAGE_EXT;
   std::string dot_image_file_png = image_dir_ + "/." + image_file_png;
   std::string full_image_file_png = image_dir_ + "/" + image_file_png;
-  cv::cvtColor(*output_item.buffer, *output_item.buffer, cv::COLOR_RGB2BGR);
-  cv::imwrite(dot_image_file_png, *output_item.buffer);
+  cv::imencode(IMAGE_EXT, *output_item.buffer, *image_buffer_);
+  std::ofstream image_out;
+  image_out.open(dot_image_file_png, std::ios::binary | std::ios::out);
+  image_out.write((const char *)image_buffer_->data(), image_buffer_->size());
+  image_out.close();
   rename(dot_image_file_png.c_str(), full_image_file_png.c_str());
+  std::stringstream ss("", std::ios_base::app | std::ios_base::out);
+  ss << "{"
+     << "\"ts\": " << host_now_str_(output_item.ts)
+     << ", \"rx_freq\": " << output_item.rx_freq;
+  // TODO: synchronous requests for testing. Should be parallel.
+  if (host_.size() && port_.size()) {
+    boost::asio::io_context ioc;
+    boost::asio::ip::tcp::resolver resolver(ioc);
+    boost::beast::tcp_stream stream(ioc);
+    const std::string_view body(
+        reinterpret_cast<char const *>(image_buffer_->data()),
+        image_buffer_->size());
+    boost::beast::http::request<boost::beast::http::string_body> req{
+        boost::beast::http::verb::post, "/predictions/" + model_name_, 11};
+    req.set(boost::beast::http::field::host, host_);
+    req.set(boost::beast::http::field::user_agent, BOOST_BEAST_VERSION_STRING);
+    req.set(boost::beast::http::field::content_type, "image/" + IMAGE_TYPE);
+    req.body() = body;
+    req.prepare_payload();
+    boost::beast::flat_buffer buffer;
+    boost::beast::http::response<boost::beast::http::string_body> res;
+
+    try {
+      auto const results = resolver.resolve(host_, port_);
+      stream.connect(results);
+      boost::beast::http::write(stream, req);
+      boost::beast::http::read(stream, buffer, res);
+      ss << ", \"predictions\": " << res.body().data();
+      boost::beast::error_code ec;
+      stream.socket().shutdown(boost::asio::ip::tcp::socket::shutdown_both, ec);
+    } catch (std::exception &ex) {
+      ss << ", \"error\": \"" << ex.what() << "\"";
+    }
+  }
+  ss << "}" << std::endl;
+  const std::string s = ss.str();
+  out_buf_.insert(out_buf_.end(), s.begin(), s.end());
   delete_output_();
 }
 
@@ -337,8 +372,17 @@ int image_inference_impl::general_work(int noutput_items,
   size_t in_first = nitems_read(0);
 
   if (!output_q_.empty()) {
-    output_image_(static_cast<output_type *>(output_items[0]));
-    return 1;
+    output_image_();
+  }
+
+  if (!out_buf_.empty()) {
+    auto out = static_cast<output_type *>(output_items[0]);
+    const size_t leftover = std::min(out_buf_.size(), (size_t)noutput_items);
+    auto from = out_buf_.begin();
+    auto to = from + leftover;
+    std::copy(from, to, out);
+    out_buf_.erase(from, to);
+    return leftover;
   }
 
   std::vector<tag_t> all_tags, rx_freq_tags;

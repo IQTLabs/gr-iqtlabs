@@ -203,11 +203,15 @@
 #    limitations under the License.
 #
 
+import concurrent.futures
+import imghdr
+import json
 import glob
 import os
 import pmt
 import time
 import tempfile
+from flask import Flask
 from gnuradio import gr, gr_unittest
 from gnuradio import analog, blocks
 
@@ -225,11 +229,33 @@ except ImportError:
 class qa_image_inference(gr_unittest.TestCase):
     def setUp(self):
         self.tb = gr.top_block()
+        self.pid = os.fork()
 
     def tearDown(self):
         self.tb = None
+        if self.pid:
+            os.kill(self.pid, 15)
+
+    def simulate_torchserve(self, port, model_name, result):
+        app = Flask(__name__)
+
+        # nosemgrep:github.workflows.config.useless-inner-function
+        @app.route(f"/predictions/{model_name}", methods=["POST"])
+        def predictions_test():  
+            return json.dumps(result), 200
+
+        try:
+            app.run(host="127.0.0.1", port=11001)
+        except RuntimeError:
+            return
 
     def test_instance(self):
+        port = 11001
+        model_name = "testmodel"
+        predictions_result = {"modulation": 999}
+        if self.pid == 0:
+            self.simulate_torchserve(port, model_name, predictions_result)
+            return
         x = 800
         y = 600
         fft_size = 1024
@@ -257,12 +283,14 @@ class qa_image_inference(gr_unittest.TestCase):
                 2,
                 0,
                 -1e9,
+                f"localhost:{port}",
+                model_name,
             )
             c2r = blocks.complex_to_real(1)
             stream2vector = blocks.stream_to_vector(gr.sizeof_float, fft_size)
             throttle = blocks.throttle(gr.sizeof_float, samp_rate, True)
             fs = blocks.file_sink(
-                gr.sizeof_char * output_vlen, os.path.join(tmpdir, test_file), False
+                gr.sizeof_char, os.path.join(tmpdir, test_file), False
             )
 
             self.tb.msg_connect((strobe, "strobe"), (source, "cmd"))
@@ -281,7 +309,12 @@ class qa_image_inference(gr_unittest.TestCase):
             for image_file in image_files:
                 stat = os.stat(image_file)
                 self.assertTrue(stat.st_size)
+                self.assertEqual(imghdr.what(image_file), "png")
             self.assertTrue(os.stat(test_file).st_size)
+            with open(test_file) as f:
+                for line in f.readlines():
+                    result = json.loads(line)
+                    self.assertEqual(result["predictions"], predictions_result)
 
 
 if __name__ == "__main__":

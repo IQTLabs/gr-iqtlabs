@@ -14,6 +14,7 @@ sudo apt-get update && \
     libvulkan-dev \
     libzstd-dev \
     mesa-vulkan-drivers \
+    python3-flask \
     python3-numpy \
     python3-packaging \
     python3-pandas \
