@@ -206,6 +206,11 @@
 #define INCLUDED_IQTLABS_IMAGE_INFERENCE_IMPL_H
 
 #include "base_impl.h"
+#include <boost/asio/connect.hpp>
+#include <boost/asio/ip/tcp.hpp>
+#include <boost/beast/core.hpp>
+#include <boost/beast/http.hpp>
+#include <boost/beast/version.hpp>
 #include <boost/scoped_ptr.hpp>
 #include <gnuradio/iqtlabs/image_inference.h>
 #include <opencv2/imgcodecs.hpp>
@@ -216,6 +221,8 @@ namespace iqtlabs {
 
 using input_type = float;
 using output_type = unsigned char;
+const std::string IMAGE_TYPE = "png";
+const std::string IMAGE_EXT = "." + IMAGE_TYPE;
 
 typedef struct output_item {
   uint64_t rx_freq;
@@ -230,13 +237,16 @@ private:
   double convert_alpha_, norm_alpha_, norm_beta_, last_rx_time_,
       min_peak_points_;
   std::vector<output_item_type> output_q_;
+  boost::scoped_ptr<std::vector<unsigned char>> image_buffer_;
   boost::scoped_ptr<cv::Mat> points_buffer_, cmapped_buffer_;
   std::string image_dir_;
   pmt::pmt_t tag_;
+  std::deque<output_type> out_buf_;
+  std::string model_name_, host_, port_;
 
   void process_items_(size_t c, const input_type *&in);
   void create_image_();
-  void output_image_(output_type *out);
+  void output_image_();
   void delete_output_();
 
 public:
@@ -244,7 +254,8 @@ public:
                        const std::string &image_dir, double convert_alpha,
                        double norm_alpha, double norm_beta, int norm_type,
                        int colormap, int interpolation, int flip,
-                       double min_peak_points);
+                       double min_peak_points, const std::string &model_server,
+                       const std::string &model_name);
   ~image_inference_impl();
   int general_work(int noutput_items, gr_vector_int &ninput_items,
                    gr_vector_const_void_star &input_items,

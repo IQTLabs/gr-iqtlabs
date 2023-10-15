@@ -29,6 +29,7 @@ mkShell {
     gnuradio.python.pkgs.pybind11
     libsndfile
     opencv
+    python3Packages.flask
     soapysdr
     spdlog
     uhd
