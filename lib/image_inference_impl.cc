@@ -326,7 +326,8 @@ void image_inference_impl::output_image_() {
   std::stringstream ss("", std::ios_base::app | std::ios_base::out);
   ss << "{"
      << "\"ts\": " << host_now_str_(output_item.ts)
-     << ", \"rx_freq\": " << output_item.rx_freq;
+     << ", \"rx_freq\": " << output_item.rx_freq << ", \"image_path\": \""
+     << full_image_file_png << "\"";
   // TODO: synchronous requests for testing. Should be parallel.
   if (host_.size() && port_.size()) {
     boost::asio::io_context ioc;
@@ -357,7 +358,9 @@ void image_inference_impl::output_image_() {
       ss << ", \"error\": \"" << ex.what() << "\"";
     }
   }
-  ss << "}" << std::endl;
+  // double new line to faciliate json parsing, since prediction may contain new
+  // lines.
+  ss << "}\n" << std::endl;
   const std::string s = ss.str();
   out_buf_.insert(out_buf_.end(), s.begin(), s.end());
   delete_output_();
