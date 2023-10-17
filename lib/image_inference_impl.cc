@@ -326,8 +326,8 @@ void image_inference_impl::output_image_() {
   std::stringstream ss("", std::ios_base::app | std::ios_base::out);
   ss << "{"
      << "\"ts\": " << host_now_str_(output_item.ts)
-     << ", \"rx_freq\": " << output_item.rx_freq
-     << ", \"image_path\": \"" << full_image_file_png << "\"";
+     << ", \"rx_freq\": " << output_item.rx_freq << ", \"image_path\": \""
+     << full_image_file_png << "\"";
   // TODO: synchronous requests for testing. Should be parallel.
   if (host_.size() && port_.size()) {
     boost::asio::io_context ioc;
