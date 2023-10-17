@@ -241,8 +241,8 @@ class qa_image_inference(gr_unittest.TestCase):
 
         # nosemgrep:github.workflows.config.useless-inner-function
         @app.route(f"/predictions/{model_name}", methods=["POST"])
-        def predictions_test():  
-            return json.dumps(result), 200
+        def predictions_test():
+            return json.dumps(result, indent=2), 200
 
         try:
             app.run(host="127.0.0.1", port=11001)
@@ -252,7 +252,7 @@ class qa_image_inference(gr_unittest.TestCase):
     def test_instance(self):
         port = 11001
         model_name = "testmodel"
-        predictions_result = {"modulation": 999}
+        predictions_result = {"modulation": [{"conf": 0.9, "xywh": [1, 2, 3, 4]}]}
         if self.pid == 0:
             self.simulate_torchserve(port, model_name, predictions_result)
             return
@@ -312,10 +312,15 @@ class qa_image_inference(gr_unittest.TestCase):
                 self.assertEqual(imghdr.what(image_file), "png")
             self.assertTrue(os.stat(test_file).st_size)
             with open(test_file) as f:
-                for line in f.readlines():
-                    result = json.loads(line)
-                    self.assertTrue(os.path.exists(result["image_path"])
-                    self.assertEqual(result["predictions"], predictions_result)
+                content = f.read()
+            json_raw_all = content.split("\n\n")
+            self.assertTrue(json_raw_all)
+            for json_raw in json_raw_all:
+                if not json_raw:
+                    continue
+                result = json.loads(json_raw)
+                self.assertTrue(os.path.exists(result["image_path"]))
+                self.assertEqual(result["predictions"], predictions_result)
 
 
 if __name__ == "__main__":

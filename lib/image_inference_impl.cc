@@ -358,7 +358,8 @@ void image_inference_impl::output_image_() {
       ss << ", \"error\": \"" << ex.what() << "\"";
     }
   }
-  ss << "}" << std::endl;
+  // double new line to faciliate json parsing, since prediction may contain new lines.
+  ss << "}\n" << std::endl;
   const std::string s = ss.str();
   out_buf_.insert(out_buf_.end(), s.begin(), s.end());
   delete_output_();
