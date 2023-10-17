@@ -314,6 +314,7 @@ class qa_image_inference(gr_unittest.TestCase):
             with open(test_file) as f:
                 for line in f.readlines():
                     result = json.loads(line)
+                    self.assertTrue(os.path.exists(result["image_path"])
                     self.assertEqual(result["predictions"], predictions_result)
 
 
