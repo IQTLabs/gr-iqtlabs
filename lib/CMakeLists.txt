@@ -8,7 +8,6 @@
 include(GrPlatform) # define LIB_SUFFIX
 
 set(SRC_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/..")
-# TODO: use find_package(SPIRV-Tools) when supported.
 if(VKFFT)
   set(VKFFT_LIB
       -Wl,--whole-archive
@@ -19,8 +18,6 @@ if(VKFFT)
       ${SRC_ROOT}/VkFFT/build/glslang-main/OGLCompilersDLL/libOGLCompiler.a
       ${SRC_ROOT}/VkFFT/build/glslang-main/SPIRV/libSPIRV.a
       ${SRC_ROOT}/VkFFT/build/CMakeFiles/VkFFT_TestSuite.dir/benchmark_scripts/vkFFT_scripts/src/utils_VkFFT.cpp.o
-      ${SRC_ROOT}/SPIRV-Tools/build/source/opt/libSPIRV-Tools-opt.a
-      ${SRC_ROOT}/SPIRV-Tools/build/source/libSPIRV-Tools.a
       -Wl,--no-whole-archive
       ${Vulkan_LIBRARIES}
       ${UHD_LIBRARIES})
