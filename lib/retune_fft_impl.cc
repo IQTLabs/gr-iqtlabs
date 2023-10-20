@@ -244,8 +244,10 @@ retune_fft_impl::retune_fft_impl(
     : gr::block("retune_fft",
                 gr::io_signature::make(1 /* min inputs */, 1 /* max inputs */,
                                        vlen * sizeof(input_type)),
-                gr::io_signature::make(1 /* min outputs */, 1 /*max outputs */,
-                                       sizeof(output_type))),
+                gr::io_signature::makev(
+                    2 /* min outputs */, 2 /* max outputs */,
+                    std::vector<int>{(int)sizeof(output_type),
+                                     (int)(nfft * sizeof(input_type))})),
       retuner_impl(freq_start, freq_end, tune_step_hz, tune_step_fft,
                    skip_tune_step_fft, tuning_ranges),
       tag_(pmt::intern(tag)), vlen_(vlen), nfft_(nfft), samp_rate_(samp_rate),
@@ -312,7 +314,9 @@ void retune_fft_impl::sum_items_(const input_type *in) {
   }
 }
 
-void retune_fft_impl::process_items_(size_t c, const input_type *&in) {
+size_t retune_fft_impl::process_items_(size_t c, const input_type *&in,
+                                       const input_type *&fft_output) {
+  size_t fft_output_items = 0;
   for (size_t i = 0; i < c; ++i) {
     for (size_t j = 0; j < (vlen_ / nfft_); ++j, in += nfft_) {
       if (skip_fft_count_) {
@@ -326,9 +330,13 @@ void retune_fft_impl::process_items_(size_t c, const input_type *&in) {
       if (in_max < fft_min_) {
         continue;
       }
+      std::memcpy((void *)fft_output, (const void *)in,
+                  nfft_ * sizeof(input_type));
+      fft_output += nfft_;
       write_items_(in);
       sum_items_(in);
       ++sample_count_;
+      ++fft_output_items;
       if (need_retune_(1)) {
         if (!pre_fft_) {
           retune_now_();
@@ -336,11 +344,13 @@ void retune_fft_impl::process_items_(size_t c, const input_type *&in) {
       }
     }
   }
+  return fft_output_items;
 }
 
 void retune_fft_impl::forecast(int noutput_items,
                                gr_vector_int &ninput_items_required) {
   ninput_items_required[0] = 1;
+  ninput_items_required[1] = noutput_items * (vlen_ / nfft_);
 }
 
 void retune_fft_impl::output_buckets_(
@@ -441,14 +451,16 @@ void retune_fft_impl::process_buckets_(uint64_t rx_freq, double rx_time) {
 }
 
 void retune_fft_impl::process_tags_(const input_type *in, size_t in_count,
-                                    size_t in_first) {
+                                    size_t in_first,
+                                    const input_type *fft_output) {
   std::vector<tag_t> all_tags, rx_freq_tags;
   std::vector<double> rx_times;
   get_tags_in_window(all_tags, 0, 0, in_count);
   get_tags(tag_, all_tags, rx_freq_tags, rx_times, in_count);
+  size_t fft_output_items = 0;
 
   if (rx_freq_tags.empty()) {
-    process_items_(in_count, in);
+    fft_output_items += process_items_(in_count, in, fft_output);
   } else {
     for (size_t t = 0; t < rx_freq_tags.size(); ++t) {
       const auto &tag = rx_freq_tags[t];
@@ -457,7 +469,7 @@ void retune_fft_impl::process_tags_(const input_type *in, size_t in_count,
       in_first += rel;
 
       if (rel > 0) {
-        process_items_(rel, in);
+        fft_output_items += process_items_(rel, in, fft_output);
       }
 
       const uint64_t rx_freq = (uint64_t)pmt::to_double(tag.value);
@@ -469,6 +481,8 @@ void retune_fft_impl::process_tags_(const input_type *in, size_t in_count,
       process_buckets_(rx_freq, rx_time);
     }
   }
+
+  produce(1, fft_output_items);
 }
 
 int retune_fft_impl::general_work(int noutput_items,
@@ -482,16 +496,23 @@ int retune_fft_impl::general_work(int noutput_items,
     auto to = from + leftover;
     std::copy(from, to, out);
     out_buf_.erase(from, to);
-    return leftover;
+    produce(0, leftover);
+    produce(1, 0);
+    return WORK_CALLED_PRODUCE;
   }
 
+  const input_type *fft_output =
+      static_cast<const input_type *>(output_items[1]);
   const input_type *in = static_cast<const input_type *>(input_items[0]);
-  size_t in_count = ninput_items[0];
-  size_t in_first = nitems_read(0);
-  process_tags_(in, in_count, in_first);
-  consume_each(in_count);
 
-  return 0;
+  float max_input_items = noutput_items * nfft_ / vlen_;
+  size_t in_count = std::min(ninput_items[0], int(max_input_items));
+  size_t in_first = nitems_read(0);
+  process_tags_(in, in_count, in_first, fft_output);
+  consume_each(in_count);
+  produce(0, 0);
+
+  return WORK_CALLED_PRODUCE;
 }
 } /* namespace iqtlabs */
 } /* namespace gr */

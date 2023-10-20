@@ -138,6 +138,10 @@ outputs:
     domain: stream
     dtype: byte
     vlen: 1
+  - label: fft_output
+    domain: stream
+    dtype: float
+    vlen: ${ nfft }
   - label: tune
     domain: message
   - label: json

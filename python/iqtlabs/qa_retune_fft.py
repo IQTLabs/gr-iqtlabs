@@ -270,8 +270,8 @@ class qa_retune_fft_base:
         points = int(2048)
         samp_rate = int(points * points)
         tune_step_hz = samp_rate
-        tune_step_fft = int(64)
-        skip_tune_step_fft = int(2)
+        tune_step_fft = int(256)
+        skip_tune_step_fft = int(16)
         freq_start = int(1e9 / samp_rate) * samp_rate
         freq_end = int(1.1e9 / samp_rate) * samp_rate
         freq_mid = ((freq_end - freq_start) / 2) + freq_start
@@ -339,6 +339,8 @@ class qa_retune_fft_base:
             )
             blocks_file_sink_0 = blocks.file_sink(gr.sizeof_char * 1, test_file, False)
             blocks_file_sink_0.set_unbuffered(False)
+            blocks_null_sink_0 = blocks.null_sink(gr.sizeof_float * points)
+
             blocks_complex_to_mag_0 = blocks.complex_to_mag(points)
             blocks_nlog10_ff_0 = blocks.nlog10_ff(20, points, 0)
             vr1 = vector_roll(points)
@@ -360,6 +362,7 @@ class qa_retune_fft_base:
                 self.tb.connect((fft_vxx_0, 0), (vr1, 0))
                 self.tb.connect((vr1, 0), (blocks_complex_to_mag_0, 0))
             self.tb.connect((iqtlabs_retune_fft_0, 0), (blocks_file_sink_0, 0))
+            self.tb.connect((iqtlabs_retune_fft_0, 1), (blocks_null_sink_0, 0))
             self.tb.connect((iqtlabs_retune_pre_fft_0, 0), (window, 0))
             self.tb.connect((window, 0), (fft_vxx_0, 0))
             self.tb.connect((blocks_throttle_0, 0), (iqtlabs_retune_pre_fft_0, 0))

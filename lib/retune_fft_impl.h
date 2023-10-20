@@ -224,7 +224,8 @@ private:
   void retune_now_();
   void write_items_(const input_type *in);
   void sum_items_(const input_type *in);
-  void process_items_(size_t c, const input_type *&in);
+  size_t process_items_(size_t c, const input_type *&in,
+                        const input_type *&fft_output);
   void output_buckets_(const std::string &name,
                        const std::list<std::pair<double, double>> &buckets,
                        std::stringstream &ss);
@@ -232,7 +233,8 @@ private:
   void send_retune_(uint64_t tune_freq);
   void process_buckets_(uint64_t rx_freq, double rx_time);
   void write_buckets_(double host_now, uint64_t rx_freq);
-  void process_tags_(const input_type *in, size_t in_count, size_t in_first);
+  void process_tags_(const input_type *in, size_t in_count, size_t in_first,
+                     const input_type *fft_output);
   void write_(const char *data, size_t len);
   void open_(const std::string &file);
   void close_();
