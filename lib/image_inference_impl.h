@@ -232,6 +232,7 @@ typedef struct output_item {
   double ts;
   std::vector<unsigned char> *image_buffer;
   std::string image_path;
+  size_t orig_rows;
 } output_item_type;
 
 class image_inference_impl : public image_inference, base_impl {

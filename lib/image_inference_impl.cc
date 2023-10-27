@@ -293,6 +293,7 @@ void image_inference_impl::create_image_() {
       output_item.rx_freq = last_rx_freq_;
       output_item.ts = last_rx_time_;
       output_item.image_buffer = new std::vector<unsigned char>();
+      output_item.orig_rows = points_buffer_->rows;
       this->d_logger->debug("rx_freq {} rx_time {} rows {}", last_rx_freq_,
                             last_rx_time_, points_buffer_->rows);
       cv::normalize(*points_buffer_, *points_buffer_, norm_alpha_, norm_beta_,
@@ -349,7 +350,8 @@ void image_inference_impl::get_inference_() {
     std::stringstream ss("", std::ios_base::app | std::ios_base::out);
     ss << "{"
        << "\"ts\": " << host_now_str_(output_item.ts)
-       << ", \"rx_freq\": " << output_item.rx_freq << ", \"image_path\": \""
+       << ", \"rx_freq\": " << output_item.rx_freq
+       << ", \"orig_rows\": " << output_item.orig_rows << ", \"image_path\": \""
        << output_item.image_path << "\"";
     if (host_.size() && port_.size()) {
       // TODO: reuse resolver/existing connection if possible.
