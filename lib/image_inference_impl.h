@@ -211,10 +211,12 @@
 #include <boost/beast/core.hpp>
 #include <boost/beast/http.hpp>
 #include <boost/beast/version.hpp>
+#include <boost/lockfree/spsc_queue.hpp>
 #include <boost/scoped_ptr.hpp>
 #include <gnuradio/iqtlabs/image_inference.h>
 #include <opencv2/imgcodecs.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
+#include <thread>
 
 namespace gr {
 namespace iqtlabs {
@@ -223,11 +225,14 @@ using input_type = float;
 using output_type = unsigned char;
 const std::string IMAGE_TYPE = "png";
 const std::string IMAGE_EXT = "." + IMAGE_TYPE;
+const size_t MAX_INFERENCE = 50;
 
 typedef struct output_item {
   uint64_t rx_freq;
   double ts;
-  cv::Mat *buffer;
+  std::vector<unsigned char> *image_buffer;
+  std::string image_path;
+  size_t orig_rows;
 } output_item_type;
 
 class image_inference_impl : public image_inference, base_impl {
@@ -236,18 +241,23 @@ private:
   uint64_t last_rx_freq_;
   double convert_alpha_, norm_alpha_, norm_beta_, last_rx_time_,
       min_peak_points_;
-  std::vector<output_item_type> output_q_;
-  boost::scoped_ptr<std::vector<unsigned char>> image_buffer_;
-  boost::scoped_ptr<cv::Mat> points_buffer_, cmapped_buffer_;
+  boost::lockfree::spsc_queue<output_item_type> inference_q_{MAX_INFERENCE};
+  boost::lockfree::spsc_queue<std::string> yaml_q_{MAX_INFERENCE};
+  boost::scoped_ptr<cv::Mat> points_buffer_, cmapped_buffer_, resized_buffer_;
   std::string image_dir_;
   pmt::pmt_t tag_;
   std::deque<output_type> out_buf_;
   std::string model_name_, host_, port_;
+  bool running_;
+  bool inference_connected_;
+  boost::scoped_ptr<std::thread> inference_thread_;
+  boost::asio::io_context ioc_;
+  boost::scoped_ptr<boost::beast::tcp_stream> stream_;
 
   void process_items_(size_t c, const input_type *&in);
   void create_image_();
-  void output_image_();
-  void delete_output_();
+  void get_inference_();
+  void delete_inference_();
 
 public:
   image_inference_impl(const std::string &tag, int vlen, int x, int y,
