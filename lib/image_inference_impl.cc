@@ -241,7 +241,16 @@ image_inference_impl::image_inference_impl(
       last_rx_time_(0), image_dir_(image_dir), convert_alpha_(convert_alpha),
       norm_alpha_(norm_alpha), norm_beta_(norm_beta), norm_type_(norm_type),
       colormap_(colormap), interpolation_(interpolation), flip_(flip),
-      min_peak_points_(min_peak_points), model_name_(model_name) {
+      min_peak_points_(min_peak_points), model_name_(model_name),
+      running_(true), inference_connected_(false) {
+  points_buffer_.reset(
+      new cv::Mat(cv::Size(vlen, 0), CV_32F, cv::Scalar::all(0)));
+  cmapped_buffer_.reset(
+      new cv::Mat(cv::Size(vlen, 0), CV_8UC3, cv::Scalar::all(0)));
+  resized_buffer_.reset(
+      new cv::Mat(cv::Size(x_, y_), CV_8UC3, cv::Scalar::all(0)));
+  // we will output our own metadata tags.
+  set_tag_propagation_policy(TPP_DONT);
   // TODO: IPv6 IP addresses
   std::vector<std::string> model_server_parts_;
   boost::split(model_server_parts_, model_server, boost::is_any_of(":"),
@@ -250,32 +259,29 @@ image_inference_impl::image_inference_impl(
     host_ = model_server_parts_[0];
     port_ = model_server_parts_[1];
   }
-  image_buffer_.reset(new std::vector<unsigned char>());
-  points_buffer_.reset(
-      new cv::Mat(cv::Size(vlen, 0), CV_32F, cv::Scalar::all(0)));
-  cmapped_buffer_.reset(
-      new cv::Mat(cv::Size(vlen, 0), CV_8UC3, cv::Scalar::all(0)));
-  // we will output our own metadata tags.
-  set_tag_propagation_policy(TPP_DONT);
+  stream_.reset(new boost::beast::tcp_stream(ioc_));
+  inference_thread_.reset(
+      new std::thread(&image_inference_impl::get_inference_, this));
 }
 
-void image_inference_impl::delete_output_() {
-  output_item_type output_item = output_q_.back();
-  output_q_.pop_back();
-  delete output_item.buffer;
+void image_inference_impl::delete_inference_() {
+  output_item_type output_item;
+  inference_q_.pop(output_item);
+  delete output_item.image_buffer;
 }
 
 image_inference_impl::~image_inference_impl() {
-  while (!output_q_.empty()) {
-    delete_output_();
+  running_ = false;
+  inference_thread_->join();
+  while (!inference_q_.empty()) {
+    delete_inference_();
   }
 }
 
 void image_inference_impl::process_items_(size_t c, const input_type *&in) {
-  for (size_t i = 0; i < c; ++i, in += vlen_) {
-    cv::Mat new_row(cv::Size(vlen_, 1), CV_32F, (void *)in);
-    points_buffer_->push_back(new_row);
-  }
+  cv::Mat new_rows(cv::Size(vlen_, c), CV_32F, (void *)in);
+  points_buffer_->push_back(new_rows);
+  in += (vlen_ * c);
 }
 
 void image_inference_impl::create_image_() {
@@ -286,8 +292,7 @@ void image_inference_impl::create_image_() {
       output_item_type output_item;
       output_item.rx_freq = last_rx_freq_;
       output_item.ts = last_rx_time_;
-      output_item.buffer =
-          new cv::Mat(cv::Size(x_, y_), CV_8UC3, cv::Scalar::all(0));
+      output_item.image_buffer = new std::vector<unsigned char>();
       this->d_logger->debug("rx_freq {} rx_time {} rows {}", last_rx_freq_,
                             last_rx_time_, points_buffer_->rows);
       cv::normalize(*points_buffer_, *points_buffer_, norm_alpha_, norm_beta_,
@@ -295,75 +300,119 @@ void image_inference_impl::create_image_() {
       points_buffer_->convertTo(*cmapped_buffer_, CV_8UC3, convert_alpha_, 0);
       cv::applyColorMap(*cmapped_buffer_, *cmapped_buffer_, colormap_);
       cv::cvtColor(*cmapped_buffer_, *cmapped_buffer_, cv::COLOR_BGR2RGB);
-      cv::resize(*cmapped_buffer_, *output_item.buffer, cv::Size(x_, y_),
+      cv::resize(*cmapped_buffer_, *resized_buffer_, cv::Size(x_, y_),
                  interpolation_);
       if (flip_ == -1 || flip_ == 0 || flip_ == 1) {
-        cv::flip(*output_item.buffer, *output_item.buffer, flip_);
+        cv::flip(*resized_buffer_, *resized_buffer_, flip_);
       }
-      cv::cvtColor(*output_item.buffer, *output_item.buffer, cv::COLOR_RGB2BGR);
-      output_q_.insert(output_q_.begin(), output_item);
+      cv::cvtColor(*resized_buffer_, *resized_buffer_, cv::COLOR_RGB2BGR);
+      cv::imencode(IMAGE_EXT, *resized_buffer_, *output_item.image_buffer);
+      // write image file
+      std::string image_file_base =
+          "image_" + host_now_str_(output_item.ts) + "_" +
+          std::to_string(uint64_t(x_)) + "x" + std::to_string(uint64_t(y_)) +
+          "_" + std::to_string(uint64_t(output_item.rx_freq)) + "Hz";
+      std::string image_file_png = image_file_base + IMAGE_EXT;
+      std::string dot_image_file_png = image_dir_ + "/." + image_file_png;
+      std::string full_image_file_png = image_dir_ + "/" + image_file_png;
+      std::ofstream image_out;
+      image_out.open(dot_image_file_png, std::ios::binary | std::ios::out);
+      image_out.write((const char *)output_item.image_buffer->data(),
+                      output_item.image_buffer->size());
+      image_out.close();
+      rename(dot_image_file_png.c_str(), full_image_file_png.c_str());
+      output_item.image_path = full_image_file_png;
+      if (!inference_q_.push(output_item)) {
+        d_logger->error("inference request queue full, size {}", MAX_INFERENCE);
+      }
     }
     points_buffer_->resize(0);
   }
 }
 
-void image_inference_impl::output_image_() {
-  output_item_type output_item = output_q_.back();
-  // write image file
-  std::string image_file_base =
-      "image_" + host_now_str_(output_item.ts) + "_" +
-      std::to_string(uint64_t(x_)) + "x" + std::to_string(uint64_t(y_)) + "_" +
-      std::to_string(uint64_t(output_item.rx_freq)) + "Hz";
-  std::string image_file_png = image_file_base + IMAGE_EXT;
-  std::string dot_image_file_png = image_dir_ + "/." + image_file_png;
-  std::string full_image_file_png = image_dir_ + "/" + image_file_png;
-  cv::imencode(IMAGE_EXT, *output_item.buffer, *image_buffer_);
-  std::ofstream image_out;
-  image_out.open(dot_image_file_png, std::ios::binary | std::ios::out);
-  image_out.write((const char *)image_buffer_->data(), image_buffer_->size());
-  image_out.close();
-  rename(dot_image_file_png.c_str(), full_image_file_png.c_str());
-  std::stringstream ss("", std::ios_base::app | std::ios_base::out);
-  ss << "{"
-     << "\"ts\": " << host_now_str_(output_item.ts)
-     << ", \"rx_freq\": " << output_item.rx_freq << ", \"image_path\": \""
-     << full_image_file_png << "\"";
-  // TODO: synchronous requests for testing. Should be parallel.
-  if (host_.size() && port_.size()) {
-    boost::asio::io_context ioc;
-    boost::asio::ip::tcp::resolver resolver(ioc);
-    boost::beast::tcp_stream stream(ioc);
-    const std::string_view body(
-        reinterpret_cast<char const *>(image_buffer_->data()),
-        image_buffer_->size());
-    boost::beast::http::request<boost::beast::http::string_body> req{
-        boost::beast::http::verb::post, "/predictions/" + model_name_, 11};
-    req.set(boost::beast::http::field::host, host_);
-    req.set(boost::beast::http::field::user_agent, BOOST_BEAST_VERSION_STRING);
-    req.set(boost::beast::http::field::content_type, "image/" + IMAGE_TYPE);
-    req.body() = body;
-    req.prepare_payload();
-    boost::beast::flat_buffer buffer;
-    boost::beast::http::response<boost::beast::http::string_body> res;
-
-    try {
-      auto const results = resolver.resolve(host_, port_);
-      stream.connect(results);
-      boost::beast::http::write(stream, req);
-      boost::beast::http::read(stream, buffer, res);
-      ss << ", \"predictions\": " << res.body().data();
-      boost::beast::error_code ec;
-      stream.socket().shutdown(boost::asio::ip::tcp::socket::shutdown_both, ec);
-    } catch (std::exception &ex) {
-      ss << ", \"error\": \"" << ex.what() << "\"";
+void image_inference_impl::get_inference_() {
+  boost::beast::error_code ec;
+  for (;;) {
+    if (!running_) {
+      if (inference_connected_) {
+        stream_->socket().shutdown(boost::asio::ip::tcp::socket::shutdown_both,
+                                   ec);
+      }
+      return;
     }
+    if (inference_q_.empty()) {
+      sleep(0.001);
+      continue;
+    }
+    output_item_type output_item;
+    inference_q_.pop(output_item);
+    std::stringstream ss("", std::ios_base::app | std::ios_base::out);
+    ss << "{"
+       << "\"ts\": " << host_now_str_(output_item.ts)
+       << ", \"rx_freq\": " << output_item.rx_freq << ", \"image_path\": \""
+       << output_item.image_path << "\"";
+    if (host_.size() && port_.size()) {
+      // TODO: reuse resolver/existing connection if possible.
+      const std::string_view body(
+          reinterpret_cast<char const *>(output_item.image_buffer->data()),
+          output_item.image_buffer->size());
+      boost::beast::http::request<boost::beast::http::string_body> req{
+          boost::beast::http::verb::post, "/predictions/" + model_name_, 11};
+      req.keep_alive(true);
+      req.set(boost::beast::http::field::connection, "keep-alive");
+      req.set(boost::beast::http::field::host, host_);
+      req.set(boost::beast::http::field::user_agent,
+              BOOST_BEAST_VERSION_STRING);
+      req.set(boost::beast::http::field::content_type, "image/" + IMAGE_TYPE);
+      req.body() = body;
+      req.prepare_payload();
+      std::string results;
+
+      // attempt to re-use existing connection. may fail if an http 1.1 server
+      // has dropped the connection to use in the meantime.
+      if (inference_connected_) {
+        try {
+          boost::beast::flat_buffer buffer;
+          boost::beast::http::response<boost::beast::http::string_body> res;
+          boost::beast::http::write(*stream_, req);
+          boost::beast::http::read(*stream_, buffer, res);
+          results = res.body().data();
+        } catch (std::exception &ex) {
+          stream_->socket().shutdown(
+              boost::asio::ip::tcp::socket::shutdown_both, ec);
+          inference_connected_ = false;
+        }
+      }
+
+      if (results.size() == 0) {
+        try {
+          if (!inference_connected_) {
+            boost::asio::ip::tcp::resolver resolver(ioc_);
+            auto const results = resolver.resolve(host_, port_);
+            stream_->connect(results);
+            inference_connected_ = true;
+          }
+          boost::beast::flat_buffer buffer;
+          boost::beast::http::response<boost::beast::http::string_body> res;
+          boost::beast::http::write(*stream_, req);
+          boost::beast::http::read(*stream_, buffer, res);
+          results = res.body().data();
+        } catch (std::exception &ex) {
+          ss << ", \"error\": \"" << ex.what() << "\"";
+          inference_connected_ = false;
+        }
+      }
+
+      if (results.size()) {
+        ss << ", \"predictions\": " << results;
+      }
+    }
+    // double new line to faciliate json parsing, since prediction may contain
+    // new lines.
+    ss << "}\n" << std::endl;
+    yaml_q_.push(ss.str());
+    delete output_item.image_buffer;
   }
-  // double new line to faciliate json parsing, since prediction may contain new
-  // lines.
-  ss << "}\n" << std::endl;
-  const std::string s = ss.str();
-  out_buf_.insert(out_buf_.end(), s.begin(), s.end());
-  delete_output_();
 }
 
 int image_inference_impl::general_work(int noutput_items,
@@ -374,8 +423,10 @@ int image_inference_impl::general_work(int noutput_items,
   size_t in_count = ninput_items[0];
   size_t in_first = nitems_read(0);
 
-  if (!output_q_.empty()) {
-    output_image_();
+  while (!yaml_q_.empty()) {
+    std::string yaml;
+    yaml_q_.pop(yaml);
+    out_buf_.insert(out_buf_.end(), yaml.begin(), yaml.end());
   }
 
   if (!out_buf_.empty()) {
