@@ -203,6 +203,7 @@
  */
 
 #include "image_inference_impl.h"
+#include "../json.hpp"
 #include <boost/algorithm/string.hpp>
 #include <boost/lexical_cast.hpp>
 #include <fstream>
