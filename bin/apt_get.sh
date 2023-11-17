@@ -18,5 +18,7 @@ sudo apt-get update && \
     python3-numpy \
     python3-packaging \
     python3-pandas \
-    vulkan-tools && \
+    vulkan-tools \
+    wget && \
   sudo pip3 install zstandard
+wget https://github.com/nlohmann/json/releases/download/v3.11.2/json.hpp

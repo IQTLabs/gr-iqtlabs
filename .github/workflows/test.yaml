@@ -20,7 +20,7 @@ jobs:
         fetch-depth: 0
     - name: clang-format
       run: |
-        sudo apt-get update -yq && sudo apt-get install -yq clang-format python3-pip && pip3 install cmake_format && bin/run_c_format.sh $(pwd) lib include/gnuradio/iqtlabs grc
+        sudo apt-get update -yq && sudo apt-get install -yq clang-format python3-pip && pip3 install cmake_format && bin/run_c_format.sh CMakeLists.txt lib include/gnuradio/iqtlabs grc
   test-latest:
     runs-on: ubuntu-latest
     steps:

@@ -34,6 +34,7 @@ mkShell {
     spdlog
     uhd
     volk
+    wget
     zstd
   ];
 }

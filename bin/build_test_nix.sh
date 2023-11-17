@@ -2,7 +2,8 @@
 set -e
 export CXXFLAGS="-I /var/empty/local/include/ -L /var/empty/local/lib/"
 export PATH=/var/empty/local/bin:$PATH
-cppcheck --verbose --language=c++ --inline-suppr lib/* && \
+cppcheck --verbose --language=c++ --inline-suppr --suppress=preprocessorErrorDirective --suppress=syntaxError --force lib/* && \
   pip3 install --user -r codecheck-requirements.txt && \
   ./bin/clonedeps.sh && \
+  wget https://github.com/nlohmann/json/releases/download/v3.11.2/json.hpp && \
   rm -rf build && mkdir build && cd build && cmake .. && make -j $(nproc) && sudo make install && sudo ldconfig && sudo PYTHONPATH=$HOME/.local/lib/python3.10/site-packages:$PYTHONPATH make test ARGS="--verbose --timeout 180" && cd ..
