@@ -21,4 +21,3 @@ sudo apt-get update && \
     vulkan-tools \
     wget && \
   sudo pip3 install zstandard
-wget https://github.com/nlohmann/json/releases/download/v3.11.2/json.hpp
