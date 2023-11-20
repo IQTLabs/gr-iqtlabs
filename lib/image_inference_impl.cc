@@ -203,13 +203,13 @@
  */
 
 #include "image_inference_impl.h"
-#include "../json.hpp"
 #include <boost/algorithm/string.hpp>
 #include <boost/lexical_cast.hpp>
 #include <fstream>
 #include <gnuradio/io_signature.h>
 #include <ios>
 #include <iostream>
+#include <nlohmann/json.hpp>
 
 namespace gr {
 namespace iqtlabs {
@@ -244,8 +244,7 @@ image_inference_impl::image_inference_impl(
       colormap_(colormap), interpolation_(interpolation), flip_(flip),
       min_peak_points_(min_peak_points), model_name_(model_name),
       running_(true), inference_connected_(false) {
-  points_buffer_.reset(
-      new cv::Mat(cv::Size(vlen, 0), CV_32F, cv::Scalar::all(0)));
+  points_buffer_ = new cv::Mat(cv::Size(vlen, 0), CV_32F, cv::Scalar::all(0));
   cmapped_buffer_.reset(
       new cv::Mat(cv::Size(vlen, 0), CV_8UC3, cv::Scalar::all(0)));
   resized_buffer_.reset(
@@ -265,10 +264,15 @@ image_inference_impl::image_inference_impl(
       new std::thread(&image_inference_impl::get_inference_, this));
 }
 
+void image_inference_impl::delete_output_item_(output_item_type &output_item) {
+  delete output_item.image_buffer;
+  delete output_item.points_buffer;
+}
+
 void image_inference_impl::delete_inference_() {
   output_item_type output_item;
   inference_q_.pop(output_item);
-  delete output_item.image_buffer;
+  delete_output_item_(output_item);
 }
 
 image_inference_impl::~image_inference_impl() {
@@ -277,6 +281,7 @@ image_inference_impl::~image_inference_impl() {
   while (!inference_q_.empty()) {
     delete_inference_();
   }
+  delete points_buffer_;
 }
 
 void image_inference_impl::process_items_(size_t c, const input_type *&in) {
@@ -293,7 +298,8 @@ void image_inference_impl::create_image_() {
       output_item_type output_item;
       output_item.rx_freq = last_rx_freq_;
       output_item.ts = last_rx_time_;
-      output_item.image_buffer = new std::vector<unsigned char>();
+      output_item.image_buffer =
+          new cv::Mat(cv::Size(x_, y_), CV_8UC3, cv::Scalar::all(0));
       output_item.orig_rows = points_buffer_->rows;
       this->d_logger->debug("rx_freq {} rx_time {} rows {}", last_rx_freq_,
                             last_rx_time_, points_buffer_->rows);
@@ -307,28 +313,16 @@ void image_inference_impl::create_image_() {
       if (flip_ == -1 || flip_ == 0 || flip_ == 1) {
         cv::flip(*resized_buffer_, *resized_buffer_, flip_);
       }
-      cv::cvtColor(*resized_buffer_, *resized_buffer_, cv::COLOR_RGB2BGR);
-      cv::imencode(IMAGE_EXT, *resized_buffer_, *output_item.image_buffer);
-      // write image file
-      std::string image_file_base =
-          "image_" + host_now_str_(output_item.ts) + "_" +
-          std::to_string(uint64_t(x_)) + "x" + std::to_string(uint64_t(y_)) +
-          "_" + std::to_string(uint64_t(output_item.rx_freq)) + "Hz";
-      std::string image_file_png = image_file_base + IMAGE_EXT;
-      std::string dot_image_file_png = image_dir_ + "/." + image_file_png;
-      std::string full_image_file_png = image_dir_ + "/" + image_file_png;
-      std::ofstream image_out;
-      image_out.open(dot_image_file_png, std::ios::binary | std::ios::out);
-      image_out.write((const char *)output_item.image_buffer->data(),
-                      output_item.image_buffer->size());
-      image_out.close();
-      rename(dot_image_file_png.c_str(), full_image_file_png.c_str());
-      output_item.image_path = full_image_file_png;
+      cv::cvtColor(*resized_buffer_, *output_item.image_buffer,
+                   cv::COLOR_RGB2BGR);
+      output_item.points_buffer = points_buffer_;
       if (!inference_q_.push(output_item)) {
         d_logger->error("inference request queue full, size {}", MAX_INFERENCE);
+        delete_output_item_(output_item);
       }
     }
-    points_buffer_->resize(0);
+    points_buffer_ =
+        new cv::Mat(cv::Size(vlen_, 0), CV_32F, cv::Scalar::all(0));
   }
 }
 
@@ -348,17 +342,34 @@ void image_inference_impl::get_inference_() {
     }
     output_item_type output_item;
     inference_q_.pop(output_item);
+    boost::scoped_ptr<std::vector<unsigned char>> encoded_buffer(
+        new std::vector<unsigned char>());
+    cv::imencode(IMAGE_EXT, *output_item.image_buffer, *encoded_buffer);
+    // write image file
+    std::string image_file_base =
+        "image_" + host_now_str_(output_item.ts) + "_" +
+        std::to_string(uint64_t(x_)) + "x" + std::to_string(uint64_t(y_)) +
+        "_" + std::to_string(uint64_t(output_item.rx_freq)) + "Hz";
+    std::string image_file_png = image_file_base + IMAGE_EXT;
+    std::string dot_image_file_png = image_dir_ + "/." + image_file_png;
+    std::string full_image_file_png = image_dir_ + "/" + image_file_png;
+    std::ofstream image_out;
+    image_out.open(dot_image_file_png, std::ios::binary | std::ios::out);
+    image_out.write((const char *)encoded_buffer->data(),
+                    encoded_buffer->size());
+    image_out.close();
+    rename(dot_image_file_png.c_str(), full_image_file_png.c_str());
+
     std::stringstream ss("", std::ios_base::app | std::ios_base::out);
     ss << "{"
        << "\"ts\": " << host_now_str_(output_item.ts)
        << ", \"rx_freq\": " << output_item.rx_freq
        << ", \"orig_rows\": " << output_item.orig_rows << ", \"image_path\": \""
-       << output_item.image_path << "\"";
+       << full_image_file_png << "\"";
     if (host_.size() && port_.size()) {
-      // TODO: reuse resolver/existing connection if possible.
       const std::string_view body(
-          reinterpret_cast<char const *>(output_item.image_buffer->data()),
-          output_item.image_buffer->size());
+          reinterpret_cast<char const *>(encoded_buffer->data()),
+          encoded_buffer->size());
       boost::beast::http::request<boost::beast::http::string_body> req{
           boost::beast::http::verb::post, "/predictions/" + model_name_, 11};
       req.keep_alive(true);
@@ -407,14 +418,30 @@ void image_inference_impl::get_inference_() {
       }
 
       if (results.size()) {
-        ss << ", \"predictions\": " << results;
+        if (nlohmann::json::accept(results)) {
+          nlohmann::json results_json = nlohmann::json::parse(results);
+          ss << ", \"predictions\": " << results_json;
+          // TODO: create with predictions and bboxes.
+          // TODO: extract RSSI via bounding box
+          // cv::Rect rect(100, 100, 50, 50);
+          // cv::rectangle(*resized_buffer_, rect, cv::Scalar(255, 255, 255));
+          // cv::imencode(IMAGE_EXT, *resized_buffer_,
+          // *output_item.image_buffer); image_out.open("/tmp/test.png",
+          // std::ios::binary | std::ios::out); image_out.write((const
+          // char*)output_item.image_buffer->data(),
+          //                 output_item.image_buffer->size());
+          // image_out.close();
+        } else {
+          ss << ", \"error\": \"invalid json: " << results << "\"";
+          inference_connected_ = false;
+        }
       }
     }
     // double new line to faciliate json parsing, since prediction may contain
     // new lines.
     ss << "}\n" << std::endl;
-    yaml_q_.push(ss.str());
-    delete output_item.image_buffer;
+    json_q_.push(ss.str());
+    delete_output_item_(output_item);
   }
 }
 
@@ -426,10 +453,10 @@ int image_inference_impl::general_work(int noutput_items,
   size_t in_count = ninput_items[0];
   size_t in_first = nitems_read(0);
 
-  while (!yaml_q_.empty()) {
-    std::string yaml;
-    yaml_q_.pop(yaml);
-    out_buf_.insert(out_buf_.end(), yaml.begin(), yaml.end());
+  while (!json_q_.empty()) {
+    std::string json;
+    json_q_.pop(json);
+    out_buf_.insert(out_buf_.end(), json.begin(), json.end());
   }
 
   if (!out_buf_.empty()) {

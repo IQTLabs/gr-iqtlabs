@@ -52,7 +52,6 @@ sudo apt-get -y update && \
 	 swig \
      wget \
     && \
-    wget https://github.com/nlohmann/json/releases/download/v3.11.2/json.hpp && \
     git clone --recursive https://github.com/gnuradio/volk -b v3.0.0 && cd volk && mkdir build && cd build && cmake -DCMAKE_BUILD_TYPE=Release -DPYTHON_EXECUTABLE=/usr/bin/python3 .. && make -j "$(nproc)" && sudo make install && sudo ldconfig && cd ../.. && \
     git clone https://github.com/gnuradio/gnuradio -b maint-3.9 && cd gnuradio && mkdir build && cd build && CMAKE_CXX_STANDARD=17 cmake -DENABLE_DEFAULT=OFF -DENABLE_GRC=ON -DENABLE_PYTHON=ON -DENABLE_GNURADIO_RUNTIME=ON -DENABLE_GR_BLOCKS=ON -DENABLE_GR_FFT=ON -DENABLE_GR_FILTER=ON -DENABLE_GR_ANALOG=ON -DENABLE_GR_NETWORK=ON .. && make -j "$(nproc)" && sudo make install && sudo ln -s /usr/local/lib/python3/dist-packages/* /usr/local/lib/python3.*/dist-packages && sudo ldconfig && cd ../.. &&
     python3 -c "import gnuradio"

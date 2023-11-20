@@ -62,8 +62,13 @@ endif(NOT iqtlabs_sources)
 
 add_library(gnuradio-iqtlabs SHARED ${iqtlabs_sources})
 target_link_libraries(
-  gnuradio-iqtlabs ${VKFFT_LIB} ${Boost_LIBRARIES} ${OpenCV_LIBS}
-  libsigmf::libsigmf gnuradio::gnuradio-runtime)
+  gnuradio-iqtlabs
+  ${VKFFT_LIB}
+  ${Boost_LIBRARIES}
+  ${OpenCV_LIBS}
+  nlohmann_json::nlohmann_json
+  libsigmf::libsigmf
+  gnuradio::gnuradio-runtime)
 
 target_include_directories(
   gnuradio-iqtlabs ${VKFFT_INCLUDES}

@@ -230,8 +230,8 @@ const size_t MAX_INFERENCE = 50;
 typedef struct output_item {
   uint64_t rx_freq;
   double ts;
-  std::vector<unsigned char> *image_buffer;
-  std::string image_path;
+  cv::Mat *image_buffer;
+  cv::Mat *points_buffer;
   size_t orig_rows;
 } output_item_type;
 
@@ -242,8 +242,9 @@ private:
   double convert_alpha_, norm_alpha_, norm_beta_, last_rx_time_,
       min_peak_points_;
   boost::lockfree::spsc_queue<output_item_type> inference_q_{MAX_INFERENCE};
-  boost::lockfree::spsc_queue<std::string> yaml_q_{MAX_INFERENCE};
-  boost::scoped_ptr<cv::Mat> points_buffer_, cmapped_buffer_, resized_buffer_;
+  boost::lockfree::spsc_queue<std::string> json_q_{MAX_INFERENCE};
+  cv::Mat *points_buffer_;
+  boost::scoped_ptr<cv::Mat> cmapped_buffer_, resized_buffer_;
   std::string image_dir_;
   pmt::pmt_t tag_;
   std::deque<output_type> out_buf_;
@@ -257,6 +258,7 @@ private:
   void process_items_(size_t c, const input_type *&in);
   void create_image_();
   void get_inference_();
+  void delete_output_item_(output_item_type &output_item);
   void delete_inference_();
 
 public:

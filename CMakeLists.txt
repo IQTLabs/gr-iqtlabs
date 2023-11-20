@@ -57,6 +57,8 @@ else()
   message(INFO ": Vulkan NOT found, vkfft will NOT be built")
 endif()
 
+find_package(nlohmann_json 3.11.2 REQUIRED)
+
 # Set the version information here
 set(VERSION_MAJOR 1)
 set(VERSION_API 0)
