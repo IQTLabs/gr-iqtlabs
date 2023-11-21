@@ -435,10 +435,10 @@ void image_inference_impl::get_inference_() {
           nlohmann::json original_results_json = nlohmann::json::parse(results);
           nlohmann::json results_json = original_results_json;
           size_t rendered_predictions = 0;
-          float xf = float(output_item.points_buffer->cols) /
-                     float(output_item.image_buffer->cols);
-          float yf = float(output_item.points_buffer->rows) /
-                     float(output_item.image_buffer->rows);
+          const float xf = float(output_item.points_buffer->cols) /
+                           float(output_item.image_buffer->cols);
+          const float yf = float(output_item.points_buffer->rows) /
+                           float(output_item.image_buffer->rows);
           const cv::Scalar white = cv::Scalar(255, 255, 255);
           for (auto &prediction_class : original_results_json.items()) {
             size_t i = 0;
@@ -446,26 +446,32 @@ void image_inference_impl::get_inference_() {
               auto &prediction = prediction_ref.value();
               float conf = prediction["conf"];
               if (conf > confidence_) {
-                ++rendered_predictions;
                 auto &xywh = prediction["xywh"];
-                int x = xywh[0];
-                int y = xywh[1];
+                int cx = xywh[0];
+                int cy = xywh[1];
                 int w = xywh[2];
                 int h = xywh[3];
-                cv::Mat rssi_points = (*output_item.points_buffer)(cv::Rect(
-                    int(x * xf), int(y * yf), int(w * xf), int(h * yf)));
+                int tlx = cx - (w / 2);
+                int tly = cy - (h / 2);
+                cv::Rect bbox_rect(tlx, tly, w, h);
+                cv::Rect rssi_rect(int(tlx * xf), int(tly * yf), int(w * xf),
+                                   int(h * yf));
+                cv::Mat rssi_points = (*output_item.points_buffer)(rssi_rect);
                 float rssi = cv::mean(rssi_points)[0];
-                auto &augmented = results_json[prediction_class.key()][i];
-                augmented["rssi"] = rssi;
-                augmented["rssi_samples"] = rssi_points.cols * rssi_points.rows;
-                cv::rectangle(*output_item.image_buffer, cv::Rect(x, y, w, h),
-                              white);
-                std::string label = prediction_class.key() + ": conf " +
-                                    std::to_string(conf) + ", RSSI " +
-                                    std::to_string(rssi);
-                cv::putText(*output_item.image_buffer, label,
-                            cv::Point(x - 10, y - 10), cv::FONT_HERSHEY_SIMPLEX,
-                            0.5, white, 2);
+                if (rssi >= min_peak_points_) {
+                  ++rendered_predictions;
+                  auto &augmented = results_json[prediction_class.key()][i];
+                  augmented["rssi"] = rssi;
+                  augmented["rssi_samples"] =
+                      rssi_points.cols * rssi_points.rows;
+                  cv::rectangle(*output_item.image_buffer, bbox_rect, white);
+                  std::string label = prediction_class.key() + ": conf " +
+                                      std::to_string(conf) + ", RSSI " +
+                                      std::to_string(rssi);
+                  cv::putText(*output_item.image_buffer, label,
+                              cv::Point(cx - 10, cy - 10),
+                              cv::FONT_HERSHEY_SIMPLEX, 0.5, white, 2);
+                }
                 // TODO: add NMS
               }
               ++i;
