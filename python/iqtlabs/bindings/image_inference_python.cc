@@ -14,7 +14,7 @@
 /* BINDTOOL_GEN_AUTOMATIC(0)                                                       */
 /* BINDTOOL_USE_PYGCCXML(0)                                                        */
 /* BINDTOOL_HEADER_FILE(image_inference.h)                                        */
-/* BINDTOOL_HEADER_FILE_HASH(ed9a9d38e8c7f50546d907bfa44a223b)                     */
+/* BINDTOOL_HEADER_FILE_HASH(95fb94fd34e1930b2cdc80357e966443)                     */
 /***********************************************************************************/
 
 #include <pybind11/complex.h>
@@ -54,6 +54,7 @@ void bind_image_inference(py::module& m)
              py::arg("min_peak_points"),
              py::arg("model_server"),
              py::arg("model_name"),
+             py::arg("confidence"),
              D(image_inference, make))
 
 

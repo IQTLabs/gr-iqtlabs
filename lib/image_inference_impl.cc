@@ -220,11 +220,11 @@ image_inference::make(const std::string &tag, int vlen, int x, int y,
                       double norm_alpha, double norm_beta, int norm_type,
                       int colormap, int interpolation, int flip,
                       double min_peak_points, const std::string &model_server,
-                      const std::string &model_name) {
+                      const std::string &model_name, double confidence) {
   return gnuradio::make_block_sptr<image_inference_impl>(
       tag, vlen, x, y, image_dir, convert_alpha, norm_alpha, norm_beta,
       norm_type, colormap, interpolation, flip, min_peak_points, model_server,
-      model_name);
+      model_name, confidence);
 }
 
 image_inference_impl::image_inference_impl(
@@ -232,7 +232,7 @@ image_inference_impl::image_inference_impl(
     const std::string &image_dir, double convert_alpha, double norm_alpha,
     double norm_beta, int norm_type, int colormap, int interpolation, int flip,
     double min_peak_points, const std::string &model_server,
-    const std::string &model_name)
+    const std::string &model_name, double confidence)
     : gr::block("image_inference",
                 gr::io_signature::make(1 /* min inputs */, 1 /* max inputs */,
                                        vlen * sizeof(input_type)),
@@ -243,8 +243,9 @@ image_inference_impl::image_inference_impl(
       norm_alpha_(norm_alpha), norm_beta_(norm_beta), norm_type_(norm_type),
       colormap_(colormap), interpolation_(interpolation), flip_(flip),
       min_peak_points_(min_peak_points), model_name_(model_name),
-      running_(true), inference_connected_(false) {
-  points_buffer_ = new cv::Mat(cv::Size(vlen, 0), CV_32F, cv::Scalar::all(0));
+      confidence_(confidence), running_(true), inference_connected_(false) {
+  points_buffer_.reset(
+      new cv::Mat(cv::Size(vlen_, 0), CV_32F, cv::Scalar::all(0)));
   cmapped_buffer_.reset(
       new cv::Mat(cv::Size(vlen, 0), CV_8UC3, cv::Scalar::all(0)));
   resized_buffer_.reset(
@@ -281,7 +282,6 @@ image_inference_impl::~image_inference_impl() {
   while (!inference_q_.empty()) {
     delete_inference_();
   }
-  delete points_buffer_;
 }
 
 void image_inference_impl::process_items_(size_t c, const input_type *&in) {
@@ -298,9 +298,17 @@ void image_inference_impl::create_image_() {
       output_item_type output_item;
       output_item.rx_freq = last_rx_freq_;
       output_item.ts = last_rx_time_;
+      output_item.points_min = points_min;
+      output_item.points_max = points_max;
       output_item.image_buffer =
           new cv::Mat(cv::Size(x_, y_), CV_8UC3, cv::Scalar::all(0));
-      output_item.orig_rows = points_buffer_->rows;
+      output_item.points_buffer =
+          new cv::Mat(cv::Size(vlen_, 0), CV_32F, cv::Scalar::all(0));
+      if (flip_ == -1 || flip_ == 0 || flip_ == 1) {
+        cv::flip(*points_buffer_, *points_buffer_, flip_);
+      }
+      points_buffer_->copyTo(*output_item.points_buffer);
+      output_item.points_mean = cv::mean(*output_item.points_buffer)[0];
       this->d_logger->debug("rx_freq {} rx_time {} rows {}", last_rx_freq_,
                             last_rx_time_, points_buffer_->rows);
       cv::normalize(*points_buffer_, *points_buffer_, norm_alpha_, norm_beta_,
@@ -310,20 +318,35 @@ void image_inference_impl::create_image_() {
       cv::cvtColor(*cmapped_buffer_, *cmapped_buffer_, cv::COLOR_BGR2RGB);
       cv::resize(*cmapped_buffer_, *resized_buffer_, cv::Size(x_, y_),
                  interpolation_);
-      if (flip_ == -1 || flip_ == 0 || flip_ == 1) {
-        cv::flip(*resized_buffer_, *resized_buffer_, flip_);
-      }
       cv::cvtColor(*resized_buffer_, *output_item.image_buffer,
                    cv::COLOR_RGB2BGR);
-      output_item.points_buffer = points_buffer_;
       if (!inference_q_.push(output_item)) {
         d_logger->error("inference request queue full, size {}", MAX_INFERENCE);
         delete_output_item_(output_item);
       }
     }
-    points_buffer_ =
-        new cv::Mat(cv::Size(vlen_, 0), CV_32F, cv::Scalar::all(0));
+    points_buffer_->resize(0);
   }
+}
+
+std::string image_inference_impl::write_image_(
+    const std::string &prefix, output_item_type &output_item,
+    boost::scoped_ptr<std::vector<unsigned char>> &encoded_buffer) {
+  encoded_buffer.reset(new std::vector<unsigned char>());
+  cv::imencode(IMAGE_EXT, *output_item.image_buffer, *encoded_buffer);
+  std::string image_file_base =
+      prefix + "_" + host_now_str_(output_item.ts) + "_" +
+      std::to_string(uint64_t(x_)) + "x" + std::to_string(uint64_t(y_)) + "_" +
+      std::to_string(uint64_t(output_item.rx_freq)) + "Hz";
+  std::string image_file_png = image_file_base + IMAGE_EXT;
+  std::string dot_image_file_png = image_dir_ + "/." + image_file_png;
+  std::string full_image_file_png = image_dir_ + "/" + image_file_png;
+  std::ofstream image_out;
+  image_out.open(dot_image_file_png, std::ios::binary | std::ios::out);
+  image_out.write((const char *)encoded_buffer->data(), encoded_buffer->size());
+  image_out.close();
+  rename(dot_image_file_png.c_str(), full_image_file_png.c_str());
+  return full_image_file_png;
 }
 
 void image_inference_impl::get_inference_() {
@@ -342,30 +365,20 @@ void image_inference_impl::get_inference_() {
     }
     output_item_type output_item;
     inference_q_.pop(output_item);
-    boost::scoped_ptr<std::vector<unsigned char>> encoded_buffer(
-        new std::vector<unsigned char>());
-    cv::imencode(IMAGE_EXT, *output_item.image_buffer, *encoded_buffer);
-    // write image file
-    std::string image_file_base =
-        "image_" + host_now_str_(output_item.ts) + "_" +
-        std::to_string(uint64_t(x_)) + "x" + std::to_string(uint64_t(y_)) +
-        "_" + std::to_string(uint64_t(output_item.rx_freq)) + "Hz";
-    std::string image_file_png = image_file_base + IMAGE_EXT;
-    std::string dot_image_file_png = image_dir_ + "/." + image_file_png;
-    std::string full_image_file_png = image_dir_ + "/" + image_file_png;
-    std::ofstream image_out;
-    image_out.open(dot_image_file_png, std::ios::binary | std::ios::out);
-    image_out.write((const char *)encoded_buffer->data(),
-                    encoded_buffer->size());
-    image_out.close();
-    rename(dot_image_file_png.c_str(), full_image_file_png.c_str());
+    boost::scoped_ptr<std::vector<unsigned char>> encoded_buffer;
 
-    std::stringstream ss("", std::ios_base::app | std::ios_base::out);
-    ss << "{"
-       << "\"ts\": " << host_now_str_(output_item.ts)
-       << ", \"rx_freq\": " << output_item.rx_freq
-       << ", \"orig_rows\": " << output_item.orig_rows << ", \"image_path\": \""
-       << full_image_file_png << "\"";
+    nlohmann::json metadata_json;
+    metadata_json["rssi_max"] = std::to_string(output_item.points_max);
+    metadata_json["rssi_mean"] = std::to_string(output_item.points_mean);
+    metadata_json["rssi_min"] = std::to_string(output_item.points_min);
+    metadata_json["ts"] = host_now_str_(output_item.ts);
+    metadata_json["rx_freq"] = std::to_string(output_item.rx_freq);
+    metadata_json["orig_rows"] = output_item.points_buffer->rows;
+    metadata_json["image_path"] =
+        write_image_("image", output_item, encoded_buffer);
+
+    nlohmann::json output_json;
+
     if (host_.size() && port_.size()) {
       const std::string_view body(
           reinterpret_cast<char const *>(encoded_buffer->data()),
@@ -412,35 +425,67 @@ void image_inference_impl::get_inference_() {
           boost::beast::http::read(*stream_, buffer, res);
           results = res.body().data();
         } catch (std::exception &ex) {
-          ss << ", \"error\": \"" << ex.what() << "\"";
+          output_json["error"] = ex.what();
           inference_connected_ = false;
         }
       }
 
       if (results.size()) {
         if (nlohmann::json::accept(results)) {
-          nlohmann::json results_json = nlohmann::json::parse(results);
-          ss << ", \"predictions\": " << results_json;
-          // TODO: create with predictions and bboxes.
-          // TODO: extract RSSI via bounding box
-          // cv::Rect rect(100, 100, 50, 50);
-          // cv::rectangle(*resized_buffer_, rect, cv::Scalar(255, 255, 255));
-          // cv::imencode(IMAGE_EXT, *resized_buffer_,
-          // *output_item.image_buffer); image_out.open("/tmp/test.png",
-          // std::ios::binary | std::ios::out); image_out.write((const
-          // char*)output_item.image_buffer->data(),
-          //                 output_item.image_buffer->size());
-          // image_out.close();
+          nlohmann::json original_results_json = nlohmann::json::parse(results);
+          nlohmann::json results_json = original_results_json;
+          size_t rendered_predictions = 0;
+          float xf = float(output_item.points_buffer->cols) /
+                     float(output_item.image_buffer->cols);
+          float yf = float(output_item.points_buffer->rows) /
+                     float(output_item.image_buffer->rows);
+          const cv::Scalar white = cv::Scalar(255, 255, 255);
+          for (auto &prediction_class : original_results_json.items()) {
+            size_t i = 0;
+            for (auto &prediction_ref : prediction_class.value().items()) {
+              auto &prediction = prediction_ref.value();
+              float conf = prediction["conf"];
+              if (conf > confidence_) {
+                ++rendered_predictions;
+                auto &xywh = prediction["xywh"];
+                int x = xywh[0];
+                int y = xywh[1];
+                int w = xywh[2];
+                int h = xywh[3];
+                cv::Mat rssi_points = (*output_item.points_buffer)(cv::Rect(
+                    int(x * xf), int(y * yf), int(w * xf), int(h * yf)));
+                float rssi = cv::mean(rssi_points)[0];
+                auto &augmented = results_json[prediction_class.key()][i];
+                augmented["rssi"] = rssi;
+                augmented["rssi_samples"] = rssi_points.cols * rssi_points.rows;
+                cv::rectangle(*output_item.image_buffer, cv::Rect(x, y, w, h),
+                              white);
+                std::string label = prediction_class.key() + ": conf " +
+                                    std::to_string(conf) + ", RSSI " +
+                                    std::to_string(rssi);
+                cv::putText(*output_item.image_buffer, label,
+                            cv::Point(x - 10, y - 10), cv::FONT_HERSHEY_SIMPLEX,
+                            0.5, white, 2);
+                // TODO: add NMS
+              }
+              ++i;
+            }
+          }
+          output_json["predictions"] = results_json;
+          if (rendered_predictions) {
+            metadata_json["predictions_image_path"] =
+                write_image_("predictions_image", output_item, encoded_buffer);
+          }
         } else {
-          ss << ", \"error\": \"invalid json: " << results << "\"";
+          output_json["error"] = "invalid json: " + results;
           inference_connected_ = false;
         }
       }
     }
-    // double new line to faciliate json parsing, since prediction may contain
+    // double new line to facilitate json parsing, since prediction may contain
     // new lines.
-    ss << "}\n" << std::endl;
-    json_q_.push(ss.str());
+    output_json["metadata"] = metadata_json;
+    json_q_.push(output_json.dump() + "\n\n");
     delete_output_item_(output_item);
   }
 }

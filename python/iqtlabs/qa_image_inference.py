@@ -252,7 +252,7 @@ class qa_image_inference(gr_unittest.TestCase):
     def test_instance(self):
         port = 11001
         model_name = "testmodel"
-        predictions_result = {"modulation": [{"conf": 0.9, "xywh": [1, 2, 3, 4]}]}
+        predictions_result = {"modulation": [{"conf": 0.9, "xywh": [10, 20, 50, 50]}]}
         if self.pid == 0:
             self.simulate_torchserve(port, model_name, predictions_result)
             return
@@ -260,7 +260,7 @@ class qa_image_inference(gr_unittest.TestCase):
         y = 600
         fft_size = 1024
         output_vlen = x * y * 3
-        samp_rate = 32e3
+        samp_rate = 4e6
         with tempfile.TemporaryDirectory() as tmpdir:
             test_file = os.path.join(tmpdir, "samples")
             freq_divisor = 1e9
@@ -285,6 +285,7 @@ class qa_image_inference(gr_unittest.TestCase):
                 -1e9,
                 f"localhost:{port}",
                 model_name,
+                0.8,
             )
             c2r = blocks.complex_to_real(1)
             stream2vector = blocks.stream_to_vector(gr.sizeof_float, fft_size)
@@ -304,7 +305,7 @@ class qa_image_inference(gr_unittest.TestCase):
             time.sleep(test_time)
             self.tb.stop()
             self.tb.wait()
-            image_files = [f for f in glob.glob(f"{tmpdir}/image*png")]
+            image_files = [f for f in glob.glob(f"{tmpdir}/*image*png")]
             self.assertGreater(len(image_files), 2)
             for image_file in image_files:
                 stat = os.stat(image_file)
@@ -319,7 +320,18 @@ class qa_image_inference(gr_unittest.TestCase):
                 if not json_raw:
                     continue
                 result = json.loads(json_raw)
-                self.assertTrue(os.path.exists(result["image_path"]))
+                print(result)
+                metadata_result = result["metadata"]
+                rssi_min, rssi_mean, rssi_max = [
+                    float(metadata_result[v])
+                    for v in ("rssi_min", "rssi_mean", "rssi_max")
+                ]
+                self.assertGreaterEqual(rssi_mean, rssi_min, metadata_result)
+                self.assertGreaterEqual(rssi_max, rssi_mean, metadata_result)
+                self.assertTrue(os.path.exists(metadata_result["image_path"]))
+                self.assertTrue(os.path.exists(metadata_result["predictions_image_path"]))
+                for k in ("rssi", "rssi_samples"):
+                    del result["predictions"]["modulation"][0][k]
                 self.assertEqual(result["predictions"], predictions_result)
 
 

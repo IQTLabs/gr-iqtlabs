@@ -233,7 +233,7 @@ public:
                    double norm_alpha, double norm_beta, int norm_type,
                    int colormap, int interpolation, int flip,
                    double min_peak_points, const std::string &model_server,
-                   const std::string &model_name);
+                   const std::string &model_name, double confidence);
 };
 
 } // namespace iqtlabs
