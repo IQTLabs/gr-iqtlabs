@@ -458,12 +458,11 @@ void image_inference_impl::get_inference_() {
                                    int(h * yf));
                 cv::Mat rssi_points = (*output_item.points_buffer)(rssi_rect);
                 float rssi = cv::mean(rssi_points)[0];
+                auto &augmented = results_json[prediction_class.key()][i];
+                augmented["rssi"] = rssi;
+                augmented["rssi_samples"] = rssi_points.cols * rssi_points.rows;
                 if (rssi >= min_peak_points_) {
                   ++rendered_predictions;
-                  auto &augmented = results_json[prediction_class.key()][i];
-                  augmented["rssi"] = rssi;
-                  augmented["rssi_samples"] =
-                      rssi_points.cols * rssi_points.rows;
                   cv::rectangle(*output_item.image_buffer, bbox_rect, white);
                   std::string label = prediction_class.key() + ": conf " +
                                       std::to_string(conf) + ", RSSI " +
