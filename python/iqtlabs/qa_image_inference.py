@@ -252,7 +252,7 @@ class qa_image_inference(gr_unittest.TestCase):
     def test_instance(self):
         port = 11001
         model_name = "testmodel"
-        predictions_result = {"modulation": [{"conf": 0.9, "xywh": [10, 20, 50, 50]}]}
+        predictions_result = {"modulation": [{"conf": 0.9, "xywh": [50, 50, 10, 10]}]}
         if self.pid == 0:
             self.simulate_torchserve(port, model_name, predictions_result)
             return
