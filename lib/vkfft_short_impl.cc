@@ -246,9 +246,9 @@ int vkfft_short_impl::work(int noutput_items,
       reinterpret_cast<const std::int16_t *const>(input_items[0]);
   gr_complex *const out = reinterpret_cast<gr_complex *const>(output_items[0]);
   auto *buffer = input_buffer_.get();
+  size_t buffer_index = 0;
 
-  for (int i = 0; i < noutput_items; ++i) {
-    const int buffer_index = i * vlen_ * 2;
+  for (int i = 0; i < noutput_items; ++i, buffer_index += vlen_ * 2) {
     _converter->conv(&in[buffer_index], &buffer[0], vlen_);
     vkfft_offload((char *)&buffer[0], (char *)&out[buffer_index]);
   }
