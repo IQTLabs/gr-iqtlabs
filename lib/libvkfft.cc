@@ -117,10 +117,10 @@ VkFFTResult _transferDataToCPU(char *cpu_arr) {
     return VKFFT_ERROR_MALLOC_FAILED;
   if (_shift) {
     const size_t halfFftBufferSize = fftBufferSize / 2;
-    for (int i = 0; i < vkConfiguration.numberBatches; ++i) {
+    for (int i = 0; i < vkConfiguration.numberBatches;
+         ++i, cpu_arr += fftBufferSize, data += fftBufferSize) {
       memcpy(cpu_arr + halfFftBufferSize, data, halfFftBufferSize);
       memcpy(cpu_arr, data + halfFftBufferSize, halfFftBufferSize);
-      cpu_arr += fftBufferSize;
     }
   } else {
     memcpy(cpu_arr, data, stagingBufferSize);

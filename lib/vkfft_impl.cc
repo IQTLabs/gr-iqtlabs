@@ -230,9 +230,9 @@ int vkfft_impl::work(int noutput_items, gr_vector_const_void_star &input_items,
   const gr_complex *const in =
       reinterpret_cast<const gr_complex *const>(input_items[0]);
   gr_complex *const out = reinterpret_cast<gr_complex *const>(output_items[0]);
+  size_t buffer_index = 0;
 
-  for (int i = 0; i < noutput_items; ++i) {
-    const int buffer_index = i * vlen_;
+  for (int i = 0; i < noutput_items; ++i, buffer_index += vlen_) {
     vkfft_offload((char *)&in[buffer_index], (char *)&out[buffer_index]);
   }
 
