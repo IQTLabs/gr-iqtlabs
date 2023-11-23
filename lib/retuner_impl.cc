@@ -281,17 +281,18 @@ void retuner_impl::parse_tuning_ranges_(const std::string &tuning_ranges) {
     }
   }
   tune_freq_ = tuning_ranges_[0].freq_start;
+  stare_mode_ = tuning_ranges_[0].steps == 1;
 }
 
 void retuner_impl::next_retune_(double host_now) {
   ++total_tune_count_;
   ++pending_retune_;
   last_tuning_range_ = tuning_range_;
-  size_t range_steps = tuning_ranges_[tuning_range_].steps;
-  if (range_steps == 1) {
+  if (stare_mode_) {
     last_sweep_start_ = host_now;
     return;
   }
+  size_t range_steps = tuning_ranges_[tuning_range_].steps;
   tune_freq_ = std::min(tune_freq_ + tune_step_hz_,
                         tuning_ranges_[tuning_range_].freq_end);
   ++tuning_range_step_;

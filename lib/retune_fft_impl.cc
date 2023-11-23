@@ -226,11 +226,12 @@ retune_fft::make(const std::string &tag, size_t vlen, size_t nfft,
                  const std::string &sdir, uint64_t write_step_fft,
                  double bucket_range, const std::string &tuning_ranges,
                  const std::string &description, uint64_t rotate_secs,
-                 bool pre_fft, bool tag_now) {
+                 bool pre_fft, bool tag_now, bool low_power_hold_down) {
   return gnuradio::make_block_sptr<retune_fft_impl>(
       tag, vlen, nfft, samp_rate, freq_start, freq_end, tune_step_hz,
       tune_step_fft, skip_tune_step_fft, fft_min, fft_max, sdir, write_step_fft,
-      bucket_range, tuning_ranges, description, rotate_secs, pre_fft, tag_now);
+      bucket_range, tuning_ranges, description, rotate_secs, pre_fft, tag_now,
+      low_power_hold_down);
 }
 
 retune_fft_impl::retune_fft_impl(
@@ -240,7 +241,7 @@ retune_fft_impl::retune_fft_impl(
     double fft_max, const std::string &sdir, uint64_t write_step_fft,
     double bucket_range, const std::string &tuning_ranges,
     const std::string &description, uint64_t rotate_secs, bool pre_fft,
-    bool tag_now)
+    bool tag_now, bool low_power_hold_down)
     : gr::block("retune_fft",
                 gr::io_signature::make(1 /* min inputs */, 1 /* max inputs */,
                                        vlen * sizeof(input_type)),
@@ -255,7 +256,8 @@ retune_fft_impl::retune_fft_impl(
       sdir_(sdir), write_step_fft_(write_step_fft),
       write_step_fft_count_(write_step_fft), bucket_range_(bucket_range),
       description_(description), rotate_secs_(rotate_secs), pre_fft_(pre_fft),
-      tag_now_(tag_now) {
+      tag_now_(tag_now), low_power_hold_down_(low_power_hold_down),
+      in_hold_down_(false) {
   bucket_offset_ = round(float((vlen_ - round(bucket_range_ * vlen_)) / 2));
   outbuf_p.reset(new boost::iostreams::filtering_ostream());
   message_port_register_out(TUNE_KEY);
@@ -263,6 +265,9 @@ retune_fft_impl::retune_fft_impl(
   message_port_register_in(CMD_KEY);
   set_msg_handler(CMD_KEY,
                   [this](const pmt::pmt_t &msg) { next_retune_(host_now_()); });
+  if (low_power_hold_down_ && !stare_mode_) {
+    set_tag_propagation_policy(TPP_DONT);
+  }
 }
 
 retune_fft_impl::~retune_fft_impl() { close_(); }
@@ -299,6 +304,9 @@ void retune_fft_impl::retune_now_() {
   const double host_now = host_now_();
   send_retune_(tune_freq_);
   next_retune_(host_now);
+  if (low_power_hold_down_ && !stare_mode_) {
+    in_hold_down_ = true;
+  }
 }
 
 void retune_fft_impl::write_items_(const input_type *in) {
@@ -328,6 +336,19 @@ size_t retune_fft_impl::process_items_(size_t c, const input_type *&in,
       // avoids having to use a static skip_fft_count setting.
       input_type in_max = *std::max_element(in, in + nfft_);
       if (in_max < fft_min_) {
+        if (in_hold_down_) {
+          in_hold_down_ = false;
+          std::stringstream str;
+          str << name() << unique_id();
+          pmt::pmt_t _id = pmt::string_to_symbol(str.str());
+          this->add_item_tag(1, nitems_written(1), RX_TIME_KEY,
+                             make_rx_time_key_(last_rx_time_), _id);
+          this->add_item_tag(1, nitems_written(1), RX_FREQ_KEY,
+                             pmt::from_double(last_rx_freq_), _id);
+        }
+        continue;
+      }
+      if (in_hold_down_ && total_tune_count_ > 1) {
         continue;
       }
       std::memcpy((void *)fft_output, (const void *)in,

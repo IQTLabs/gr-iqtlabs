@@ -49,6 +49,8 @@ documentation: |-
     rotate_secs: if > 0, use a new epoch timestamped directory every N seconds.
     pre_fft: if True, tuning is controlled by the retune_pre_fft block.
     tag_now: if True, send "tag:now" tag along with tuning message.
+    low_power_hold_down: if True, suppress samples between sending a retune message
+                         and observing low power (Ettus retune delay workaround).
 
   example JSON output:
     { "ts": <epoch time>, "sweep start": <epoch time>,
@@ -65,7 +67,8 @@ templates:
     iqtlabs.retune_fft(${tag}, ${vlen}, ${nfft}, ${samp_rate}, ${freq_start},
     ${freq_end}, ${tune_step_hz}, ${tune_step_fft}, ${skip_tune_step_fft},
     ${fft_min}, ${fft_max}, ${sdir}, ${write_step_fft}, ${bucket_range},
-    ${tuning_ranges}, ${description}, ${rotate_secs}, ${pre_fft}, ${tag_now})
+    ${tuning_ranges}, ${description}, ${rotate_secs}, ${pre_fft}, ${tag_now},
+    ${low_power_hold_down))
 
 cpp_templates:
   includes: ['#include <gnuradio/iqtlabs/retune_fft.h>']
@@ -75,7 +78,7 @@ cpp_templates:
     ${samp_rate}, ${freq_start}, ${freq_end}, ${tune_step_hz}, ${tune_step_fft},
     ${skip_tune_step_fft}, ${fft_min}, ${fft_max}, ${sdir}, ${write_step_fft},
     ${bucket_range}, ${tuning_ranges}, ${description}, ${rotate_secs},
-    ${pre_fft}, ${tag_now});
+    ${pre_fft}, ${tag_now}, ${low_power_hold_down));
   link: ['libgnuradio-iqtlabs.so']
 
 asserts:
@@ -123,6 +126,8 @@ parameters:
   - id: rotate_secs
     dtype: int
   - id: tag_now
+    dtype: bool
+  - id: low_power_hold_down
     dtype: bool
 
 inputs:
