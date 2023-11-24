@@ -243,6 +243,7 @@ public:
   size_t pending_retune_;
   size_t total_tune_count_;
   std::vector<tuning_range_t> tuning_ranges_;
+  bool stare_mode_;
 };
 } /* namespace iqtlabs */
 } /* namespace gr */

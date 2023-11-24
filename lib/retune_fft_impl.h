@@ -250,6 +250,7 @@ private:
   std::string description_;
   bool pre_fft_;
   bool tag_now_;
+  bool low_power_hold_down_;
 
   double fft_min_;
   double fft_max_;
@@ -259,6 +260,7 @@ private:
   size_t sample_count_;
   uint64_t write_step_fft_count_;
   size_t bucket_offset_;
+  bool in_hold_down_;
 
   boost::scoped_ptr<boost::iostreams::filtering_ostream> outbuf_p;
   std::string file_;
@@ -271,7 +273,7 @@ public:
                   const std::string &sdir, uint64_t write_step_fft,
                   double bucket_range, const std::string &tuning_ranges,
                   const std::string &description, uint64_t rotate_secs,
-                  bool pre_fft, bool tag_now);
+                  bool pre_fft, bool tag_now, bool low_power_hold_down);
   ~retune_fft_impl();
   void forecast(int noutput_items, gr_vector_int &ninput_items_required);
   int general_work(int noutput_items, gr_vector_int &ninput_items,
