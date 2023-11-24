@@ -49,8 +49,9 @@ documentation: |-
     rotate_secs: if > 0, use a new epoch timestamped directory every N seconds.
     pre_fft: if True, tuning is controlled by the retune_pre_fft block.
     tag_now: if True, send "tag:now" tag along with tuning message.
-    low_power_hold_down: if True, suppress samples between sending a retune message
-                         and observing low power (Ettus retune delay workaround).
+    low_power_hold_down: if True, suppress samples between sending a retune
+                         message and observing low power (Ettus retune delay
+                         workaround).
 
   example JSON output:
     { "ts": <epoch time>, "sweep start": <epoch time>,
