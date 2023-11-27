@@ -322,9 +322,8 @@ void retune_fft_impl::sum_items_(const input_type *in) {
   }
 }
 
-size_t retune_fft_impl::process_items_(size_t c, const input_type *&in,
-                                       const input_type *&fft_output) {
-  size_t fft_output_items = 0;
+void retune_fft_impl::process_items_(size_t c, const input_type *&in,
+                                     const input_type *&fft_output) {
   for (size_t i = 0; i < c; ++i) {
     for (size_t j = 0; j < (vlen_ / nfft_); ++j, in += nfft_) {
       if (skip_fft_count_) {
@@ -354,10 +353,10 @@ size_t retune_fft_impl::process_items_(size_t c, const input_type *&in,
       std::memcpy((void *)fft_output, (const void *)in,
                   nfft_ * sizeof(input_type));
       fft_output += nfft_;
+      produce(1, 1);
       write_items_(in);
       sum_items_(in);
       ++sample_count_;
-      ++fft_output_items;
       if (need_retune_(1)) {
         if (!pre_fft_) {
           retune_now_();
@@ -365,7 +364,6 @@ size_t retune_fft_impl::process_items_(size_t c, const input_type *&in,
       }
     }
   }
-  return fft_output_items;
 }
 
 void retune_fft_impl::forecast(int noutput_items,
@@ -478,10 +476,9 @@ void retune_fft_impl::process_tags_(const input_type *in, size_t in_count,
   std::vector<double> rx_times;
   get_tags_in_window(all_tags, 0, 0, in_count);
   get_tags(tag_, all_tags, rx_freq_tags, rx_times, in_count);
-  size_t fft_output_items = 0;
 
   if (rx_freq_tags.empty()) {
-    fft_output_items += process_items_(in_count, in, fft_output);
+    process_items_(in_count, in, fft_output);
   } else {
     for (size_t t = 0; t < rx_freq_tags.size(); ++t) {
       const auto &tag = rx_freq_tags[t];
@@ -490,7 +487,7 @@ void retune_fft_impl::process_tags_(const input_type *in, size_t in_count,
       in_first += rel;
 
       if (rel > 0) {
-        fft_output_items += process_items_(rel, in, fft_output);
+        process_items_(rel, in, fft_output);
       }
 
       const uint64_t rx_freq = (uint64_t)pmt::to_double(tag.value);
@@ -502,8 +499,6 @@ void retune_fft_impl::process_tags_(const input_type *in, size_t in_count,
       process_buckets_(rx_freq, rx_time);
     }
   }
-
-  produce(1, fft_output_items);
 }
 
 int retune_fft_impl::general_work(int noutput_items,
@@ -518,7 +513,6 @@ int retune_fft_impl::general_work(int noutput_items,
     std::copy(from, to, out);
     out_buf_.erase(from, to);
     produce(0, leftover);
-    produce(1, 0);
     return WORK_CALLED_PRODUCE;
   }
 
@@ -531,7 +525,6 @@ int retune_fft_impl::general_work(int noutput_items,
   size_t in_first = nitems_read(0);
   process_tags_(in, in_count, in_first, fft_output);
   consume_each(in_count);
-  produce(0, 0);
 
   return WORK_CALLED_PRODUCE;
 }
