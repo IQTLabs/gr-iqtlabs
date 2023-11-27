@@ -239,13 +239,16 @@ typedef struct output_item {
 
 class image_inference_impl : public image_inference, base_impl {
 private:
-  int x_, y_, vlen_, norm_type_, colormap_, interpolation_, flip_;
+  int x_, y_, vlen_, norm_type_, colormap_, interpolation_, flip_, max_rows_;
   uint64_t last_rx_freq_;
   double convert_alpha_, norm_alpha_, norm_beta_, last_rx_time_,
       min_peak_points_, confidence_;
+  double points_min_, points_max_;
   boost::lockfree::spsc_queue<output_item_type> inference_q_{MAX_INFERENCE};
   boost::lockfree::spsc_queue<std::string> json_q_{MAX_INFERENCE};
-  boost::scoped_ptr<cv::Mat> cmapped_buffer_, resized_buffer_, points_buffer_;
+  boost::scoped_ptr<cv::Mat> cmapped_buffer_, resized_buffer_,
+      normalized_buffer_;
+  cv::Mat *points_buffer_;
   std::string image_dir_;
   pmt::pmt_t tag_;
   std::deque<output_type> out_buf_;
@@ -271,7 +274,8 @@ public:
                        double norm_alpha, double norm_beta, int norm_type,
                        int colormap, int interpolation, int flip,
                        double min_peak_points, const std::string &model_server,
-                       const std::string &model_name, double confidence);
+                       const std::string &model_name, double confidence,
+                       int max_rows);
   ~image_inference_impl();
   int general_work(int noutput_items, gr_vector_int &ninput_items,
                    gr_vector_const_void_star &input_items,

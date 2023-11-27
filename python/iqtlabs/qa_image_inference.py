@@ -286,6 +286,7 @@ class qa_image_inference(gr_unittest.TestCase):
                 f"localhost:{port}",
                 model_name,
                 0.8,
+                1024,
             )
             c2r = blocks.complex_to_real(1)
             stream2vector = blocks.stream_to_vector(gr.sizeof_float, fft_size)

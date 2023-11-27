@@ -9,7 +9,8 @@ templates:
   make: >
     iqtlabs.image_inference(${tag}, ${vlen}, ${x}, ${y}, ${image_dir},
     ${convert_alpha}, ${norm_alpha}, ${norm_beta}, ${norm_type}, ${colormap},
-    ${interpolation}, ${model_server}, ${model_name}, ${confidence})
+    ${interpolation}, ${model_server}, ${model_name}, ${confidence},
+    ${max_rows})
 
 cpp_templates:
   includes: ['#include <gnuradio/iqtlabs/image_inference.h>']
@@ -18,7 +19,7 @@ cpp_templates:
     this->${id} = gr::iqtlabs::image_inference::make(${tag}, ${vlen},
     ${x}, ${y}, ${image_dir}, ${convert_alpha}, ${norm_alpha}, ${norm_beta},
     ${norm_type}, ${colormap}, ${interpolation}, ${model_server},
-    ${model_name}, ${confidence});
+    ${model_name}, ${confidence}, ${max_rows});
   link: ['libgnuradio-iqtlabs.so']
 
 
@@ -63,6 +64,8 @@ parameters:
     dtype: str
   - id: confidence
     dtype: float
+  - id: max_rows
+    dtype: int
 
 asserts:
   - ${ tag != "" }
