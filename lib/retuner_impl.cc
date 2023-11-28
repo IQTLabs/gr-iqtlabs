@@ -280,8 +280,12 @@ void retuner_impl::parse_tuning_ranges_(const std::string &tuning_ranges) {
       add_range_(tuning_range_freq_start, tuning_range_freq_end);
     }
   }
-  tune_freq_ = tuning_ranges_[0].freq_start;
   stare_mode_ = tuning_ranges_[0].steps == 1;
+  tune_freq_ = tuning_ranges_[0].freq_start;
+  if (stare_mode_) {
+    tune_freq_ +=
+        (tuning_ranges_[0].freq_end - tuning_ranges_[0].freq_start) / 2;
+  }
 }
 
 void retuner_impl::next_retune_(double host_now) {
