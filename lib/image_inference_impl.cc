@@ -476,10 +476,14 @@ void image_inference_impl::get_inference_() {
                 cv::Rect rssi_rect(int(tlx * xf), int(tly * yf), int(w * xf),
                                    int(h * yf));
                 cv::Mat rssi_points = (*output_item.points_buffer)(rssi_rect);
+                double rssi_min, rssi_max;
+                cv::minMaxLoc(rssi_points, &rssi_min, &rssi_max);
                 float rssi = cv::mean(rssi_points)[0];
                 auto &augmented = results_json[prediction_class.key()][i];
                 augmented["rssi"] = rssi;
                 augmented["rssi_samples"] = rssi_points.cols * rssi_points.rows;
+                augmented["rssi_min"] = rssi_min;
+                augmented["rssi_max"] = rssi_max;
                 if (rssi >= min_peak_points_) {
                   ++rendered_predictions;
                   cv::rectangle(*output_item.image_buffer, bbox_rect, white);
