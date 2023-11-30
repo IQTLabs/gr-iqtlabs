@@ -295,8 +295,8 @@ void image_inference_impl::process_items_(size_t c, const input_type *&in) {
     double points_min, points_max;
     cv::minMaxLoc(new_rows, &points_min, &points_max);
     if (points_buffer_->empty()) {
-      points_min_ = points_min_;
-      points_max_ = points_max_;
+      points_min_ = points_min;
+      points_max_ = points_max;
     } else {
       points_min_ = std::min(points_min_, points_min);
       points_max_ = std::max(points_max_, points_max);
