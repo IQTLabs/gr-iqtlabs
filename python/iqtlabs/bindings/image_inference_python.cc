@@ -14,7 +14,7 @@
 /* BINDTOOL_GEN_AUTOMATIC(0)                                                       */
 /* BINDTOOL_USE_PYGCCXML(0)                                                        */
 /* BINDTOOL_HEADER_FILE(image_inference.h)                                        */
-/* BINDTOOL_HEADER_FILE_HASH(b39ddd6fde28ff8492f4a3e4bcec592a)                     */
+/* BINDTOOL_HEADER_FILE_HASH(671ed286da7e9aebf3601fda93c48ca7)                     */
 /***********************************************************************************/
 
 #include <pybind11/complex.h>
@@ -56,6 +56,9 @@ void bind_image_inference(py::module& m)
              py::arg("model_name"),
              py::arg("confidence"),
              py::arg("max_rows"),
+             py::arg("rotate_secs"),
+             py::arg("n_image"),
+             py::arg("n_inference"),
              D(image_inference, make))
 
 
