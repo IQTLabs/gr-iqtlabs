@@ -219,11 +219,12 @@ image_inference::sptr image_inference::make(
     const std::string &image_dir, double convert_alpha, double norm_alpha,
     double norm_beta, int norm_type, int colormap, int interpolation, int flip,
     double min_peak_points, const std::string &model_server,
-    const std::string &model_name, double confidence, int max_rows) {
+    const std::string &model_name, double confidence, int max_rows,
+    int rotate_secs, int n_image, int n_inference) {
   return gnuradio::make_block_sptr<image_inference_impl>(
       tag, vlen, x, y, image_dir, convert_alpha, norm_alpha, norm_beta,
       norm_type, colormap, interpolation, flip, min_peak_points, model_server,
-      model_name, confidence, max_rows);
+      model_name, confidence, max_rows, rotate_secs, n_image, n_inference);
 }
 
 image_inference_impl::image_inference_impl(
@@ -231,7 +232,8 @@ image_inference_impl::image_inference_impl(
     const std::string &image_dir, double convert_alpha, double norm_alpha,
     double norm_beta, int norm_type, int colormap, int interpolation, int flip,
     double min_peak_points, const std::string &model_server,
-    const std::string &model_name, double confidence, int max_rows)
+    const std::string &model_name, double confidence, int max_rows,
+    int rotate_secs, int n_image, int n_inference)
     : gr::block("image_inference",
                 gr::io_signature::make(1 /* min inputs */, 1 /* max inputs */,
                                        vlen * sizeof(input_type)),
@@ -242,8 +244,10 @@ image_inference_impl::image_inference_impl(
       norm_alpha_(norm_alpha), norm_beta_(norm_beta), norm_type_(norm_type),
       colormap_(colormap), interpolation_(interpolation), flip_(flip),
       min_peak_points_(min_peak_points), model_name_(model_name),
-      confidence_(confidence), max_rows_(max_rows), running_(true),
-      inference_connected_(false) {
+      confidence_(confidence), max_rows_(max_rows), rotate_secs_(rotate_secs),
+      n_image_(n_image), n_inference_(n_inference), running_(true),
+      inference_connected_(false), image_count_(0), prediction_image_count_(0),
+      inference_count_(0) {
   points_buffer_ = new cv::Mat(cv::Size(vlen_, 0), CV_32F, cv::Scalar::all(0));
   normalized_buffer_.reset(
       new cv::Mat(cv::Size(vlen_, 0), CV_32F, cv::Scalar::all(0)));
@@ -327,7 +331,8 @@ void image_inference_impl::create_image_() {
 }
 
 std::string image_inference_impl::write_image_(
-    const std::string &prefix, output_item_type &output_item,
+    const std::string &secs_image_dir, const std::string &prefix,
+    output_item_type &output_item,
     boost::scoped_ptr<std::vector<unsigned char>> &encoded_buffer) {
   encoded_buffer.reset(new std::vector<unsigned char>());
   cv::imencode(IMAGE_EXT, *output_item.image_buffer, *encoded_buffer);
@@ -336,8 +341,8 @@ std::string image_inference_impl::write_image_(
       std::to_string(uint64_t(x_)) + "x" + std::to_string(uint64_t(y_)) + "_" +
       std::to_string(uint64_t(output_item.rx_freq)) + "Hz";
   std::string image_file_png = image_file_base + IMAGE_EXT;
-  std::string dot_image_file_png = image_dir_ + "/." + image_file_png;
-  std::string full_image_file_png = image_dir_ + "/" + image_file_png;
+  std::string dot_image_file_png = secs_image_dir + "." + image_file_png;
+  std::string full_image_file_png = secs_image_dir + image_file_png;
   std::ofstream image_out;
   image_out.open(dot_image_file_png, std::ios::binary | std::ios::out);
   image_out.write((const char *)encoded_buffer->data(), encoded_buffer->size());
@@ -389,12 +394,17 @@ void image_inference_impl::get_inference_() {
     metadata_json["ts"] = host_now_str_(output_item.ts);
     metadata_json["rx_freq"] = std::to_string(output_item.rx_freq);
     metadata_json["orig_rows"] = output_item.points_buffer->rows;
-    metadata_json["image_path"] =
-        write_image_("image", output_item, encoded_buffer);
+
+    const std::string secs_image_dir = secs_dir(image_dir_, rotate_secs_);
+    if (n_image_ == 0 || ++image_count_ % n_image_ == 0) {
+      metadata_json["image_path"] =
+          write_image_(secs_image_dir, "image", output_item, encoded_buffer);
+    }
 
     nlohmann::json output_json;
 
-    if (host_.size() && port_.size()) {
+    if ((host_.size() && port_.size()) &&
+        (n_inference_ == 0 || ++inference_count_ % n_inference_ == 0)) {
       const std::string_view body(
           reinterpret_cast<char const *>(encoded_buffer->data()),
           encoded_buffer->size());
@@ -501,8 +511,11 @@ void image_inference_impl::get_inference_() {
           }
           output_json["predictions"] = results_json;
           if (rendered_predictions) {
-            metadata_json["predictions_image_path"] =
-                write_image_("predictions_image", output_item, encoded_buffer);
+            if (n_image_ == 0 || ++prediction_image_count_ % n_image_ == 0) {
+              metadata_json["predictions_image_path"] =
+                  write_image_(secs_image_dir, "predictions_image", output_item,
+                               encoded_buffer);
+            }
           }
         } else {
           output_json["error"] = "invalid json: " + results;

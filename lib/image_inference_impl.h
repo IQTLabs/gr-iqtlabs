@@ -239,7 +239,9 @@ typedef struct output_item {
 
 class image_inference_impl : public image_inference, base_impl {
 private:
-  int x_, y_, vlen_, norm_type_, colormap_, interpolation_, flip_, max_rows_;
+  int x_, y_, vlen_, norm_type_, colormap_, interpolation_, flip_, max_rows_,
+      rotate_secs_, n_image_, n_inference_, image_count_,
+      prediction_image_count_, inference_count_;
   uint64_t last_rx_freq_;
   double convert_alpha_, norm_alpha_, norm_beta_, last_rx_time_,
       min_peak_points_, confidence_;
@@ -265,7 +267,8 @@ private:
   void delete_output_item_(output_item_type &output_item);
   void delete_inference_();
   std::string
-  write_image_(const std::string &prefix, output_item_type &output_item,
+  write_image_(const std::string &secs_image_dir, const std::string &prefix,
+               output_item_type &output_item,
                boost::scoped_ptr<std::vector<unsigned char>> &encoded_buffer);
 
 public:
@@ -275,7 +278,8 @@ public:
                        int colormap, int interpolation, int flip,
                        double min_peak_points, const std::string &model_server,
                        const std::string &model_name, double confidence,
-                       int max_rows);
+                       int max_rows, int rotate_secs, int n_image,
+                       int n_inference);
   ~image_inference_impl();
   int general_work(int noutput_items, gr_vector_int &ninput_items,
                    gr_vector_const_void_star &input_items,

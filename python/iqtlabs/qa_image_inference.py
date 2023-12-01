@@ -287,6 +287,9 @@ class qa_image_inference(gr_unittest.TestCase):
                 model_name,
                 0.8,
                 1024,
+                30,
+                0,
+                0
             )
             c2r = blocks.complex_to_real(1)
             stream2vector = blocks.stream_to_vector(gr.sizeof_float, fft_size)
@@ -306,7 +309,7 @@ class qa_image_inference(gr_unittest.TestCase):
             time.sleep(test_time)
             self.tb.stop()
             self.tb.wait()
-            image_files = [f for f in glob.glob(f"{tmpdir}/*image*png")]
+            image_files = [f for f in glob.glob(f"{tmpdir}/**/*image*png")]
             self.assertGreater(len(image_files), 2)
             for image_file in image_files:
                 stat = os.stat(image_file)
