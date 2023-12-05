@@ -367,7 +367,6 @@ void image_inference_impl::get_inference_() {
     }
     output_item_type output_item;
     inference_q_.pop(output_item);
-    boost::scoped_ptr<std::vector<unsigned char>> encoded_buffer;
 
     output_item.image_buffer =
         new cv::Mat(cv::Size(x_, y_), CV_8UC3, cv::Scalar::all(0));
@@ -386,6 +385,7 @@ void image_inference_impl::get_inference_() {
     if (flip_ == -1 || flip_ == 0 || flip_ == 1) {
       cv::flip(*output_item.image_buffer, *output_item.image_buffer, flip_);
     }
+    boost::scoped_ptr<std::vector<unsigned char>> encoded_buffer;
 
     nlohmann::json metadata_json;
     metadata_json["rssi_max"] = std::to_string(output_item.points_max);
@@ -405,6 +405,10 @@ void image_inference_impl::get_inference_() {
 
     if ((host_.size() && port_.size()) &&
         (n_inference_ == 0 || ++inference_count_ % n_inference_ == 0)) {
+      if (!metadata_json.contains("image_path")) {
+        metadata_json["image_path"] =
+            write_image_(secs_image_dir, "image", output_item, encoded_buffer);
+      }
       const std::string_view body(
           reinterpret_cast<char const *>(encoded_buffer->data()),
           encoded_buffer->size());
