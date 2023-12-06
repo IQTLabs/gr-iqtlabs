@@ -246,8 +246,7 @@ image_inference_impl::image_inference_impl(
       min_peak_points_(min_peak_points), model_name_(model_name),
       confidence_(confidence), max_rows_(max_rows), rotate_secs_(rotate_secs),
       n_image_(n_image), n_inference_(n_inference), running_(true),
-      inference_connected_(false), image_count_(0), prediction_image_count_(0),
-      inference_count_(0) {
+      inference_connected_(false), image_count_(0), inference_count_(0) {
   points_buffer_ = new cv::Mat(cv::Size(vlen_, 0), CV_32F, cv::Scalar::all(0));
   normalized_buffer_.reset(
       new cv::Mat(cv::Size(vlen_, 0), CV_32F, cv::Scalar::all(0)));
@@ -502,8 +501,8 @@ void image_inference_impl::get_inference_() {
                   ++rendered_predictions;
                   cv::rectangle(*output_item.image_buffer, bbox_rect, white);
                   std::string label = prediction_class.key() + ": conf " +
-                                      std::to_string(conf) + ", RSSI " +
-                                      std::to_string(rssi);
+                                      std::to_string(conf) + ", RSSI max " +
+                                      std::to_string(rssi_max);
                   cv::putText(*output_item.image_buffer, label,
                               cv::Point(cx - 10, cy - 10),
                               cv::FONT_HERSHEY_SIMPLEX, 0.5, white, 2);
@@ -515,11 +514,9 @@ void image_inference_impl::get_inference_() {
           }
           output_json["predictions"] = results_json;
           if (rendered_predictions) {
-            if (n_image_ == 0 || ++prediction_image_count_ % n_image_ == 0) {
-              metadata_json["predictions_image_path"] =
-                  write_image_(secs_image_dir, "predictions_image", output_item,
-                               encoded_buffer);
-            }
+            metadata_json["predictions_image_path"] =
+                write_image_(secs_image_dir, "predictions_image", output_item,
+                             encoded_buffer);
           }
         } else {
           output_json["error"] = "invalid json: " + results;
