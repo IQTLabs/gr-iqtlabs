@@ -3,6 +3,46 @@ id: iqtlabs_image_inference
 label: image_inference
 category: '[iqtlabs]'
 flags: [python, cpp]
+documentation: |-
+  This block accepts dB values from retune_fft, reformats them
+  as images and runs inference on them via torchserve. The inference
+  results are used to annotate the images with bounding boxes
+  and RSSI values (the bounding boxes are used to select the original
+  dB power values within the boxes).
+
+  Torchserve inference is done in a background thread, to avoid
+  blocking the flowgraph. Torchserve batching is currently not done,
+  to trade inference latency for efficiency (generally, the inference
+  response time is much less than scanner dwell time). Also currently,
+  only one model name/server is supported.
+
+  input:
+    vector of floats, representing FFT dB power values,
+    tagged with center frequency.
+  output:
+    JSON inference results.
+
+  parameters:
+    tag: received frequency tag name.
+    vlen: length of FFT dB vector.
+    x: size in pixels of image to produce (x axis)
+    y: size in pixels of image to produce (y axis)
+    image_dir: directory to accumulate image results and logs under.
+    convert_alpha: alpha value when converting from dB power to image.
+    norm_alpha: alpha value to cv::normalize().
+    norm_beta: beta value to cv::normalize().
+    norm_type: type of normalization to cv::normalize().
+    colormap: type of colormap to cv::applyColorMap().
+    interpolation: type of interpolation to cv::resize().
+    flip: if -1, 0, or 1, type of transform to apply to image in cv::flip().
+    min_peak_points: Only run inference on buckets with this minimum dB power.
+    model_name: if not empty, do torchserve inference with this model name.
+    model_server: if not empty, do torchserve inference to this address.
+    confidence: Only output inference results where confidence is greater.
+    max_rows: if > 0, use at most N dB input vectors per image.
+    rotate_secs: if > 0, use a new epoch timestamped directory every N seconds.
+    n_image: if > 0, only log 1/n_image images.
+    n_inference: if > 0, only run inference on 1/n_inference images.
 
 templates:
   imports: from gnuradio import iqtlabs

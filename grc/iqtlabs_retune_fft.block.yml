@@ -8,7 +8,10 @@ documentation: |-
   while annotating the output of a FFT block, outputing JSON objects
   (see https://github.com/iqtlabs/gamutRF for an example use case). Scanning
   is driven by counting FFT samples to decide when to retune by configurable
-  increments.
+  increments. If the radio does not accurately annotate samples with frequencies
+  and times, this block can gate on low power holddown (see below). If
+  the radio does accurately annotate, use the pre_retune block and
+  pre_fft = True.
 
   input:
     vector of floats, representing FFT bucket values,
