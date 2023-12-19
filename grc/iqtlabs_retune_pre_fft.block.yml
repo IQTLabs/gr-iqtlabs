@@ -3,6 +3,32 @@ id: iqtlabs_retune_pre_fft
 label: retune_pre_fft
 category: '[iqtlabs]'
 flags: [python, cpp]
+documentation: |-
+  This block commands a radio source block to scan across a frequency range,
+  based on a static count of samples per bucket, batching samples for
+  the succeeding FFT block as required. This block is used where the radio
+  accurately annotates samples with frequency values and times.
+
+  input:
+    stream of complex I/Q samples.
+  output:
+    batch of complex I/Q samples.
+
+  parameters:
+    nfft: number of FFT points.
+    fft_batch_size: number of sample vectors to send to succeeding FFT block.
+    tag: expected PMT tag containing center frequency
+         (generally "rx_freq" for Soapy or UHD sources).
+    freq_start: frequency to start scan at in Hz (overridden by tuning_ranges).
+    freq_end: frequency to end scan at in Hz (overridden by tuning_ranges).
+    tune_step_hz: increment frequency by this value each retuning step.
+    tune_step_fft: count at least this many FFT vectors between retuning steps.
+    skip_tune_step_fft: discard this many FFT vectors before counting
+                        (to allow for radio to stabilize after retuning)
+    tuning_ranges: if not empty, a comma separated list of tuning ranges
+                   in ascending order (non-linear scan), e.g.
+                   "2.2e9-2.4e9,5.1e9-5.9e9".
+    tag_now: if True, send "tag:now" tag along with tuning message.
 
 templates:
   imports: from gnuradio import iqtlabs

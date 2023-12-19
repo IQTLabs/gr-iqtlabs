@@ -6,11 +6,16 @@ This repo contains gnuradio OOT blocks, used by IQTLabs projects (including [gam
 
 ### [image_inference](grc/iqtlabs_image_inference.block.yml)
 
-Produce a spectrogram like image that may be used by machine learning pipelines to infer the presence of signals in FFT output.
+Produce a spectrogram like image that may be used by machine learning pipelines (typically torchserve based) to infer the presence of signals in FFT output.
+
+### [retune_pre_fft](grc/iqtlabs_retune_pre_fft.block.yml)
+
+Command a source block with PMT tuning messages to sweep over a set of frequency ranges, retuning after a configurable nunber of FFT points are received over a configurable threshold.
 
 ### [retune_fft](grc/iqtlabs_retune_fft.block.yml)
 
-Command a source block with PMT tuning messages to sweep over a set of frequency ranges, retuning after a configurable nunber of FFT points are received over a configurable threshold.
+Command a source block with PMT tuning messages to sweep over a set of frequency ranges, retuning after a configurable nunber of FFT points are received over a configurable threshold
+(while validating power values are in a valid range).
 
 ### [tuneable_test_source](grc/iqtlabs_tuneable_test_source.block.yml)
 
