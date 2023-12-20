@@ -253,6 +253,7 @@ int vkfft_short_impl::work(int noutput_items,
     vkfft_offload((char *)&buffer[0], (char *)&out[buffer_index]);
   }
 
+  consume_each(noutput_items);
   return noutput_items;
 }
 

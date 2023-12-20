@@ -236,6 +236,7 @@ int vkfft_impl::work(int noutput_items, gr_vector_const_void_star &input_items,
     vkfft_offload((char *)&in[buffer_index], (char *)&out[buffer_index]);
   }
 
+  consume_each(noutput_items);
   return noutput_items;
 }
 
