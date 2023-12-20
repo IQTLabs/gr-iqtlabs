@@ -267,6 +267,7 @@ int retune_pre_fft_impl::work(int noutput_items,
   std::vector<double> rx_times;
   get_tags_in_window(all_tags, 0, 0, in_count);
   get_tags(tag_, all_tags, rx_freq_tags, rx_times, in_count);
+  consume_each(in_count);
 
   if (skip_fft_count_) {
     if (out_ffts > skip_fft_count_) {
