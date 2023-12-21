@@ -292,11 +292,10 @@ image_inference_impl::~image_inference_impl() {
 }
 
 void image_inference_impl::process_items_(size_t c, const input_type *&in) {
-  if (points_buffer_->rows < max_rows_) {
-    int clip_c = std::min(max_rows_ - points_buffer_->rows, (int)c);
-    cv::Mat new_rows(cv::Size(vlen_, clip_c), CV_32F, (void *)in);
+  for (size_t i = 0; i < c; ++i, in += vlen_) {
+    cv::Mat new_row(cv::Size(vlen_, 1), CV_32F, (void *)in);
     double points_min, points_max;
-    cv::minMaxLoc(new_rows, &points_min, &points_max);
+    cv::minMaxLoc(new_row, &points_min, &points_max);
     if (points_buffer_->empty()) {
       points_min_ = points_min;
       points_max_ = points_max;
@@ -304,14 +303,16 @@ void image_inference_impl::process_items_(size_t c, const input_type *&in) {
       points_min_ = std::min(points_min_, points_min);
       points_max_ = std::max(points_max_, points_max);
     }
-    points_buffer_->push_back(new_rows);
+    points_buffer_->push_back(new_row);
+    if (points_buffer_->rows == max_rows_) {
+      create_image_();
+    }
   }
-  in += (vlen_ * c);
 }
 
 void image_inference_impl::create_image_() {
   if (!points_buffer_->empty()) {
-    if (points_max_ > min_peak_points_) {
+    if (points_max_ > min_peak_points_ && points_buffer_->rows >= max_rows_) {
       output_item_type output_item;
       output_item.rx_freq = last_rx_freq_;
       output_item.ts = last_rx_time_;
