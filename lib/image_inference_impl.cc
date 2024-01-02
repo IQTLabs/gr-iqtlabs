@@ -266,7 +266,7 @@ image_inference_impl::image_inference_impl(
   }
   stream_.reset(new boost::beast::tcp_stream(ioc_));
   inference_thread_.reset(
-      new std::thread(&image_inference_impl::get_inference_, this));
+      new std::thread(&image_inference_impl::background_run_inference_, this));
 }
 
 void image_inference_impl::delete_output_item_(output_item_type &output_item) {
@@ -282,13 +282,18 @@ void image_inference_impl::delete_inference_() {
   delete_output_item_(output_item);
 }
 
-image_inference_impl::~image_inference_impl() {
+bool image_inference_impl::stop() {
+  d_logger->info("stopping");
   running_ = false;
   inference_thread_->join();
-  while (!inference_q_.empty()) {
-    delete_inference_();
+  run_inference_();
+  d_logger->info("inference queue empty: {}", inference_q_.empty());
+  if (inference_connected_) {
+    boost::beast::error_code ec;
+    stream_->socket().shutdown(boost::asio::ip::tcp::socket::shutdown_both, ec);
   }
   delete points_buffer_;
+  return true;
 }
 
 void image_inference_impl::process_items_(size_t c, const input_type *&in) {
@@ -312,7 +317,8 @@ void image_inference_impl::process_items_(size_t c, const input_type *&in) {
 
 void image_inference_impl::create_image_() {
   if (!points_buffer_->empty()) {
-    if (points_max_ > min_peak_points_ && points_buffer_->rows >= max_rows_) {
+    if (points_max_ > min_peak_points_ && points_buffer_->rows >= max_rows_ &&
+        last_rx_freq_) {
       output_item_type output_item;
       output_item.rx_freq = last_rx_freq_;
       output_item.ts = last_rx_time_;
@@ -351,20 +357,16 @@ std::string image_inference_impl::write_image_(
   return full_image_file_png;
 }
 
-void image_inference_impl::get_inference_() {
+void image_inference_impl::background_run_inference_() {
+  while (running_) {
+    run_inference_();
+    sleep(0.001);
+  }
+}
+
+void image_inference_impl::run_inference_() {
   boost::beast::error_code ec;
-  for (;;) {
-    if (!running_) {
-      if (inference_connected_) {
-        stream_->socket().shutdown(boost::asio::ip::tcp::socket::shutdown_both,
-                                   ec);
-      }
-      return;
-    }
-    if (inference_q_.empty()) {
-      sleep(0.001);
-      continue;
-    }
+  while (!inference_q_.empty()) {
     output_item_type output_item;
     inference_q_.pop(output_item);
 
@@ -525,8 +527,8 @@ void image_inference_impl::get_inference_() {
         }
       }
     }
-    // double new line to facilitate json parsing, since prediction may contain
-    // new lines.
+    // double new line to facilitate json parsing, since prediction may
+    // contain new lines.
     output_json["metadata"] = metadata_json;
     json_q_.push(output_json.dump() + "\n\n");
     delete_output_item_(output_item);
@@ -576,7 +578,9 @@ int image_inference_impl::general_work(int noutput_items,
       }
 
       uint64_t rx_freq = (uint64_t)pmt::to_double(tag.value);
-      create_image_();
+      if (rx_freq != last_rx_freq_) {
+        create_image_();
+      }
       last_rx_freq_ = rx_freq;
       last_rx_time_ = rx_time;
     }
