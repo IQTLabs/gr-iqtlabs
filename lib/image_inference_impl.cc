@@ -246,7 +246,8 @@ image_inference_impl::image_inference_impl(
       min_peak_points_(min_peak_points), model_name_(model_name),
       confidence_(confidence), max_rows_(max_rows), rotate_secs_(rotate_secs),
       n_image_(n_image), n_inference_(n_inference), running_(true),
-      inference_connected_(false), image_count_(0), inference_count_(0) {
+      inference_connected_(false), image_count_(0), inference_count_(0),
+      rowc_(0) {
   points_buffer_ = new cv::Mat(cv::Size(vlen_, 0), CV_32F, cv::Scalar::all(0));
   normalized_buffer_.reset(
       new cv::Mat(cv::Size(vlen_, 0), CV_32F, cv::Scalar::all(0)));
@@ -299,6 +300,7 @@ bool image_inference_impl::stop() {
 void image_inference_impl::process_items_(size_t c, const input_type *&in) {
   for (size_t i = 0; i < c; ++i, in += vlen_) {
     cv::Mat new_row(cv::Size(vlen_, 1), CV_32F, (void *)in);
+    ++rowc_;
     double points_min, points_max;
     cv::minMaxLoc(new_row, &points_min, &points_max);
     if (points_buffer_->empty()) {
@@ -326,6 +328,7 @@ void image_inference_impl::create_image_() {
       output_item.points_max = points_max_;
       output_item.points_buffer = points_buffer_;
       output_item.image_buffer = NULL;
+      output_item.rowc = rowc_;
       if (!inference_q_.push(output_item)) {
         d_logger->error("inference request queue full, size {}", MAX_INFERENCE);
         delete_output_item_(output_item);
@@ -343,7 +346,7 @@ std::string image_inference_impl::write_image_(
   encoded_buffer.reset(new std::vector<unsigned char>());
   cv::imencode(IMAGE_EXT, *output_item.image_buffer, *encoded_buffer);
   std::string image_file_base =
-      prefix + "_" + std::to_string(image_count_) + "_" +
+      prefix + "_" + std::to_string(output_item.rowc) + "_" +
       host_now_str_(output_item.ts) + "_" + std::to_string(uint64_t(x_)) + "x" +
       std::to_string(uint64_t(y_)) + "_" +
       std::to_string(uint64_t(output_item.rx_freq)) + "Hz";

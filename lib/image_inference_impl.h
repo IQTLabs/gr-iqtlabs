@@ -235,6 +235,7 @@ typedef struct output_item {
   double points_min;
   double points_mean;
   double points_max;
+  size_t rowc;
 } output_item_type;
 
 class image_inference_impl : public image_inference, base_impl {
@@ -242,6 +243,7 @@ private:
   int x_, y_, vlen_, norm_type_, colormap_, interpolation_, flip_, max_rows_,
       rotate_secs_, n_image_, n_inference_, image_count_, inference_count_;
   uint64_t last_rx_freq_;
+  size_t rowc_;
   double convert_alpha_, norm_alpha_, norm_beta_, last_rx_time_,
       min_peak_points_, confidence_;
   double points_min_, points_max_;
