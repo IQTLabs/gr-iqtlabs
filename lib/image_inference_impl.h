@@ -262,7 +262,8 @@ private:
 
   void process_items_(size_t c, const input_type *&in);
   void create_image_();
-  void get_inference_();
+  void run_inference_();
+  void background_run_inference_();
   void delete_output_item_(output_item_type &output_item);
   void delete_inference_();
   std::string
@@ -279,11 +280,11 @@ public:
                        const std::string &model_name, double confidence,
                        int max_rows, int rotate_secs, int n_image,
                        int n_inference);
-  ~image_inference_impl();
   int general_work(int noutput_items, gr_vector_int &ninput_items,
                    gr_vector_const_void_star &input_items,
                    gr_vector_void_star &output_items);
   void forecast(int noutput_items, gr_vector_int &ninput_items_required);
+  bool stop();
 };
 
 } // namespace iqtlabs
