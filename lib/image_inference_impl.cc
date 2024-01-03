@@ -343,8 +343,9 @@ std::string image_inference_impl::write_image_(
   encoded_buffer.reset(new std::vector<unsigned char>());
   cv::imencode(IMAGE_EXT, *output_item.image_buffer, *encoded_buffer);
   std::string image_file_base =
-      prefix + "_" + host_now_str_(output_item.ts) + "_" +
-      std::to_string(uint64_t(x_)) + "x" + std::to_string(uint64_t(y_)) + "_" +
+      prefix + "_" + std::to_string(image_count_) + "_" +
+      host_now_str_(output_item.ts) + "_" + std::to_string(uint64_t(x_)) + "x" +
+      std::to_string(uint64_t(y_)) + "_" +
       std::to_string(uint64_t(output_item.rx_freq)) + "Hz";
   std::string image_file_png = image_file_base + IMAGE_EXT;
   std::string dot_image_file_png = secs_image_dir + "." + image_file_png;
@@ -398,7 +399,8 @@ void image_inference_impl::run_inference_() {
     metadata_json["orig_rows"] = output_item.points_buffer->rows;
 
     const std::string secs_image_dir = secs_dir(image_dir_, rotate_secs_);
-    if (n_image_ == 0 || ++image_count_ % n_image_ == 0) {
+    ++image_count_;
+    if (n_image_ == 0 || image_count_ % n_image_ == 0) {
       metadata_json["image_path"] =
           write_image_(secs_image_dir, "image", output_item, encoded_buffer);
     }
