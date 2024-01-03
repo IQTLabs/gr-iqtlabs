@@ -334,7 +334,7 @@ void retune_fft_impl::process_items_(size_t c, const input_type *&in,
       // Ettus radios periodically output low power after retuning. This
       // avoids having to use a static skip_fft_count setting.
       input_type in_max = *std::max_element(in, in + nfft_);
-      if (in_max < fft_min_) {
+      if (0 && in_max < fft_min_) {
         if (in_hold_down_) {
           in_hold_down_ = false;
           std::stringstream str;
