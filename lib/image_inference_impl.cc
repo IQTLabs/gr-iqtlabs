@@ -505,12 +505,28 @@ void image_inference_impl::run_inference_() {
                 if (rssi >= min_peak_points_) {
                   ++rendered_predictions;
                   cv::rectangle(*output_item.image_buffer, bbox_rect, white);
-                  std::string label = prediction_class.key() + ": conf " +
-                                      std::to_string(conf) + ", RSSI max " +
-                                      std::to_string(rssi_max);
-                  cv::putText(*output_item.image_buffer, label,
-                              cv::Point(cx - 10, cy - 10),
-                              cv::FONT_HERSHEY_SIMPLEX, 0.5, white, 2);
+                  const auto fontFace = cv::FONT_HERSHEY_SIMPLEX;
+                  const auto lineStyle = cv::LINE_AA;
+                  const auto fontScale = 0.5;
+                  const auto thickness = 1;
+                  int baseLine = 0;
+                  cv::Size text_size = getTextSize(
+                      "placeholder", fontFace, fontScale, thickness, &baseLine);
+                  int text_gap = text_size.height * 1.5;
+                  std::stringstream class_label_stream;
+                  class_label_stream << std::fixed << std::setprecision(2);
+                  class_label_stream << prediction_class.key() << ": " << conf;
+                  std::stringstream rssi_label_stream;
+                  rssi_label_stream << std::fixed << std::setprecision(2);
+                  rssi_label_stream << "RSSI max: " << rssi_max;
+                  cv::putText(*output_item.image_buffer,
+                              class_label_stream.str(),
+                              cv::Point(cx - 10, cy - text_gap * 2), fontFace,
+                              fontScale, white, thickness, lineStyle, false);
+                  cv::putText(*output_item.image_buffer,
+                              rssi_label_stream.str(),
+                              cv::Point(cx - 10, cy - text_gap), fontFace,
+                              fontScale, white, thickness, lineStyle, false);
                 }
                 // TODO: add NMS
               }
