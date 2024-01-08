@@ -245,9 +245,70 @@ class qa_image_inference(gr_unittest.TestCase):
             return json.dumps(result, indent=2), 200
 
         try:
-            app.run(host="127.0.0.1", port=11001)
+            app.run(host="127.0.0.1", port=port)
         except RuntimeError:
             return
+
+    def run_flowgraph(self, tmpdir, x, y, fft_size, samp_rate, port, model_name):
+        test_file = os.path.join(tmpdir, "samples")
+        freq_divisor = 1e9
+        new_freq = 1e9 / 2
+        delay = 500
+        source = tuneable_test_source(freq_divisor)
+        strobe = blocks.message_strobe(pmt.to_pmt({"freq": new_freq}), delay)
+        image_inf = image_inference(
+            "rx_freq",
+            fft_size,
+            x,
+            y,
+            tmpdir,
+            255,
+            0,
+            1,
+            32,
+            20,
+            2,
+            0,
+            -1e9,
+            f"localhost:{port}",
+            model_name,
+            0.8,
+            1024,
+            30,
+            0,
+            0,
+        )
+        c2r = blocks.complex_to_real(1)
+        stream2vector = blocks.stream_to_vector(gr.sizeof_float, fft_size)
+        throttle = blocks.throttle(gr.sizeof_float, samp_rate, True)
+        fs = blocks.file_sink(gr.sizeof_char, os.path.join(tmpdir, test_file), False)
+
+        self.tb.msg_connect((strobe, "strobe"), (source, "cmd"))
+        self.tb.connect((source, 0), (c2r, 0))
+        self.tb.connect((c2r, 0), (throttle, 0))
+        self.tb.connect((throttle, 0), (stream2vector, 0))
+        self.tb.connect((stream2vector, 0), (image_inf, 0))
+        self.tb.connect((image_inf, 0), (fs, 0))
+        self.tb.start()
+        test_time = 10
+        time.sleep(test_time)
+        self.tb.stop()
+        self.tb.wait()
+        return test_file
+
+    def test_bad_instance(self):
+        port = 11002
+        model_name = "testmodel"
+        predictions_result = ["cant", "parse", {"this": 0}]
+        if self.pid == 0:
+            self.simulate_torchserve(port, model_name, predictions_result)
+            return
+        x = 800
+        y = 600
+        fft_size = 1024
+        samp_rate = 4e6
+        with tempfile.TemporaryDirectory() as tmpdir:
+            self.run_flowgraph(tmpdir, x, y, fft_size, samp_rate, port, model_name)
 
     def test_instance(self):
         port = 11001
@@ -259,56 +320,11 @@ class qa_image_inference(gr_unittest.TestCase):
         x = 800
         y = 600
         fft_size = 1024
-        output_vlen = x * y * 3
         samp_rate = 4e6
         with tempfile.TemporaryDirectory() as tmpdir:
-            test_file = os.path.join(tmpdir, "samples")
-            freq_divisor = 1e9
-            new_freq = 1e9 / 2
-            delay = 500
-            source = tuneable_test_source(freq_divisor)
-
-            strobe = blocks.message_strobe(pmt.to_pmt({"freq": new_freq}), delay)
-            image_inf = image_inference(
-                "rx_freq",
-                fft_size,
-                x,
-                y,
-                tmpdir,
-                255,
-                0,
-                1,
-                32,
-                20,
-                2,
-                0,
-                -1e9,
-                f"localhost:{port}",
-                model_name,
-                0.8,
-                1024,
-                30,
-                0,
-                0
+            test_file = self.run_flowgraph(
+                tmpdir, x, y, fft_size, samp_rate, port, model_name
             )
-            c2r = blocks.complex_to_real(1)
-            stream2vector = blocks.stream_to_vector(gr.sizeof_float, fft_size)
-            throttle = blocks.throttle(gr.sizeof_float, samp_rate, True)
-            fs = blocks.file_sink(
-                gr.sizeof_char, os.path.join(tmpdir, test_file), False
-            )
-
-            self.tb.msg_connect((strobe, "strobe"), (source, "cmd"))
-            self.tb.connect((source, 0), (c2r, 0))
-            self.tb.connect((c2r, 0), (throttle, 0))
-            self.tb.connect((throttle, 0), (stream2vector, 0))
-            self.tb.connect((stream2vector, 0), (image_inf, 0))
-            self.tb.connect((image_inf, 0), (fs, 0))
-            self.tb.start()
-            test_time = 10
-            time.sleep(test_time)
-            self.tb.stop()
-            self.tb.wait()
             image_files = [f for f in glob.glob(f"{tmpdir}/**/*image*png")]
             self.assertGreater(len(image_files), 2)
             for image_file in image_files:
@@ -333,7 +349,9 @@ class qa_image_inference(gr_unittest.TestCase):
                 self.assertGreaterEqual(rssi_mean, rssi_min, metadata_result)
                 self.assertGreaterEqual(rssi_max, rssi_mean, metadata_result)
                 self.assertTrue(os.path.exists(metadata_result["image_path"]))
-                self.assertTrue(os.path.exists(metadata_result["predictions_image_path"]))
+                self.assertTrue(
+                    os.path.exists(metadata_result["predictions_image_path"])
+                )
                 for k in ("rssi", "rssi_samples", "rssi_min", "rssi_max"):
                     del result["predictions"]["modulation"][0][k]
                 self.assertEqual(result["predictions"], predictions_result)
