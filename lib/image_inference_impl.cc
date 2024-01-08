@@ -460,7 +460,7 @@ void image_inference_impl::run_inference_() {
         } catch (std::exception &ex) {
           output_json["error"] = ex.what();
           this->d_logger->error("inference connection error: " + results);
-              inference_connected_ = false;
+          inference_connected_ = false;
         }
       }
 
