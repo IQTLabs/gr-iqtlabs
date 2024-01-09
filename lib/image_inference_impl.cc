@@ -251,7 +251,7 @@ image_inference_impl::image_inference_impl(
   normalized_buffer_.reset(
       new cv::Mat(cv::Size(vlen_, 0), CV_32F, cv::Scalar::all(0)));
   cmapped_buffer_.reset(
-      new cv::Mat(cv::Size(vlen, 0), CV_8UC3, cv::Scalar::all(0)));
+      new cv::Mat(cv::Size(vlen_, 0), CV_8UC3, cv::Scalar::all(0)));
   resized_buffer_.reset(
       new cv::Mat(cv::Size(x_, y_), CV_8UC3, cv::Scalar::all(0)));
   // we will output our own metadata tags.
@@ -263,6 +263,9 @@ image_inference_impl::image_inference_impl(
   if (model_server_parts_.size() == 2) {
     host_ = model_server_parts_[0];
     port_ = model_server_parts_[1];
+    if (model_name_.size() == 0) {
+      d_logger->error("missing model name");
+    }
   }
   stream_.reset(new boost::beast::tcp_stream(ioc_));
   inference_thread_.reset(
@@ -417,7 +420,7 @@ void image_inference_impl::run_inference_() {
 
     nlohmann::json output_json;
 
-    if ((host_.size() && port_.size()) &&
+    if ((host_.size() && port_.size()) && (model_name_.size() > 0) &&
         (n_inference_ == 0 || ++inference_count_ % n_inference_ == 0)) {
       if (!metadata_json.contains("image_path")) {
         transform_image_(output_item);
