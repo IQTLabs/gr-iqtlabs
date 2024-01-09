@@ -225,7 +225,7 @@ using input_type = float;
 using output_type = unsigned char;
 const std::string IMAGE_TYPE = "png";
 const std::string IMAGE_EXT = "." + IMAGE_TYPE;
-const size_t MAX_INFERENCE = 50;
+const size_t MAX_INFERENCE = 5;
 
 typedef struct output_item {
   uint64_t rx_freq;
@@ -265,6 +265,7 @@ private:
   void run_inference_();
   void background_run_inference_();
   void delete_output_item_(output_item_type &output_item);
+  void transform_image_(output_item_type &output_item);
   void delete_inference_();
   std::string
   write_image_(const std::string &secs_image_dir, const std::string &prefix,

@@ -297,18 +297,21 @@ bool image_inference_impl::stop() {
 }
 
 void image_inference_impl::process_items_(size_t c, const input_type *&in) {
-  for (size_t i = 0; i < c; ++i, in += vlen_) {
-    cv::Mat new_row(cv::Size(vlen_, 1), CV_32F, (void *)in);
-    double points_min, points_max;
-    cv::minMaxLoc(new_row, &points_min, &points_max);
-    if (points_buffer_->empty()) {
-      points_min_ = points_min;
-      points_max_ = points_max;
-    } else {
-      points_min_ = std::min(points_min_, points_min);
-      points_max_ = std::max(points_max_, points_max);
+  while (c) {
+    size_t rows =
+        std::min(std::min(size_t(max_rows_ - points_buffer_->rows), c),
+                 size_t(max_rows_));
+    if (rows) {
+      if (points_buffer_->empty()) {
+        delete points_buffer_;
+        points_buffer_ = new cv::Mat(cv::Size(vlen_, rows), CV_32F, (void *)in);
+      } else {
+        cv::Mat new_rows(cv::Size(vlen_, rows), CV_32F, (void *)in);
+        points_buffer_->push_back(new_rows);
+      }
+      c -= rows;
+      in += (vlen_ * rows);
     }
-    points_buffer_->push_back(new_row);
     if (points_buffer_->rows == max_rows_) {
       create_image_();
     }
@@ -317,22 +320,28 @@ void image_inference_impl::process_items_(size_t c, const input_type *&in) {
 
 void image_inference_impl::create_image_() {
   if (!points_buffer_->empty()) {
-    if (points_max_ > min_peak_points_ && points_buffer_->rows >= max_rows_ &&
-        last_rx_freq_) {
-      output_item_type output_item;
-      output_item.rx_freq = last_rx_freq_;
-      output_item.ts = last_rx_time_;
-      output_item.points_min = points_min_;
-      output_item.points_max = points_max_;
-      output_item.points_buffer = points_buffer_;
-      output_item.image_buffer = NULL;
-      if (!inference_q_.push(output_item)) {
-        d_logger->error("inference request queue full, size {}", MAX_INFERENCE);
-        delete_output_item_(output_item);
+    if (points_buffer_->rows >= max_rows_) {
+      cv::minMaxLoc(*points_buffer_, &points_min_, &points_max_);
+      if (points_max_ > min_peak_points_ && last_rx_freq_) {
+        output_item_type output_item;
+        output_item.rx_freq = last_rx_freq_;
+        output_item.ts = last_rx_time_;
+        output_item.points_min = points_min_;
+        output_item.points_max = points_max_;
+        output_item.points_buffer = points_buffer_;
+        output_item.points_mean = cv::mean(*output_item.points_buffer)[0];
+        output_item.image_buffer = NULL;
+        if (!inference_q_.push(output_item)) {
+          d_logger->error("inference request queue full, size {}",
+                          MAX_INFERENCE);
+          delete_output_item_(output_item);
+        }
+      } else {
+        delete points_buffer_;
       }
+      points_buffer_ =
+          new cv::Mat(cv::Size(vlen_, 0), CV_32F, cv::Scalar::all(0));
     }
-    points_buffer_ =
-        new cv::Mat(cv::Size(vlen_, 0), CV_32F, cv::Scalar::all(0));
   }
 }
 
@@ -353,6 +362,7 @@ std::string image_inference_impl::write_image_(
   std::ofstream image_out;
   image_out.open(dot_image_file_png, std::ios::binary | std::ios::out);
   image_out.write((const char *)encoded_buffer->data(), encoded_buffer->size());
+  image_out.flush();
   image_out.close();
   rename(dot_image_file_png.c_str(), full_image_file_png.c_str());
   return full_image_file_png;
@@ -365,29 +375,28 @@ void image_inference_impl::background_run_inference_() {
   }
 }
 
+void image_inference_impl::transform_image_(output_item_type &output_item) {
+  output_item.image_buffer =
+      new cv::Mat(cv::Size(x_, y_), CV_8UC3, cv::Scalar::all(0));
+  cv::normalize(*output_item.points_buffer, *normalized_buffer_, norm_alpha_,
+                norm_beta_, norm_type_);
+  normalized_buffer_->convertTo(*cmapped_buffer_, CV_8UC3, convert_alpha_, 0);
+  cv::applyColorMap(*cmapped_buffer_, *cmapped_buffer_, colormap_);
+  cv::cvtColor(*cmapped_buffer_, *cmapped_buffer_, cv::COLOR_BGR2RGB);
+  cv::resize(*cmapped_buffer_, *resized_buffer_, cv::Size(x_, y_),
+             interpolation_);
+  cv::cvtColor(*resized_buffer_, *output_item.image_buffer, cv::COLOR_RGB2BGR);
+  if (flip_ == -1 || flip_ == 0 || flip_ == 1) {
+    cv::flip(*output_item.image_buffer, *output_item.image_buffer, flip_);
+  }
+}
+
 void image_inference_impl::run_inference_() {
   boost::beast::error_code ec;
   while (!inference_q_.empty()) {
     output_item_type output_item;
     inference_q_.pop(output_item);
 
-    output_item.image_buffer =
-        new cv::Mat(cv::Size(x_, y_), CV_8UC3, cv::Scalar::all(0));
-    output_item.points_mean = cv::mean(*output_item.points_buffer)[0];
-    this->d_logger->debug("rx_freq {} rx_time {} rows {}", last_rx_freq_,
-                          last_rx_time_, points_buffer_->rows);
-    cv::normalize(*output_item.points_buffer, *normalized_buffer_, norm_alpha_,
-                  norm_beta_, norm_type_);
-    normalized_buffer_->convertTo(*cmapped_buffer_, CV_8UC3, convert_alpha_, 0);
-    cv::applyColorMap(*cmapped_buffer_, *cmapped_buffer_, colormap_);
-    cv::cvtColor(*cmapped_buffer_, *cmapped_buffer_, cv::COLOR_BGR2RGB);
-    cv::resize(*cmapped_buffer_, *resized_buffer_, cv::Size(x_, y_),
-               interpolation_);
-    cv::cvtColor(*resized_buffer_, *output_item.image_buffer,
-                 cv::COLOR_RGB2BGR);
-    if (flip_ == -1 || flip_ == 0 || flip_ == 1) {
-      cv::flip(*output_item.image_buffer, *output_item.image_buffer, flip_);
-    }
     boost::scoped_ptr<std::vector<unsigned char>> encoded_buffer;
 
     nlohmann::json metadata_json;
@@ -401,6 +410,7 @@ void image_inference_impl::run_inference_() {
     const std::string secs_image_dir = secs_dir(image_dir_, rotate_secs_);
     ++image_count_;
     if (n_image_ == 0 || image_count_ % n_image_ == 0) {
+      transform_image_(output_item);
       metadata_json["image_path"] =
           write_image_(secs_image_dir, "image", output_item, encoded_buffer);
     }
@@ -410,6 +420,7 @@ void image_inference_impl::run_inference_() {
     if ((host_.size() && port_.size()) &&
         (n_inference_ == 0 || ++inference_count_ % n_inference_ == 0)) {
       if (!metadata_json.contains("image_path")) {
+        transform_image_(output_item);
         metadata_json["image_path"] =
             write_image_(secs_image_dir, "image", output_item, encoded_buffer);
       }
@@ -572,6 +583,7 @@ int image_inference_impl::general_work(int noutput_items,
   const input_type *in = static_cast<const input_type *>(input_items[0]);
   size_t in_count = ninput_items[0];
   size_t in_first = nitems_read(0);
+  size_t leftover = 0;
 
   while (!json_q_.empty()) {
     std::string json;
@@ -581,12 +593,11 @@ int image_inference_impl::general_work(int noutput_items,
 
   if (!out_buf_.empty()) {
     auto out = static_cast<output_type *>(output_items[0]);
-    const size_t leftover = std::min(out_buf_.size(), (size_t)noutput_items);
+    leftover = std::min(out_buf_.size(), (size_t)noutput_items);
     auto from = out_buf_.begin();
     auto to = from + leftover;
     std::copy(from, to, out);
     out_buf_.erase(from, to);
-    return leftover;
   }
 
   std::vector<tag_t> all_tags, rx_freq_tags;
@@ -617,7 +628,7 @@ int image_inference_impl::general_work(int noutput_items,
   }
 
   consume_each(in_count);
-  return 0;
+  return leftover;
 }
 
 void image_inference_impl::forecast(int noutput_items,
