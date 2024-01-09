@@ -265,9 +265,7 @@ retune_fft_impl::retune_fft_impl(
   message_port_register_in(CMD_KEY);
   set_msg_handler(CMD_KEY,
                   [this](const pmt::pmt_t &msg) { next_retune_(host_now_()); });
-  if (low_power_hold_down_ && !stare_mode_) {
-    set_tag_propagation_policy(TPP_DONT);
-  }
+  set_tag_propagation_policy(TPP_DONT);
 }
 
 retune_fft_impl::~retune_fft_impl() { close_(); }
@@ -322,6 +320,16 @@ void retune_fft_impl::sum_items_(const input_type *in) {
   }
 }
 
+void retune_fft_impl::add_output_tags_(uint64_t rx_time, double rx_freq) {
+  std::stringstream str;
+  str << name() << unique_id();
+  pmt::pmt_t _id = pmt::string_to_symbol(str.str());
+  this->add_item_tag(1, nitems_written(1), RX_TIME_KEY,
+                     make_rx_time_key_(rx_time), _id);
+  this->add_item_tag(1, nitems_written(1), RX_FREQ_KEY,
+                     pmt::from_double(rx_freq), _id);
+}
+
 void retune_fft_impl::process_items_(size_t c, const input_type *&in,
                                      const input_type *&fft_output) {
   for (size_t i = 0; i < c; ++i) {
@@ -337,13 +345,7 @@ void retune_fft_impl::process_items_(size_t c, const input_type *&in,
       if (in_max < fft_min_) {
         if (in_hold_down_) {
           in_hold_down_ = false;
-          std::stringstream str;
-          str << name() << unique_id();
-          pmt::pmt_t _id = pmt::string_to_symbol(str.str());
-          this->add_item_tag(1, nitems_written(1), RX_TIME_KEY,
-                             make_rx_time_key_(last_rx_time_), _id);
-          this->add_item_tag(1, nitems_written(1), RX_FREQ_KEY,
-                             pmt::from_double(last_rx_freq_), _id);
+          add_output_tags_(last_rx_time_, last_rx_freq_);
         }
         continue;
       }
@@ -491,6 +493,9 @@ void retune_fft_impl::process_tags_(const input_type *in, size_t in_count,
       }
 
       const uint64_t rx_freq = (uint64_t)pmt::to_double(tag.value);
+      if (!low_power_hold_down_ || stare_mode_) {
+        add_output_tags_(rx_time, rx_freq);
+      }
 
       d_logger->debug("new rx_freq tag: {}, last {}", rx_freq, last_rx_freq_);
       if (pending_retune_) {
