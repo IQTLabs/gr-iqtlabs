@@ -583,6 +583,7 @@ int image_inference_impl::general_work(int noutput_items,
   const input_type *in = static_cast<const input_type *>(input_items[0]);
   size_t in_count = ninput_items[0];
   size_t in_first = nitems_read(0);
+  size_t leftover = 0;
 
   while (!json_q_.empty()) {
     std::string json;
@@ -592,12 +593,11 @@ int image_inference_impl::general_work(int noutput_items,
 
   if (!out_buf_.empty()) {
     auto out = static_cast<output_type *>(output_items[0]);
-    const size_t leftover = std::min(out_buf_.size(), (size_t)noutput_items);
+    leftover = std::min(out_buf_.size(), (size_t)noutput_items);
     auto from = out_buf_.begin();
     auto to = from + leftover;
     std::copy(from, to, out);
     out_buf_.erase(from, to);
-    return leftover;
   }
 
   std::vector<tag_t> all_tags, rx_freq_tags;
@@ -628,7 +628,7 @@ int image_inference_impl::general_work(int noutput_items,
   }
 
   consume_each(in_count);
-  return 0;
+  return leftover;
 }
 
 void image_inference_impl::forecast(int noutput_items,
