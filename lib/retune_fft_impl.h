@@ -224,6 +224,7 @@ private:
   void retune_now_();
   void write_items_(const input_type *in);
   void sum_items_(const input_type *in);
+  void add_output_tags_(uint64_t rx_time, double rx_freq);
   void process_items_(size_t c, const input_type *&in,
                       const input_type *&fft_output);
   void output_buckets_(const std::string &name,
