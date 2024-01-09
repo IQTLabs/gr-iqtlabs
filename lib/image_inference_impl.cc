@@ -459,6 +459,7 @@ void image_inference_impl::run_inference_() {
           results = res.body().data();
         } catch (std::exception &ex) {
           output_json["error"] = ex.what();
+          this->d_logger->error("inference connection error: " + results);
           inference_connected_ = false;
         }
       }
@@ -477,61 +478,71 @@ void image_inference_impl::run_inference_() {
           const float yf = float(output_item.points_buffer->rows) /
                            float(output_item.image_buffer->rows);
           const cv::Scalar white = cv::Scalar(255, 255, 255);
-          for (auto &prediction_class : original_results_json.items()) {
-            size_t i = 0;
-            for (auto &prediction_ref : prediction_class.value().items()) {
-              auto &prediction = prediction_ref.value();
-              float conf = prediction["conf"];
-              if (conf > confidence_) {
-                auto &xywh = prediction["xywh"];
-                int cx = xywh[0];
-                int cy = xywh[1];
-                int w = xywh[2];
-                int h = xywh[3];
-                int tlx = cx - (w / 2);
-                int tly = cy - (h / 2);
-                cv::Rect bbox_rect(tlx, tly, w, h);
-                cv::Rect rssi_rect(int(tlx * xf), int(tly * yf), int(w * xf),
-                                   int(h * yf));
-                cv::Mat rssi_points = (*output_item.points_buffer)(rssi_rect);
-                double rssi_min, rssi_max;
-                cv::minMaxLoc(rssi_points, &rssi_min, &rssi_max);
-                float rssi = cv::mean(rssi_points)[0];
-                auto &augmented = results_json[prediction_class.key()][i];
-                augmented["rssi"] = rssi;
-                augmented["rssi_samples"] = rssi_points.cols * rssi_points.rows;
-                augmented["rssi_min"] = rssi_min;
-                augmented["rssi_max"] = rssi_max;
-                if (rssi >= min_peak_points_) {
-                  ++rendered_predictions;
-                  cv::rectangle(*output_item.image_buffer, bbox_rect, white);
-                  const auto fontFace = cv::FONT_HERSHEY_SIMPLEX;
-                  const auto lineStyle = cv::LINE_AA;
-                  const auto fontScale = 0.5;
-                  const auto thickness = 1;
-                  int baseLine = 0;
-                  cv::Size text_size = getTextSize(
-                      "placeholder", fontFace, fontScale, thickness, &baseLine);
-                  int text_gap = text_size.height * 1.5;
-                  std::stringstream class_label_stream;
-                  class_label_stream << std::fixed << std::setprecision(2);
-                  class_label_stream << prediction_class.key() << ": " << conf;
-                  std::stringstream rssi_label_stream;
-                  rssi_label_stream << std::fixed << std::setprecision(2);
-                  rssi_label_stream << "RSSI max: " << rssi_max;
-                  cv::putText(*output_item.image_buffer,
-                              class_label_stream.str(),
-                              cv::Point(cx - 10, cy - text_gap * 2), fontFace,
-                              fontScale, white, thickness, lineStyle, false);
-                  cv::putText(*output_item.image_buffer,
-                              rssi_label_stream.str(),
-                              cv::Point(cx - 10, cy - text_gap), fontFace,
-                              fontScale, white, thickness, lineStyle, false);
+          const auto fontFace = cv::FONT_HERSHEY_SIMPLEX;
+          const auto lineStyle = cv::LINE_AA;
+          const auto fontScale = 0.5;
+          const auto thickness = 1;
+
+          try {
+            for (auto &prediction_class : original_results_json.items()) {
+              size_t i = 0;
+              for (auto &prediction_ref : prediction_class.value().items()) {
+                auto &prediction = prediction_ref.value();
+                float conf = prediction["conf"];
+                if (conf > confidence_) {
+                  auto &xywh = prediction["xywh"];
+                  int cx = xywh[0];
+                  int cy = xywh[1];
+                  int w = xywh[2];
+                  int h = xywh[3];
+                  int tlx = cx - (w / 2);
+                  int tly = cy - (h / 2);
+                  cv::Rect bbox_rect(tlx, tly, w, h);
+                  cv::Rect rssi_rect(int(tlx * xf), int(tly * yf), int(w * xf),
+                                     int(h * yf));
+                  cv::Mat rssi_points = (*output_item.points_buffer)(rssi_rect);
+                  double rssi_min, rssi_max;
+                  cv::minMaxLoc(rssi_points, &rssi_min, &rssi_max);
+                  float rssi = cv::mean(rssi_points)[0];
+                  auto &augmented = results_json[prediction_class.key()][i];
+                  augmented["rssi"] = rssi;
+                  augmented["rssi_samples"] =
+                      rssi_points.cols * rssi_points.rows;
+                  augmented["rssi_min"] = rssi_min;
+                  augmented["rssi_max"] = rssi_max;
+                  if (rssi >= min_peak_points_) {
+                    ++rendered_predictions;
+                    cv::rectangle(*output_item.image_buffer, bbox_rect, white);
+                    int baseLine = 0;
+                    cv::Size text_size =
+                        getTextSize("placeholder", fontFace, fontScale,
+                                    thickness, &baseLine);
+                    int text_gap = text_size.height * 1.5;
+                    std::stringstream class_label_stream;
+                    class_label_stream << std::fixed << std::setprecision(2);
+                    class_label_stream << prediction_class.key() << ": "
+                                       << conf;
+                    std::stringstream rssi_label_stream;
+                    rssi_label_stream << std::fixed << std::setprecision(2);
+                    rssi_label_stream << "RSSI max: " << rssi_max;
+                    cv::putText(*output_item.image_buffer,
+                                class_label_stream.str(),
+                                cv::Point(cx - 10, cy - text_gap * 2), fontFace,
+                                fontScale, white, thickness, lineStyle, false);
+                    cv::putText(*output_item.image_buffer,
+                                rssi_label_stream.str(),
+                                cv::Point(cx - 10, cy - text_gap), fontFace,
+                                fontScale, white, thickness, lineStyle, false);
+                  }
                 }
                 // TODO: add NMS
               }
               ++i;
             }
+          } catch (std::exception &ex) {
+            output_json["error"] = "invalid json: " + results;
+            this->d_logger->error("invalid json: " + results);
+            rendered_predictions = 0;
           }
           output_json["predictions"] = results_json;
           if (rendered_predictions) {
@@ -541,6 +552,7 @@ void image_inference_impl::run_inference_() {
           }
         } else {
           output_json["error"] = "invalid json: " + results;
+          this->d_logger->error("invalid json: " + results);
           inference_connected_ = false;
         }
       }
