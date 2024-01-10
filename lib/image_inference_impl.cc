@@ -323,7 +323,7 @@ void image_inference_impl::process_items_(size_t c, const input_type *&in) {
 
 void image_inference_impl::create_image_(bool discard) {
   if (!points_buffer_->empty()) {
-    if (points_buffer_->rows >= max_rows_) {
+    if (points_buffer_->rows >= max_rows_ || discard) {
       cv::minMaxLoc(*points_buffer_, &points_min_, &points_max_);
       if (points_max_ > min_peak_points_ && last_rx_freq_) {
         output_item_type output_item;
@@ -342,10 +342,6 @@ void image_inference_impl::create_image_(bool discard) {
       } else {
         delete points_buffer_;
       }
-      points_buffer_ = NULL;
-    } else if (discard) {
-      d_logger->info("discarding {} rows", points_buffer_->rows);
-      delete points_buffer_;
       points_buffer_ = NULL;
     }
   }
