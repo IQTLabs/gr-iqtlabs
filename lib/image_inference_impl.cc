@@ -247,7 +247,7 @@ image_inference_impl::image_inference_impl(
       confidence_(confidence), max_rows_(max_rows), rotate_secs_(rotate_secs),
       n_image_(n_image), n_inference_(n_inference), running_(true),
       inference_connected_(false), image_count_(0), inference_count_(0) {
-  points_buffer_ = new cv::Mat(cv::Size(vlen_, 0), CV_32F, cv::Scalar::all(0));
+  points_buffer_ = NULL;
   normalized_buffer_.reset(
       new cv::Mat(cv::Size(vlen_, 0), CV_32F, cv::Scalar::all(0)));
   cmapped_buffer_.reset(
@@ -295,34 +295,39 @@ bool image_inference_impl::stop() {
     boost::beast::error_code ec;
     stream_->socket().shutdown(boost::asio::ip::tcp::socket::shutdown_both, ec);
   }
-  delete points_buffer_;
+  if (points_buffer_) {
+    delete points_buffer_;
+  }
   return true;
 }
 
 void image_inference_impl::process_items_(size_t c, const input_type *&in) {
   while (c) {
-    size_t rows =
-        std::min(std::min(size_t(max_rows_ - points_buffer_->rows), c),
-                 size_t(max_rows_));
-    if (rows) {
-      if (points_buffer_->empty()) {
-        delete points_buffer_;
-        points_buffer_ = new cv::Mat(cv::Size(vlen_, rows), CV_32F, (void *)in);
+    size_t existing_rows = 0;
+    if (points_buffer_) {
+      existing_rows = points_buffer_->rows;
+    }
+    size_t new_rows = std::min(std::min(size_t(max_rows_ - existing_rows), c),
+                               size_t(max_rows_));
+    if (new_rows) {
+      cv::Size new_size(vlen_, new_rows);
+      if (!points_buffer_) {
+        points_buffer_ = new cv::Mat(new_size, CV_32F, (void *)in);
       } else {
-        cv::Mat new_rows(cv::Size(vlen_, rows), CV_32F, (void *)in);
+        cv::Mat new_rows(new_size, CV_32F, (void *)in);
         points_buffer_->push_back(new_rows);
       }
-      c -= rows;
-      in += (vlen_ * rows);
+      c -= new_rows;
+      in += (vlen_ * new_rows);
     }
-    if (points_buffer_->rows == max_rows_) {
+    if (points_buffer_ && points_buffer_->rows == max_rows_) {
       create_image_(false);
     }
   }
 }
 
 void image_inference_impl::create_image_(bool discard) {
-  if (!points_buffer_->empty()) {
+  if (points_buffer_ && !points_buffer_->empty()) {
     if (points_buffer_->rows >= max_rows_ || discard) {
       cv::minMaxLoc(*points_buffer_, &points_min_, &points_max_);
       if (points_max_ > min_peak_points_ && last_rx_freq_) {
@@ -344,10 +349,6 @@ void image_inference_impl::create_image_(bool discard) {
       }
       points_buffer_ = NULL;
     }
-  }
-  if (points_buffer_ == NULL) {
-    points_buffer_ =
-        new cv::Mat(cv::Size(vlen_, 0), CV_32F, cv::Scalar::all(0));
   }
 }
 
@@ -476,11 +477,13 @@ void image_inference_impl::run_inference_() {
           results = res.body().data();
         } catch (std::exception &ex) {
           output_json["error"] = ex.what();
-          this->d_logger->error("inference connection error: " + results);
+          this->d_logger->error("inference connection error: " +
+                                std::string(ex.what()));
           inference_connected_ = false;
         }
       }
 
+      std::string error;
       if (results.size()) {
         if (nlohmann::json::accept(results)) {
           if (flip_ == -1 || flip_ == 0 || flip_ == 1) {
@@ -557,8 +560,7 @@ void image_inference_impl::run_inference_() {
               ++i;
             }
           } catch (std::exception &ex) {
-            output_json["error"] = "invalid json: " + results;
-            this->d_logger->error("invalid json: " + results);
+            error = "invalid json: " + results;
             rendered_predictions = 0;
           }
           output_json["predictions"] = results_json;
@@ -568,10 +570,14 @@ void image_inference_impl::run_inference_() {
                              encoded_buffer);
           }
         } else {
-          output_json["error"] = "invalid json: " + results;
-          this->d_logger->error("invalid json: " + results);
-          inference_connected_ = false;
+          error = "invalid json: " + results;
         }
+      }
+
+      if (error.size()) {
+        d_logger->error(error);
+        output_json["error"] = error;
+        inference_connected_ = false;
       }
     }
     // double new line to facilitate json parsing, since prediction may
