@@ -347,7 +347,7 @@ void image_inference_impl::create_image_(bool discard) {
   }
   if (points_buffer_ == NULL) {
     points_buffer_ =
-          new cv::Mat(cv::Size(vlen_, 0), CV_32F, cv::Scalar::all(0));
+        new cv::Mat(cv::Size(vlen_, 0), CV_32F, cv::Scalar::all(0));
   }
 }
 
