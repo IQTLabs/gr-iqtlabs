@@ -251,7 +251,7 @@ image_inference_impl::image_inference_impl(
   normalized_buffer_.reset(
       new cv::Mat(cv::Size(vlen_, 0), CV_32F, cv::Scalar::all(0)));
   cmapped_buffer_.reset(
-      new cv::Mat(cv::Size(vlen, 0), CV_8UC3, cv::Scalar::all(0)));
+      new cv::Mat(cv::Size(vlen_, 0), CV_8UC3, cv::Scalar::all(0)));
   resized_buffer_.reset(
       new cv::Mat(cv::Size(x_, y_), CV_8UC3, cv::Scalar::all(0)));
   // we will output our own metadata tags.
@@ -263,6 +263,9 @@ image_inference_impl::image_inference_impl(
   if (model_server_parts_.size() == 2) {
     host_ = model_server_parts_[0];
     port_ = model_server_parts_[1];
+    if (model_name_.size() == 0) {
+      d_logger->error("missing model name");
+    }
   }
   stream_.reset(new boost::beast::tcp_stream(ioc_));
   inference_thread_.reset(
@@ -313,14 +316,14 @@ void image_inference_impl::process_items_(size_t c, const input_type *&in) {
       in += (vlen_ * rows);
     }
     if (points_buffer_->rows == max_rows_) {
-      create_image_();
+      create_image_(false);
     }
   }
 }
 
-void image_inference_impl::create_image_() {
+void image_inference_impl::create_image_(bool discard) {
   if (!points_buffer_->empty()) {
-    if (points_buffer_->rows >= max_rows_) {
+    if (points_buffer_->rows >= max_rows_ || discard) {
       cv::minMaxLoc(*points_buffer_, &points_min_, &points_max_);
       if (points_max_ > min_peak_points_ && last_rx_freq_) {
         output_item_type output_item;
@@ -339,9 +342,12 @@ void image_inference_impl::create_image_() {
       } else {
         delete points_buffer_;
       }
-      points_buffer_ =
-          new cv::Mat(cv::Size(vlen_, 0), CV_32F, cv::Scalar::all(0));
+      points_buffer_ = NULL;
     }
+  }
+  if (points_buffer_ == NULL) {
+    points_buffer_ =
+        new cv::Mat(cv::Size(vlen_, 0), CV_32F, cv::Scalar::all(0));
   }
 }
 
@@ -417,7 +423,7 @@ void image_inference_impl::run_inference_() {
 
     nlohmann::json output_json;
 
-    if ((host_.size() && port_.size()) &&
+    if ((host_.size() && port_.size()) && (model_name_.size() > 0) &&
         (n_inference_ == 0 || ++inference_count_ % n_inference_ == 0)) {
       if (!metadata_json.contains("image_path")) {
         transform_image_(output_item);
@@ -620,7 +626,7 @@ int image_inference_impl::general_work(int noutput_items,
 
       uint64_t rx_freq = (uint64_t)pmt::to_double(tag.value);
       if (rx_freq != last_rx_freq_) {
-        create_image_();
+        create_image_(true);
       }
       last_rx_freq_ = rx_freq;
       last_rx_time_ = rx_time;
