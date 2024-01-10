@@ -316,12 +316,12 @@ void image_inference_impl::process_items_(size_t c, const input_type *&in) {
       in += (vlen_ * rows);
     }
     if (points_buffer_->rows == max_rows_) {
-      create_image_();
+      create_image_(false);
     }
   }
 }
 
-void image_inference_impl::create_image_() {
+void image_inference_impl::create_image_(bool discard) {
   if (!points_buffer_->empty()) {
     if (points_buffer_->rows >= max_rows_) {
       cv::minMaxLoc(*points_buffer_, &points_min_, &points_max_);
@@ -342,9 +342,16 @@ void image_inference_impl::create_image_() {
       } else {
         delete points_buffer_;
       }
-      points_buffer_ =
-          new cv::Mat(cv::Size(vlen_, 0), CV_32F, cv::Scalar::all(0));
+      points_buffer_ = NULL;
+    } else if (discard) {
+      d_logger->info("discarding {} rows", points_buffer_->rows);
+      delete points_buffer_;
+      points_buffer_ = NULL;
     }
+  }
+  if (points_buffer_ == NULL) {
+    points_buffer_ =
+          new cv::Mat(cv::Size(vlen_, 0), CV_32F, cv::Scalar::all(0));
   }
 }
 
@@ -623,7 +630,7 @@ int image_inference_impl::general_work(int noutput_items,
 
       uint64_t rx_freq = (uint64_t)pmt::to_double(tag.value);
       if (rx_freq != last_rx_freq_) {
-        create_image_();
+        create_image_(true);
       }
       last_rx_freq_ = rx_freq;
       last_rx_time_ = rx_time;
