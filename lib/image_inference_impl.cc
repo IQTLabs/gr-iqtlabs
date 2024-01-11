@@ -404,8 +404,8 @@ void image_inference_impl::transform_image_(output_item_type &output_item) {
 
 size_t image_inference_impl::parse_inference_(
     const output_item_type &output_item, const std::string &results,
-    const std::string &model_name,
-    nlohmann::json &results_json, std::string &error) {
+    const std::string &model_name, nlohmann::json &results_json,
+    std::string &error) {
   size_t rendered_predictions;
   const float xf = float(output_item.points_buffer->cols) /
                    float(output_item.image_buffer->cols);
@@ -563,8 +563,8 @@ void image_inference_impl::run_inference_() {
 
       if (error.size() == 0) {
         nlohmann::json results_json;
-        size_t rendered_predictions =
-            parse_inference_(output_item, results, model_name_, results_json, error);
+        size_t rendered_predictions = parse_inference_(
+            output_item, results, model_name_, results_json, error);
         output_json["predictions"] = results_json;
         if (rendered_predictions) {
           metadata_json["predictions_image_path"] = write_image_(
