@@ -413,13 +413,13 @@ size_t image_inference_impl::parse_inference_(
                    float(output_item.image_buffer->rows);
   try {
     nlohmann::json original_results_json = nlohmann::json::parse(results);
-    results_json = original_results_json;
     for (auto &prediction_class : original_results_json.items()) {
-      size_t i = 0;
+      if (!results_json.contains(prediction_class.key())) {
+        results_json[prediction_class.key()] = nlohmann::json::array();
+      }
       for (auto &prediction_ref : prediction_class.value().items()) {
-        auto &prediction = prediction_ref.value();
-        auto &augmented = results_json[prediction_class.key()][i++];
-        augmented["model"] = model_name;
+        auto prediction = prediction_ref.value();
+        prediction["model"] = model_name;
         float conf = prediction["conf"];
         if (conf > confidence_) {
           auto &xywh = prediction["xywh"];
@@ -436,10 +436,10 @@ size_t image_inference_impl::parse_inference_(
           double rssi_min, rssi_max;
           cv::minMaxLoc(rssi_points, &rssi_min, &rssi_max);
           float rssi = cv::mean(rssi_points)[0];
-          augmented["rssi"] = rssi;
-          augmented["rssi_samples"] = rssi_points.cols * rssi_points.rows;
-          augmented["rssi_min"] = rssi_min;
-          augmented["rssi_max"] = rssi_max;
+          prediction["rssi"] = rssi;
+          prediction["rssi_samples"] = rssi_points.cols * rssi_points.rows;
+          prediction["rssi_min"] = rssi_min;
+          prediction["rssi_max"] = rssi_max;
           if (rssi >= min_peak_points_) {
             ++rendered_predictions;
             cv::rectangle(*output_item.image_buffer, bbox_rect, white);
@@ -461,6 +461,7 @@ size_t image_inference_impl::parse_inference_(
                         white, thickness, lineStyle, false);
           }
         }
+        results_json[prediction_class.key()].emplace_back(prediction);
       }
     }
   } catch (std::exception &ex) {
