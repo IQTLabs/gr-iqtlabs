@@ -277,6 +277,7 @@ class qa_image_inference(gr_unittest.TestCase):
             30,
             0,
             0,
+            int(samp_rate),
         )
         c2r = blocks.complex_to_real(1)
         stream2vector = blocks.stream_to_vector(gr.sizeof_float, fft_size)
@@ -342,9 +343,9 @@ class qa_image_inference(gr_unittest.TestCase):
                 result = json.loads(json_raw)
                 print(result)
                 metadata_result = result["metadata"]
-                rssi_min, rssi_mean, rssi_max = [
+                rssi_min, rssi_mean, rssi_max, rx_freq = [
                     float(metadata_result[v])
-                    for v in ("rssi_min", "rssi_mean", "rssi_max")
+                    for v in ("rssi_min", "rssi_mean", "rssi_max", "rx_freq")
                 ]
                 self.assertGreaterEqual(rssi_mean, rssi_min, metadata_result)
                 self.assertGreaterEqual(rssi_max, rssi_mean, metadata_result)
@@ -352,7 +353,18 @@ class qa_image_inference(gr_unittest.TestCase):
                 self.assertTrue(
                     os.path.exists(metadata_result["predictions_image_path"])
                 )
-                for k in ("rssi", "rssi_samples", "rssi_min", "rssi_max", "model"):
+                bbox_freq = rx_freq - (samp_rate / 2) + ((50 / x) * samp_rate)
+                self.assertEqual(
+                    bbox_freq, result["predictions"]["modulation"][0]["freq"]
+                )
+                for k in (
+                    "rssi",
+                    "rssi_samples",
+                    "rssi_min",
+                    "rssi_max",
+                    "model",
+                    "freq",
+                ):
                     del result["predictions"]["modulation"][0][k]
                 self.assertEqual(result["predictions"], predictions_result)
 

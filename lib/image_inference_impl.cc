@@ -224,12 +224,13 @@ image_inference::sptr image_inference::make(
     const std::string &image_dir, double convert_alpha, double norm_alpha,
     double norm_beta, int norm_type, int colormap, int interpolation, int flip,
     double min_peak_points, const std::string &model_server,
-    const std::string &model_name, double confidence, int max_rows,
-    int rotate_secs, int n_image, int n_inference) {
+    const std::string &model_names, double confidence, int max_rows,
+    int rotate_secs, int n_image, int n_inference, int samp_rate) {
   return gnuradio::make_block_sptr<image_inference_impl>(
       tag, vlen, x, y, image_dir, convert_alpha, norm_alpha, norm_beta,
       norm_type, colormap, interpolation, flip, min_peak_points, model_server,
-      model_name, confidence, max_rows, rotate_secs, n_image, n_inference);
+      model_names, confidence, max_rows, rotate_secs, n_image, n_inference,
+      samp_rate);
 }
 
 image_inference_impl::image_inference_impl(
@@ -237,8 +238,8 @@ image_inference_impl::image_inference_impl(
     const std::string &image_dir, double convert_alpha, double norm_alpha,
     double norm_beta, int norm_type, int colormap, int interpolation, int flip,
     double min_peak_points, const std::string &model_server,
-    const std::string &model_name, double confidence, int max_rows,
-    int rotate_secs, int n_image, int n_inference)
+    const std::string &model_names, double confidence, int max_rows,
+    int rotate_secs, int n_image, int n_inference, int samp_rate)
     : gr::block("image_inference",
                 gr::io_signature::make(1 /* min inputs */, 1 /* max inputs */,
                                        vlen * sizeof(input_type)),
@@ -248,9 +249,9 @@ image_inference_impl::image_inference_impl(
       last_rx_time_(0), image_dir_(image_dir), convert_alpha_(convert_alpha),
       norm_alpha_(norm_alpha), norm_beta_(norm_beta), norm_type_(norm_type),
       colormap_(colormap), interpolation_(interpolation), flip_(flip),
-      min_peak_points_(min_peak_points), model_name_(model_name),
-      confidence_(confidence), max_rows_(max_rows), rotate_secs_(rotate_secs),
-      n_image_(n_image), n_inference_(n_inference), running_(true),
+      min_peak_points_(min_peak_points), confidence_(confidence),
+      max_rows_(max_rows), rotate_secs_(rotate_secs), n_image_(n_image),
+      n_inference_(n_inference), samp_rate_(samp_rate), running_(true),
       inference_connected_(false), image_count_(0), inference_count_(0) {
   points_buffer_ = NULL;
   normalized_buffer_.reset(
@@ -265,11 +266,13 @@ image_inference_impl::image_inference_impl(
   std::vector<std::string> model_server_parts_;
   boost::split(model_server_parts_, model_server, boost::is_any_of(":"),
                boost::token_compress_on);
+  boost::split(model_names_, model_names, boost::is_any_of(","),
+               boost::token_compress_on);
   if (model_server_parts_.size() == 2) {
     host_ = model_server_parts_[0];
     port_ = model_server_parts_[1];
-    if (model_name_.size() == 0) {
-      d_logger->error("missing model name");
+    if (model_names_.size() == 0) {
+      d_logger->error("missing model name(s)");
     }
   }
   stream_.reset(new boost::beast::tcp_stream(ioc_));
@@ -413,6 +416,7 @@ size_t image_inference_impl::parse_inference_(
                    float(output_item.image_buffer->rows);
   try {
     nlohmann::json original_results_json = nlohmann::json::parse(results);
+    double min_rx_freq = output_item.rx_freq - (samp_rate_ / 2);
     for (auto &prediction_class : original_results_json.items()) {
       if (!results_json.contains(prediction_class.key())) {
         results_json[prediction_class.key()] = nlohmann::json::array();
@@ -429,6 +433,7 @@ size_t image_inference_impl::parse_inference_(
           int h = xywh[3];
           int tlx = cx - (w / 2);
           int tly = cy - (h / 2);
+          double bbox_freq = min_rx_freq + (float(cx) / float(x_) * samp_rate_);
           cv::Rect bbox_rect(tlx, tly, w, h);
           cv::Rect rssi_rect(int(tlx * xf), int(tly * yf), int(w * xf),
                              int(h * yf));
@@ -440,6 +445,7 @@ size_t image_inference_impl::parse_inference_(
           prediction["rssi_samples"] = rssi_points.cols * rssi_points.rows;
           prediction["rssi_min"] = rssi_min;
           prediction["rssi_max"] = rssi_max;
+          prediction["freq"] = bbox_freq;
           if (rssi >= min_peak_points_) {
             ++rendered_predictions;
             cv::rectangle(*output_item.image_buffer, bbox_rect, white);
@@ -453,7 +459,13 @@ size_t image_inference_impl::parse_inference_(
             std::stringstream rssi_label_stream;
             rssi_label_stream << std::fixed << std::setprecision(2);
             rssi_label_stream << "RSSI max: " << rssi_max;
+            std::stringstream freq_label_stream;
+            freq_label_stream << std::fixed << std::setprecision(2);
+            freq_label_stream << "freq: " << bbox_freq / 1e6;
             cv::putText(*output_item.image_buffer, class_label_stream.str(),
+                        cv::Point(cx - 10, cy - text_gap * 3), fontFace,
+                        fontScale, white, thickness, lineStyle, false);
+            cv::putText(*output_item.image_buffer, freq_label_stream.str(),
                         cv::Point(cx - 10, cy - text_gap * 2), fontFace,
                         fontScale, white, thickness, lineStyle, false);
             cv::putText(*output_item.image_buffer, rssi_label_stream.str(),
@@ -496,87 +508,90 @@ void image_inference_impl::run_inference_() {
 
     nlohmann::json output_json;
 
-    if ((host_.size() && port_.size()) && (model_name_.size() > 0) &&
+    if ((host_.size() && port_.size()) && (model_names_.size() > 0) &&
         (n_inference_ == 0 || ++inference_count_ % n_inference_ == 0)) {
       if (flip_ == -1 || flip_ == 0 || flip_ == 1) {
         cv::flip(*output_item.points_buffer, *output_item.points_buffer, flip_);
       }
-
       if (!metadata_json.contains("image_path")) {
         transform_image_(output_item);
         metadata_json["image_path"] =
             write_image_(secs_image_dir, "image", output_item, encoded_buffer);
       }
-      const std::string_view body(
-          reinterpret_cast<char const *>(encoded_buffer->data()),
-          encoded_buffer->size());
-      boost::beast::http::request<boost::beast::http::string_body> req{
-          boost::beast::http::verb::post, "/predictions/" + model_name_, 11};
-      req.keep_alive(true);
-      req.set(boost::beast::http::field::connection, "keep-alive");
-      req.set(boost::beast::http::field::host, host_);
-      req.set(boost::beast::http::field::user_agent,
-              BOOST_BEAST_VERSION_STRING);
-      req.set(boost::beast::http::field::content_type, "image/" + IMAGE_TYPE);
-      req.body() = body;
-      req.prepare_payload();
-      std::string results;
       std::string error;
+      nlohmann::json results_json;
+      size_t rendered_predictions = 0;
 
-      // attempt to re-use existing connection. may fail if an http 1.1 server
-      // has dropped the connection to use in the meantime.
-      if (inference_connected_) {
-        try {
-          boost::beast::flat_buffer buffer;
-          boost::beast::http::response<boost::beast::http::string_body> res;
-          boost::beast::http::write(*stream_, req);
-          boost::beast::http::read(*stream_, buffer, res);
-          results = res.body().data();
-        } catch (std::exception &ex) {
-          stream_->socket().shutdown(
-              boost::asio::ip::tcp::socket::shutdown_both, ec);
+      for (auto model_name : model_names_) {
+        const std::string_view body(
+            reinterpret_cast<char const *>(encoded_buffer->data()),
+            encoded_buffer->size());
+        boost::beast::http::request<boost::beast::http::string_body> req{
+            boost::beast::http::verb::post, "/predictions/" + model_name, 11};
+        req.keep_alive(true);
+        req.set(boost::beast::http::field::connection, "keep-alive");
+        req.set(boost::beast::http::field::host, host_);
+        req.set(boost::beast::http::field::user_agent,
+                BOOST_BEAST_VERSION_STRING);
+        req.set(boost::beast::http::field::content_type, "image/" + IMAGE_TYPE);
+        req.body() = body;
+        req.prepare_payload();
+        std::string results;
+
+        // attempt to re-use existing connection. may fail if an http 1.1 server
+        // has dropped the connection to use in the meantime.
+        if (inference_connected_) {
+          try {
+            boost::beast::flat_buffer buffer;
+            boost::beast::http::response<boost::beast::http::string_body> res;
+            boost::beast::http::write(*stream_, req);
+            boost::beast::http::read(*stream_, buffer, res);
+            results = res.body().data();
+          } catch (std::exception &ex) {
+            stream_->socket().shutdown(
+                boost::asio::ip::tcp::socket::shutdown_both, ec);
+            inference_connected_ = false;
+          }
+        }
+
+        if (results.size() == 0) {
+          try {
+            if (!inference_connected_) {
+              boost::asio::ip::tcp::resolver resolver(ioc_);
+              auto const resolve_results = resolver.resolve(host_, port_);
+              stream_->connect(resolve_results);
+              inference_connected_ = true;
+            }
+            boost::beast::flat_buffer buffer;
+            boost::beast::http::response<boost::beast::http::string_body> res;
+            boost::beast::http::write(*stream_, req);
+            boost::beast::http::read(*stream_, buffer, res);
+            results = res.body().data();
+          } catch (std::exception &ex) {
+            error = "inference connection error: " + std::string(ex.what());
+          }
+        }
+
+        if (error.size() == 0 &&
+            (results.size() == 0 || !nlohmann::json::accept(results))) {
+          error = "invalid json: " + results;
+        }
+
+        if (error.size() == 0) {
+          rendered_predictions += parse_inference_(
+              output_item, results, model_name, results_json, error);
+        }
+
+        if (error.size()) {
+          d_logger->error(error);
+          output_json["error"] = error;
           inference_connected_ = false;
         }
       }
-
-      if (results.size() == 0) {
-        try {
-          if (!inference_connected_) {
-            boost::asio::ip::tcp::resolver resolver(ioc_);
-            auto const resolve_results = resolver.resolve(host_, port_);
-            stream_->connect(resolve_results);
-            inference_connected_ = true;
-          }
-          boost::beast::flat_buffer buffer;
-          boost::beast::http::response<boost::beast::http::string_body> res;
-          boost::beast::http::write(*stream_, req);
-          boost::beast::http::read(*stream_, buffer, res);
-          results = res.body().data();
-        } catch (std::exception &ex) {
-          error = "inference connection error: " + std::string(ex.what());
-        }
-      }
-
-      if (error.size() == 0 &&
-          (results.size() == 0 || !nlohmann::json::accept(results))) {
-        error = "invalid json: " + results;
-      }
-
-      if (error.size() == 0) {
-        nlohmann::json results_json;
-        size_t rendered_predictions = parse_inference_(
-            output_item, results, model_name_, results_json, error);
-        output_json["predictions"] = results_json;
-        if (rendered_predictions) {
-          metadata_json["predictions_image_path"] = write_image_(
-              secs_image_dir, "predictions_image", output_item, encoded_buffer);
-        }
-      }
-
-      if (error.size()) {
-        d_logger->error(error);
-        output_json["error"] = error;
-        inference_connected_ = false;
+      output_json["predictions"] = results_json;
+      if (rendered_predictions) {
+        metadata_json["predictions_image_path"] = write_image_(
+            secs_image_dir, "predictions_image", output_item, encoded_buffer);
       }
     }
     // double new line to facilitate json parsing, since prediction may

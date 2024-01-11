@@ -1,5 +1,5 @@
 /*
- * Copyright 2023 Free Software Foundation, Inc.
+ * Copyright 2024 Free Software Foundation, Inc.
  *
  * This file is part of GNU Radio
  *
@@ -14,7 +14,7 @@
 /* BINDTOOL_GEN_AUTOMATIC(0)                                                       */
 /* BINDTOOL_USE_PYGCCXML(0)                                                        */
 /* BINDTOOL_HEADER_FILE(image_inference.h)                                        */
-/* BINDTOOL_HEADER_FILE_HASH(113fcb53cbc7dfe117d41d8af71d3781)                     */
+/* BINDTOOL_HEADER_FILE_HASH(9dc1a31be140675bafbfff72bab97c5b)                     */
 /***********************************************************************************/
 
 #include <pybind11/complex.h>
@@ -53,12 +53,13 @@ void bind_image_inference(py::module& m)
              py::arg("flip"),
              py::arg("min_peak_points"),
              py::arg("model_server"),
-             py::arg("model_name"),
+             py::arg("model_names"),
              py::arg("confidence"),
              py::arg("max_rows"),
              py::arg("rotate_secs"),
              py::arg("n_image"),
              py::arg("n_inference"),
+             py::arg("samp_rate"),
              D(image_inference, make))
 
 
