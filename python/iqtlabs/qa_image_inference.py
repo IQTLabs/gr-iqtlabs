@@ -354,8 +354,17 @@ class qa_image_inference(gr_unittest.TestCase):
                     os.path.exists(metadata_result["predictions_image_path"])
                 )
                 bbox_freq = rx_freq - (samp_rate / 2) + ((50 / x) * samp_rate)
-                self.assertEqual(bbox_freq, result["predictions"]["modulation"][0]["freq"])
-                for k in ("rssi", "rssi_samples", "rssi_min", "rssi_max", "model", "freq"):
+                self.assertEqual(
+                    bbox_freq, result["predictions"]["modulation"][0]["freq"]
+                )
+                for k in (
+                    "rssi",
+                    "rssi_samples",
+                    "rssi_min",
+                    "rssi_max",
+                    "model",
+                    "freq",
+                ):
                     del result["predictions"]["modulation"][0][k]
                 self.assertEqual(result["predictions"], predictions_result)
 

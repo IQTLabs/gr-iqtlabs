@@ -251,9 +251,8 @@ image_inference_impl::image_inference_impl(
       colormap_(colormap), interpolation_(interpolation), flip_(flip),
       min_peak_points_(min_peak_points), confidence_(confidence),
       max_rows_(max_rows), rotate_secs_(rotate_secs), n_image_(n_image),
-      n_inference_(n_inference), samp_rate_(samp_rate),
-      running_(true), inference_connected_(false),
-      image_count_(0), inference_count_(0)  {
+      n_inference_(n_inference), samp_rate_(samp_rate), running_(true),
+      inference_connected_(false), image_count_(0), inference_count_(0) {
   points_buffer_ = NULL;
   normalized_buffer_.reset(
       new cv::Mat(cv::Size(vlen_, 0), CV_32F, cv::Scalar::all(0)));
@@ -460,7 +459,13 @@ size_t image_inference_impl::parse_inference_(
             std::stringstream rssi_label_stream;
             rssi_label_stream << std::fixed << std::setprecision(2);
             rssi_label_stream << "RSSI max: " << rssi_max;
+            std::stringstream freq_label_stream;
+            freq_label_stream << std::fixed << std::setprecision(2);
+            freq_label_stream << "freq: " << bbox_freq / 1e6;
             cv::putText(*output_item.image_buffer, class_label_stream.str(),
+                        cv::Point(cx - 10, cy - text_gap * 3), fontFace,
+                        fontScale, white, thickness, lineStyle, false);
+            cv::putText(*output_item.image_buffer, freq_label_stream.str(),
                         cv::Point(cx - 10, cy - text_gap * 2), fontFace,
                         fontScale, white, thickness, lineStyle, false);
             cv::putText(*output_item.image_buffer, rssi_label_stream.str(),
@@ -585,9 +590,8 @@ void image_inference_impl::run_inference_() {
       }
       output_json["predictions"] = results_json;
       if (rendered_predictions) {
-          metadata_json["predictions_image_path"] =
-              write_image_(secs_image_dir, "predictions_image", output_item,
-                           encoded_buffer);
+        metadata_json["predictions_image_path"] = write_image_(
+            secs_image_dir, "predictions_image", output_item, encoded_buffer);
       }
     }
     // double new line to facilitate json parsing, since prediction may
