@@ -254,7 +254,8 @@ private:
   std::string image_dir_;
   pmt::pmt_t tag_;
   std::deque<output_type> out_buf_;
-  std::string model_name_, host_, port_;
+  std::string host_, port_;
+  std::vector<std::string> model_names_;
   bool running_;
   bool inference_connected_;
   boost::scoped_ptr<std::thread> inference_thread_;
@@ -274,7 +275,7 @@ private:
                boost::scoped_ptr<std::vector<unsigned char>> &encoded_buffer);
   size_t parse_inference_(const output_item_type &output_item,
                           const std::string &results,
-                          const std::string &model_name,
+                          const std::string &model_names,
                           nlohmann::json &results_json, std::string &error);
 
 public:
@@ -283,7 +284,7 @@ public:
                        double norm_alpha, double norm_beta, int norm_type,
                        int colormap, int interpolation, int flip,
                        double min_peak_points, const std::string &model_server,
-                       const std::string &model_name, double confidence,
+                       const std::string &model_names, double confidence,
                        int max_rows, int rotate_secs, int n_image,
                        int n_inference);
   int general_work(int noutput_items, gr_vector_int &ninput_items,
