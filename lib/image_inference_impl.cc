@@ -209,10 +209,15 @@
 #include <gnuradio/io_signature.h>
 #include <ios>
 #include <iostream>
-#include <nlohmann/json.hpp>
 
 namespace gr {
 namespace iqtlabs {
+
+const cv::Scalar white = cv::Scalar(255, 255, 255);
+const auto fontFace = cv::FONT_HERSHEY_SIMPLEX;
+const auto lineStyle = cv::LINE_AA;
+const auto fontScale = 0.5;
+const auto thickness = 1;
 
 image_inference::sptr image_inference::make(
     const std::string &tag, int vlen, int x, int y,
@@ -398,6 +403,71 @@ void image_inference_impl::transform_image_(output_item_type &output_item) {
   }
 }
 
+size_t image_inference_impl::parse_inference_(
+    const output_item_type &output_item, const std::string &results,
+    nlohmann::json &results_json, std::string &error) {
+  size_t rendered_predictions;
+  const float xf = float(output_item.points_buffer->cols) /
+                   float(output_item.image_buffer->cols);
+  const float yf = float(output_item.points_buffer->rows) /
+                   float(output_item.image_buffer->rows);
+  try {
+    nlohmann::json original_results_json = nlohmann::json::parse(results);
+    results_json = original_results_json;
+    for (auto &prediction_class : original_results_json.items()) {
+      size_t i = 0;
+      for (auto &prediction_ref : prediction_class.value().items()) {
+        auto &prediction = prediction_ref.value();
+        auto &augmented = results_json[prediction_class.key()][i++];
+        float conf = prediction["conf"];
+        if (conf > confidence_) {
+          auto &xywh = prediction["xywh"];
+          int cx = xywh[0];
+          int cy = xywh[1];
+          int w = xywh[2];
+          int h = xywh[3];
+          int tlx = cx - (w / 2);
+          int tly = cy - (h / 2);
+          cv::Rect bbox_rect(tlx, tly, w, h);
+          cv::Rect rssi_rect(int(tlx * xf), int(tly * yf), int(w * xf),
+                             int(h * yf));
+          cv::Mat rssi_points = (*output_item.points_buffer)(rssi_rect);
+          double rssi_min, rssi_max;
+          cv::minMaxLoc(rssi_points, &rssi_min, &rssi_max);
+          float rssi = cv::mean(rssi_points)[0];
+          augmented["rssi"] = rssi;
+          augmented["rssi_samples"] = rssi_points.cols * rssi_points.rows;
+          augmented["rssi_min"] = rssi_min;
+          augmented["rssi_max"] = rssi_max;
+          if (rssi >= min_peak_points_) {
+            ++rendered_predictions;
+            cv::rectangle(*output_item.image_buffer, bbox_rect, white);
+            int baseLine = 0;
+            cv::Size text_size = getTextSize("placeholder", fontFace, fontScale,
+                                             thickness, &baseLine);
+            int text_gap = text_size.height * 1.5;
+            std::stringstream class_label_stream;
+            class_label_stream << std::fixed << std::setprecision(2);
+            class_label_stream << prediction_class.key() << ": " << conf;
+            std::stringstream rssi_label_stream;
+            rssi_label_stream << std::fixed << std::setprecision(2);
+            rssi_label_stream << "RSSI max: " << rssi_max;
+            cv::putText(*output_item.image_buffer, class_label_stream.str(),
+                        cv::Point(cx - 10, cy - text_gap * 2), fontFace,
+                        fontScale, white, thickness, lineStyle, false);
+            cv::putText(*output_item.image_buffer, rssi_label_stream.str(),
+                        cv::Point(cx - 10, cy - text_gap), fontFace, fontScale,
+                        white, thickness, lineStyle, false);
+          }
+        }
+      }
+    }
+  } catch (std::exception &ex) {
+    error = "invalid json: " + std::string(ex.what()) + " " + results;
+  }
+  return rendered_predictions;
+}
+
 void image_inference_impl::run_inference_() {
   boost::beast::error_code ec;
   while (!inference_q_.empty()) {
@@ -426,6 +496,10 @@ void image_inference_impl::run_inference_() {
 
     if ((host_.size() && port_.size()) && (model_name_.size() > 0) &&
         (n_inference_ == 0 || ++inference_count_ % n_inference_ == 0)) {
+      if (flip_ == -1 || flip_ == 0 || flip_ == 1) {
+        cv::flip(*output_item.points_buffer, *output_item.points_buffer, flip_);
+      }
+
       if (!metadata_json.contains("image_path")) {
         transform_image_(output_item);
         metadata_json["image_path"] =
@@ -487,77 +561,9 @@ void image_inference_impl::run_inference_() {
       }
 
       if (error.size() == 0) {
-        if (flip_ == -1 || flip_ == 0 || flip_ == 1) {
-          cv::flip(*output_item.points_buffer, *output_item.points_buffer,
-                   flip_);
-        }
-        nlohmann::json original_results_json = nlohmann::json::parse(results);
-        nlohmann::json results_json = original_results_json;
-        size_t rendered_predictions = 0;
-        const float xf = float(output_item.points_buffer->cols) /
-                         float(output_item.image_buffer->cols);
-        const float yf = float(output_item.points_buffer->rows) /
-                         float(output_item.image_buffer->rows);
-        const cv::Scalar white = cv::Scalar(255, 255, 255);
-        const auto fontFace = cv::FONT_HERSHEY_SIMPLEX;
-        const auto lineStyle = cv::LINE_AA;
-        const auto fontScale = 0.5;
-        const auto thickness = 1;
-
-        try {
-          for (auto &prediction_class : original_results_json.items()) {
-            size_t i = 0;
-            for (auto &prediction_ref : prediction_class.value().items()) {
-              auto &prediction = prediction_ref.value();
-              auto &augmented = results_json[prediction_class.key()][i++];
-              float conf = prediction["conf"];
-              if (conf > confidence_) {
-                auto &xywh = prediction["xywh"];
-                int cx = xywh[0];
-                int cy = xywh[1];
-                int w = xywh[2];
-                int h = xywh[3];
-                int tlx = cx - (w / 2);
-                int tly = cy - (h / 2);
-                cv::Rect bbox_rect(tlx, tly, w, h);
-                cv::Rect rssi_rect(int(tlx * xf), int(tly * yf), int(w * xf),
-                                   int(h * yf));
-                cv::Mat rssi_points = (*output_item.points_buffer)(rssi_rect);
-                double rssi_min, rssi_max;
-                cv::minMaxLoc(rssi_points, &rssi_min, &rssi_max);
-                float rssi = cv::mean(rssi_points)[0];
-                augmented["rssi"] = rssi;
-                augmented["rssi_samples"] = rssi_points.cols * rssi_points.rows;
-                augmented["rssi_min"] = rssi_min;
-                augmented["rssi_max"] = rssi_max;
-                if (rssi >= min_peak_points_) {
-                  ++rendered_predictions;
-                  cv::rectangle(*output_item.image_buffer, bbox_rect, white);
-                  int baseLine = 0;
-                  cv::Size text_size = getTextSize(
-                      "placeholder", fontFace, fontScale, thickness, &baseLine);
-                  int text_gap = text_size.height * 1.5;
-                  std::stringstream class_label_stream;
-                  class_label_stream << std::fixed << std::setprecision(2);
-                  class_label_stream << prediction_class.key() << ": " << conf;
-                  std::stringstream rssi_label_stream;
-                  rssi_label_stream << std::fixed << std::setprecision(2);
-                  rssi_label_stream << "RSSI max: " << rssi_max;
-                  cv::putText(*output_item.image_buffer,
-                              class_label_stream.str(),
-                              cv::Point(cx - 10, cy - text_gap * 2), fontFace,
-                              fontScale, white, thickness, lineStyle, false);
-                  cv::putText(*output_item.image_buffer,
-                              rssi_label_stream.str(),
-                              cv::Point(cx - 10, cy - text_gap), fontFace,
-                              fontScale, white, thickness, lineStyle, false);
-                }
-              }
-            }
-          }
-        } catch (std::exception &ex) {
-          error = "invalid json: " + std::string(ex.what()) + " " + results;
-        }
+        nlohmann::json results_json;
+        size_t rendered_predictions =
+            parse_inference_(output_item, results, results_json, error);
         output_json["predictions"] = results_json;
         if (rendered_predictions) {
           metadata_json["predictions_image_path"] = write_image_(
