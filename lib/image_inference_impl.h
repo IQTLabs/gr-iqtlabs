@@ -241,7 +241,8 @@ typedef struct output_item {
 class image_inference_impl : public image_inference, base_impl {
 private:
   int x_, y_, vlen_, norm_type_, colormap_, interpolation_, flip_, max_rows_,
-      rotate_secs_, n_image_, n_inference_, image_count_, inference_count_;
+      rotate_secs_, n_image_, n_inference_, image_count_, inference_count_,
+      samp_rate_;
   uint64_t last_rx_freq_;
   double convert_alpha_, norm_alpha_, norm_beta_, last_rx_time_,
       min_peak_points_, confidence_;
@@ -286,7 +287,7 @@ public:
                        double min_peak_points, const std::string &model_server,
                        const std::string &model_names, double confidence,
                        int max_rows, int rotate_secs, int n_image,
-                       int n_inference);
+                       int n_inference, int samp_rate);
   int general_work(int noutput_items, gr_vector_int &ninput_items,
                    gr_vector_const_void_star &input_items,
                    gr_vector_void_star &output_items);

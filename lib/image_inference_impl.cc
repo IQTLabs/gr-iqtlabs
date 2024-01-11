@@ -225,11 +225,12 @@ image_inference::sptr image_inference::make(
     double norm_beta, int norm_type, int colormap, int interpolation, int flip,
     double min_peak_points, const std::string &model_server,
     const std::string &model_names, double confidence, int max_rows,
-    int rotate_secs, int n_image, int n_inference) {
+    int rotate_secs, int n_image, int n_inference, int samp_rate) {
   return gnuradio::make_block_sptr<image_inference_impl>(
       tag, vlen, x, y, image_dir, convert_alpha, norm_alpha, norm_beta,
       norm_type, colormap, interpolation, flip, min_peak_points, model_server,
-      model_names, confidence, max_rows, rotate_secs, n_image, n_inference);
+      model_names, confidence, max_rows, rotate_secs, n_image, n_inference,
+      samp_rate);
 }
 
 image_inference_impl::image_inference_impl(
@@ -238,7 +239,7 @@ image_inference_impl::image_inference_impl(
     double norm_beta, int norm_type, int colormap, int interpolation, int flip,
     double min_peak_points, const std::string &model_server,
     const std::string &model_names, double confidence, int max_rows,
-    int rotate_secs, int n_image, int n_inference)
+    int rotate_secs, int n_image, int n_inference, int samp_rate)
     : gr::block("image_inference",
                 gr::io_signature::make(1 /* min inputs */, 1 /* max inputs */,
                                        vlen * sizeof(input_type)),
@@ -250,8 +251,9 @@ image_inference_impl::image_inference_impl(
       colormap_(colormap), interpolation_(interpolation), flip_(flip),
       min_peak_points_(min_peak_points), confidence_(confidence),
       max_rows_(max_rows), rotate_secs_(rotate_secs), n_image_(n_image),
-      n_inference_(n_inference), running_(true), inference_connected_(false),
-      image_count_(0), inference_count_(0) {
+      n_inference_(n_inference), samp_rate_(samp_rate),
+      running_(true), inference_connected_(false),
+      image_count_(0), inference_count_(0)  {
   points_buffer_ = NULL;
   normalized_buffer_.reset(
       new cv::Mat(cv::Size(vlen_, 0), CV_32F, cv::Scalar::all(0)));

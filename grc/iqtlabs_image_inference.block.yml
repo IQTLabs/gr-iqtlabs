@@ -36,13 +36,14 @@ documentation: |-
     interpolation: type of interpolation to cv::resize().
     flip: if -1, 0, or 1, type of transform to apply to image in cv::flip().
     min_peak_points: Only run inference on buckets with this minimum dB power.
-    model_name: if not empty, do torchserve inference with this model name.
+    model_names: if not empty, comma separated list of model names.
     model_server: if not empty, do torchserve inference to this address.
     confidence: Only output inference results where confidence is greater.
     max_rows: if > 0, use at most N dB input vectors per image.
     rotate_secs: if > 0, use a new epoch timestamped directory every N seconds.
     n_image: if > 0, only log 1/n_image images.
     n_inference: if > 0, only run inference on 1/n_inference images.
+    samp_rate: sample rate.
 
 templates:
   imports: from gnuradio import iqtlabs
@@ -50,7 +51,7 @@ templates:
     iqtlabs.image_inference(${tag}, ${vlen}, ${x}, ${y}, ${image_dir},
     ${convert_alpha}, ${norm_alpha}, ${norm_beta}, ${norm_type}, ${colormap},
     ${interpolation}, ${model_server}, ${model_name}, ${confidence},
-    ${max_rows}, ${rotate_secs}, ${n_image}, ${n_inference})
+    ${max_rows}, ${rotate_secs}, ${n_image}, ${n_inference}, ${samp_rate})
 
 cpp_templates:
   includes: ['#include <gnuradio/iqtlabs/image_inference.h>']
@@ -60,7 +61,7 @@ cpp_templates:
     ${x}, ${y}, ${image_dir}, ${convert_alpha}, ${norm_alpha}, ${norm_beta},
     ${norm_type}, ${colormap}, ${interpolation}, ${model_server},
     ${model_name}, ${confidence}, ${max_rows}, ${rotate_secs}, ${n_image},
-    ${n_inference})
+    ${n_inference}, ${samp_rate})
   link: ['libgnuradio-iqtlabs.so']
 
 
@@ -113,11 +114,13 @@ parameters:
     dtype: int
   - id: n_inference
     dtype: int
+  - id: samp_rate
+    dtype: int
 
 asserts:
   - ${ tag != "" }
   - ${ vlen > 0 }
-  - ${ !model_server || (model_server && model_name) }
+  - ${ !model_server || (model_server && model_names) }
 
 inputs:
   - label: input

@@ -277,6 +277,7 @@ class qa_image_inference(gr_unittest.TestCase):
             30,
             0,
             0,
+            int(samp_rate),
         )
         c2r = blocks.complex_to_real(1)
         stream2vector = blocks.stream_to_vector(gr.sizeof_float, fft_size)
