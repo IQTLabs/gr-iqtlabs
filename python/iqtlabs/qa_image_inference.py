@@ -352,7 +352,7 @@ class qa_image_inference(gr_unittest.TestCase):
                 self.assertTrue(
                     os.path.exists(metadata_result["predictions_image_path"])
                 )
-                for k in ("rssi", "rssi_samples", "rssi_min", "rssi_max"):
+                for k in ("rssi", "rssi_samples", "rssi_min", "rssi_max", "model"):
                     del result["predictions"]["modulation"][0][k]
                 self.assertEqual(result["predictions"], predictions_result)
 

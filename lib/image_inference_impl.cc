@@ -209,10 +209,15 @@
 #include <gnuradio/io_signature.h>
 #include <ios>
 #include <iostream>
-#include <nlohmann/json.hpp>
 
 namespace gr {
 namespace iqtlabs {
+
+const cv::Scalar white = cv::Scalar(255, 255, 255);
+const auto fontFace = cv::FONT_HERSHEY_SIMPLEX;
+const auto lineStyle = cv::LINE_AA;
+const auto fontScale = 0.5;
+const auto thickness = 1;
 
 image_inference::sptr image_inference::make(
     const std::string &tag, int vlen, int x, int y,
@@ -290,7 +295,6 @@ bool image_inference_impl::stop() {
   running_ = false;
   inference_thread_->join();
   run_inference_();
-  d_logger->info("inference queue empty: {}", inference_q_.empty());
   if (inference_connected_) {
     boost::beast::error_code ec;
     stream_->socket().shutdown(boost::asio::ip::tcp::socket::shutdown_both, ec);
@@ -398,6 +402,74 @@ void image_inference_impl::transform_image_(output_item_type &output_item) {
   }
 }
 
+size_t image_inference_impl::parse_inference_(
+    const output_item_type &output_item, const std::string &results,
+    const std::string &model_name, nlohmann::json &results_json,
+    std::string &error) {
+  size_t rendered_predictions = 0;
+  const float xf = float(output_item.points_buffer->cols) /
+                   float(output_item.image_buffer->cols);
+  const float yf = float(output_item.points_buffer->rows) /
+                   float(output_item.image_buffer->rows);
+  try {
+    nlohmann::json original_results_json = nlohmann::json::parse(results);
+    for (auto &prediction_class : original_results_json.items()) {
+      if (!results_json.contains(prediction_class.key())) {
+        results_json[prediction_class.key()] = nlohmann::json::array();
+      }
+      for (auto &prediction_ref : prediction_class.value().items()) {
+        auto prediction = prediction_ref.value();
+        prediction["model"] = model_name;
+        float conf = prediction["conf"];
+        if (conf > confidence_) {
+          auto &xywh = prediction["xywh"];
+          int cx = xywh[0];
+          int cy = xywh[1];
+          int w = xywh[2];
+          int h = xywh[3];
+          int tlx = cx - (w / 2);
+          int tly = cy - (h / 2);
+          cv::Rect bbox_rect(tlx, tly, w, h);
+          cv::Rect rssi_rect(int(tlx * xf), int(tly * yf), int(w * xf),
+                             int(h * yf));
+          cv::Mat rssi_points = (*output_item.points_buffer)(rssi_rect);
+          double rssi_min, rssi_max;
+          cv::minMaxLoc(rssi_points, &rssi_min, &rssi_max);
+          float rssi = cv::mean(rssi_points)[0];
+          prediction["rssi"] = rssi;
+          prediction["rssi_samples"] = rssi_points.cols * rssi_points.rows;
+          prediction["rssi_min"] = rssi_min;
+          prediction["rssi_max"] = rssi_max;
+          if (rssi >= min_peak_points_) {
+            ++rendered_predictions;
+            cv::rectangle(*output_item.image_buffer, bbox_rect, white);
+            int baseLine = 0;
+            cv::Size text_size = getTextSize("placeholder", fontFace, fontScale,
+                                             thickness, &baseLine);
+            int text_gap = text_size.height * 1.5;
+            std::stringstream class_label_stream;
+            class_label_stream << std::fixed << std::setprecision(2);
+            class_label_stream << prediction_class.key() << ": " << conf;
+            std::stringstream rssi_label_stream;
+            rssi_label_stream << std::fixed << std::setprecision(2);
+            rssi_label_stream << "RSSI max: " << rssi_max;
+            cv::putText(*output_item.image_buffer, class_label_stream.str(),
+                        cv::Point(cx - 10, cy - text_gap * 2), fontFace,
+                        fontScale, white, thickness, lineStyle, false);
+            cv::putText(*output_item.image_buffer, rssi_label_stream.str(),
+                        cv::Point(cx - 10, cy - text_gap), fontFace, fontScale,
+                        white, thickness, lineStyle, false);
+          }
+        }
+        results_json[prediction_class.key()].emplace_back(prediction);
+      }
+    }
+  } catch (std::exception &ex) {
+    error = "invalid json: " + std::string(ex.what()) + " " + results;
+  }
+  return rendered_predictions;
+}
+
 void image_inference_impl::run_inference_() {
   boost::beast::error_code ec;
   while (!inference_q_.empty()) {
@@ -426,6 +498,10 @@ void image_inference_impl::run_inference_() {
 
     if ((host_.size() && port_.size()) && (model_name_.size() > 0) &&
         (n_inference_ == 0 || ++inference_count_ % n_inference_ == 0)) {
+      if (flip_ == -1 || flip_ == 0 || flip_ == 1) {
+        cv::flip(*output_item.points_buffer, *output_item.points_buffer, flip_);
+      }
+
       if (!metadata_json.contains("image_path")) {
         transform_image_(output_item);
         metadata_json["image_path"] =
@@ -445,6 +521,7 @@ void image_inference_impl::run_inference_() {
       req.body() = body;
       req.prepare_payload();
       std::string results;
+      std::string error;
 
       // attempt to re-use existing connection. may fail if an http 1.1 server
       // has dropped the connection to use in the meantime.
@@ -466,8 +543,8 @@ void image_inference_impl::run_inference_() {
         try {
           if (!inference_connected_) {
             boost::asio::ip::tcp::resolver resolver(ioc_);
-            auto const results = resolver.resolve(host_, port_);
-            stream_->connect(results);
+            auto const resolve_results = resolver.resolve(host_, port_);
+            stream_->connect(resolve_results);
             inference_connected_ = true;
           }
           boost::beast::flat_buffer buffer;
@@ -476,101 +553,23 @@ void image_inference_impl::run_inference_() {
           boost::beast::http::read(*stream_, buffer, res);
           results = res.body().data();
         } catch (std::exception &ex) {
-          output_json["error"] = ex.what();
-          this->d_logger->error("inference connection error: " +
-                                std::string(ex.what()));
-          inference_connected_ = false;
+          error = "inference connection error: " + std::string(ex.what());
         }
       }
 
-      std::string error;
-      if (results.size()) {
-        if (nlohmann::json::accept(results)) {
-          if (flip_ == -1 || flip_ == 0 || flip_ == 1) {
-            cv::flip(*output_item.points_buffer, *output_item.points_buffer,
-                     flip_);
-          }
-          nlohmann::json original_results_json = nlohmann::json::parse(results);
-          nlohmann::json results_json = original_results_json;
-          size_t rendered_predictions = 0;
-          const float xf = float(output_item.points_buffer->cols) /
-                           float(output_item.image_buffer->cols);
-          const float yf = float(output_item.points_buffer->rows) /
-                           float(output_item.image_buffer->rows);
-          const cv::Scalar white = cv::Scalar(255, 255, 255);
-          const auto fontFace = cv::FONT_HERSHEY_SIMPLEX;
-          const auto lineStyle = cv::LINE_AA;
-          const auto fontScale = 0.5;
-          const auto thickness = 1;
+      if (error.size() == 0 &&
+          (results.size() == 0 || !nlohmann::json::accept(results))) {
+        error = "invalid json: " + results;
+      }
 
-          try {
-            for (auto &prediction_class : original_results_json.items()) {
-              size_t i = 0;
-              for (auto &prediction_ref : prediction_class.value().items()) {
-                auto &prediction = prediction_ref.value();
-                float conf = prediction["conf"];
-                if (conf > confidence_) {
-                  auto &xywh = prediction["xywh"];
-                  int cx = xywh[0];
-                  int cy = xywh[1];
-                  int w = xywh[2];
-                  int h = xywh[3];
-                  int tlx = cx - (w / 2);
-                  int tly = cy - (h / 2);
-                  cv::Rect bbox_rect(tlx, tly, w, h);
-                  cv::Rect rssi_rect(int(tlx * xf), int(tly * yf), int(w * xf),
-                                     int(h * yf));
-                  cv::Mat rssi_points = (*output_item.points_buffer)(rssi_rect);
-                  double rssi_min, rssi_max;
-                  cv::minMaxLoc(rssi_points, &rssi_min, &rssi_max);
-                  float rssi = cv::mean(rssi_points)[0];
-                  auto &augmented = results_json[prediction_class.key()][i];
-                  augmented["rssi"] = rssi;
-                  augmented["rssi_samples"] =
-                      rssi_points.cols * rssi_points.rows;
-                  augmented["rssi_min"] = rssi_min;
-                  augmented["rssi_max"] = rssi_max;
-                  if (rssi >= min_peak_points_) {
-                    ++rendered_predictions;
-                    cv::rectangle(*output_item.image_buffer, bbox_rect, white);
-                    int baseLine = 0;
-                    cv::Size text_size =
-                        getTextSize("placeholder", fontFace, fontScale,
-                                    thickness, &baseLine);
-                    int text_gap = text_size.height * 1.5;
-                    std::stringstream class_label_stream;
-                    class_label_stream << std::fixed << std::setprecision(2);
-                    class_label_stream << prediction_class.key() << ": "
-                                       << conf;
-                    std::stringstream rssi_label_stream;
-                    rssi_label_stream << std::fixed << std::setprecision(2);
-                    rssi_label_stream << "RSSI max: " << rssi_max;
-                    cv::putText(*output_item.image_buffer,
-                                class_label_stream.str(),
-                                cv::Point(cx - 10, cy - text_gap * 2), fontFace,
-                                fontScale, white, thickness, lineStyle, false);
-                    cv::putText(*output_item.image_buffer,
-                                rssi_label_stream.str(),
-                                cv::Point(cx - 10, cy - text_gap), fontFace,
-                                fontScale, white, thickness, lineStyle, false);
-                  }
-                }
-                // TODO: add NMS
-              }
-              ++i;
-            }
-          } catch (std::exception &ex) {
-            error = "invalid json: " + results;
-            rendered_predictions = 0;
-          }
-          output_json["predictions"] = results_json;
-          if (rendered_predictions) {
-            metadata_json["predictions_image_path"] =
-                write_image_(secs_image_dir, "predictions_image", output_item,
-                             encoded_buffer);
-          }
-        } else {
-          error = "invalid json: " + results;
+      if (error.size() == 0) {
+        nlohmann::json results_json;
+        size_t rendered_predictions = parse_inference_(
+            output_item, results, model_name_, results_json, error);
+        output_json["predictions"] = results_json;
+        if (rendered_predictions) {
+          metadata_json["predictions_image_path"] = write_image_(
+              secs_image_dir, "predictions_image", output_item, encoded_buffer);
         }
       }
 

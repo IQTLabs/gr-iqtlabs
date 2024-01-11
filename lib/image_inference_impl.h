@@ -214,6 +214,7 @@
 #include <boost/lockfree/spsc_queue.hpp>
 #include <boost/scoped_ptr.hpp>
 #include <gnuradio/iqtlabs/image_inference.h>
+#include <nlohmann/json.hpp>
 #include <opencv2/imgcodecs.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
 #include <thread>
@@ -271,6 +272,10 @@ private:
   write_image_(const std::string &secs_image_dir, const std::string &prefix,
                output_item_type &output_item,
                boost::scoped_ptr<std::vector<unsigned char>> &encoded_buffer);
+  size_t parse_inference_(const output_item_type &output_item,
+                          const std::string &results,
+                          const std::string &model_name,
+                          nlohmann::json &results_json, std::string &error);
 
 public:
   image_inference_impl(const std::string &tag, int vlen, int x, int y,
