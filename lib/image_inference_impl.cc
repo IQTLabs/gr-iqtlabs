@@ -406,7 +406,7 @@ size_t image_inference_impl::parse_inference_(
     const output_item_type &output_item, const std::string &results,
     const std::string &model_name, nlohmann::json &results_json,
     std::string &error) {
-  size_t rendered_predictions;
+  size_t rendered_predictions = 0;
   const float xf = float(output_item.points_buffer->cols) /
                    float(output_item.image_buffer->cols);
   const float yf = float(output_item.points_buffer->rows) /
