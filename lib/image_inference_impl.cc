@@ -417,6 +417,7 @@ size_t image_inference_impl::parse_inference_(
                    float(output_item.image_buffer->rows);
   try {
     nlohmann::json original_results_json = nlohmann::json::parse(results);
+    double min_rx_freq = output_item.rx_freq - (samp_rate_ / 2);
     for (auto &prediction_class : original_results_json.items()) {
       if (!results_json.contains(prediction_class.key())) {
         results_json[prediction_class.key()] = nlohmann::json::array();
@@ -433,6 +434,7 @@ size_t image_inference_impl::parse_inference_(
           int h = xywh[3];
           int tlx = cx - (w / 2);
           int tly = cy - (h / 2);
+          double bbox_freq = min_rx_freq + (float(cx) / float(x_) * samp_rate_);
           cv::Rect bbox_rect(tlx, tly, w, h);
           cv::Rect rssi_rect(int(tlx * xf), int(tly * yf), int(w * xf),
                              int(h * yf));
@@ -444,6 +446,7 @@ size_t image_inference_impl::parse_inference_(
           prediction["rssi_samples"] = rssi_points.cols * rssi_points.rows;
           prediction["rssi_min"] = rssi_min;
           prediction["rssi_max"] = rssi_max;
+          prediction["freq"] = bbox_freq;
           if (rssi >= min_peak_points_) {
             ++rendered_predictions;
             cv::rectangle(*output_item.image_buffer, bbox_rect, white);
