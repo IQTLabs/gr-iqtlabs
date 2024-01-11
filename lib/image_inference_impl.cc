@@ -295,7 +295,6 @@ bool image_inference_impl::stop() {
   running_ = false;
   inference_thread_->join();
   run_inference_();
-  d_logger->info("inference queue empty: {}", inference_q_.empty());
   if (inference_connected_) {
     boost::beast::error_code ec;
     stream_->socket().shutdown(boost::asio::ip::tcp::socket::shutdown_both, ec);
@@ -405,6 +404,7 @@ void image_inference_impl::transform_image_(output_item_type &output_item) {
 
 size_t image_inference_impl::parse_inference_(
     const output_item_type &output_item, const std::string &results,
+    const std::string &model_name,
     nlohmann::json &results_json, std::string &error) {
   size_t rendered_predictions;
   const float xf = float(output_item.points_buffer->cols) /
@@ -419,6 +419,7 @@ size_t image_inference_impl::parse_inference_(
       for (auto &prediction_ref : prediction_class.value().items()) {
         auto &prediction = prediction_ref.value();
         auto &augmented = results_json[prediction_class.key()][i++];
+        augmented["model"] = model_name;
         float conf = prediction["conf"];
         if (conf > confidence_) {
           auto &xywh = prediction["xywh"];
@@ -563,7 +564,7 @@ void image_inference_impl::run_inference_() {
       if (error.size() == 0) {
         nlohmann::json results_json;
         size_t rendered_predictions =
-            parse_inference_(output_item, results, results_json, error);
+            parse_inference_(output_item, results, model_name_, results_json, error);
         output_json["predictions"] = results_json;
         if (rendered_predictions) {
           metadata_json["predictions_image_path"] = write_image_(

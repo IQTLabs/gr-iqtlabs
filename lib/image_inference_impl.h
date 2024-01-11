@@ -273,7 +273,7 @@ private:
                output_item_type &output_item,
                boost::scoped_ptr<std::vector<unsigned char>> &encoded_buffer);
   size_t parse_inference_(const output_item_type &output_item,
-                          const std::string &results,
+                          const std::string &results, const std::string &model_name,
                           nlohmann::json &results_json, std::string &error);
 
 public:
