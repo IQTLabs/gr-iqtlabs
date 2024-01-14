@@ -262,6 +262,7 @@ private:
   boost::scoped_ptr<std::thread> inference_thread_;
   boost::asio::io_context ioc_;
   boost::scoped_ptr<boost::beast::tcp_stream> stream_;
+  cv::Scalar text_color_;
 
   void process_items_(size_t c, const input_type *&in);
   void create_image_(bool discard);
@@ -278,6 +279,8 @@ private:
                           const std::string &results,
                           const std::string &model_names,
                           nlohmann::json &results_json, std::string &error);
+  void bbox_text(const output_item_type &output_item, const std::string &text,
+                 int pos, int cx, int cy);
 
 public:
   image_inference_impl(const std::string &tag, int vlen, int x, int y,
@@ -287,7 +290,8 @@ public:
                        double min_peak_points, const std::string &model_server,
                        const std::string &model_names, double confidence,
                        int max_rows, int rotate_secs, int n_image,
-                       int n_inference, int samp_rate);
+                       int n_inference, int samp_rate,
+                       const std::string &text_color);
   int general_work(int noutput_items, gr_vector_int &ninput_items,
                    gr_vector_const_void_star &input_items,
                    gr_vector_void_star &output_items);

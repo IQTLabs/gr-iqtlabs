@@ -213,7 +213,6 @@
 namespace gr {
 namespace iqtlabs {
 
-const cv::Scalar white = cv::Scalar(255, 255, 255);
 const auto fontFace = cv::FONT_HERSHEY_SIMPLEX;
 const auto lineStyle = cv::LINE_AA;
 const auto fontScale = 0.5;
@@ -225,12 +224,13 @@ image_inference::sptr image_inference::make(
     double norm_beta, int norm_type, int colormap, int interpolation, int flip,
     double min_peak_points, const std::string &model_server,
     const std::string &model_names, double confidence, int max_rows,
-    int rotate_secs, int n_image, int n_inference, int samp_rate) {
+    int rotate_secs, int n_image, int n_inference, int samp_rate,
+    const std::string &text_color) {
   return gnuradio::make_block_sptr<image_inference_impl>(
       tag, vlen, x, y, image_dir, convert_alpha, norm_alpha, norm_beta,
       norm_type, colormap, interpolation, flip, min_peak_points, model_server,
       model_names, confidence, max_rows, rotate_secs, n_image, n_inference,
-      samp_rate);
+      samp_rate, text_color);
 }
 
 image_inference_impl::image_inference_impl(
@@ -239,7 +239,8 @@ image_inference_impl::image_inference_impl(
     double norm_beta, int norm_type, int colormap, int interpolation, int flip,
     double min_peak_points, const std::string &model_server,
     const std::string &model_names, double confidence, int max_rows,
-    int rotate_secs, int n_image, int n_inference, int samp_rate)
+    int rotate_secs, int n_image, int n_inference, int samp_rate,
+    const std::string &text_color)
     : gr::block("image_inference",
                 gr::io_signature::make(1 /* min inputs */, 1 /* max inputs */,
                                        vlen * sizeof(input_type)),
@@ -264,15 +265,30 @@ image_inference_impl::image_inference_impl(
   set_tag_propagation_policy(TPP_DONT);
   // TODO: IPv6 IP addresses
   std::vector<std::string> model_server_parts_;
+  std::vector<std::string> text_color_parts_;
   boost::split(model_server_parts_, model_server, boost::is_any_of(":"),
                boost::token_compress_on);
   boost::split(model_names_, model_names, boost::is_any_of(","),
+               boost::token_compress_on);
+  boost::split(text_color_parts_, text_color, boost::is_any_of(","),
                boost::token_compress_on);
   if (model_server_parts_.size() == 2) {
     host_ = model_server_parts_[0];
     port_ = model_server_parts_[1];
     if (model_names_.size() == 0) {
       d_logger->error("missing model name(s)");
+    }
+  }
+  text_color_ = cv::Scalar(255, 255, 255);
+  if (text_color_parts_.size() == 3) {
+    try {
+      text_color_ = cv::Scalar(atoi(text_color_parts_[0].c_str()),
+                               atoi(text_color_parts_[1].c_str()),
+                               atoi(text_color_parts_[2].c_str()));
+      d_logger->info("using text color: {}", text_color);
+    } catch (std::exception &ex) {
+      d_logger->error("cannot parse text color from {}: {}", ex.what(),
+                      text_color);
     }
   }
   stream_.reset(new boost::beast::tcp_stream(ioc_));
@@ -405,6 +421,18 @@ void image_inference_impl::transform_image_(output_item_type &output_item) {
   }
 }
 
+void image_inference_impl::bbox_text(const output_item_type &output_item,
+                                     const std::string &text, int pos, int cx,
+                                     int cy) {
+  int baseLine = 0;
+  cv::Size text_size =
+      getTextSize(text, fontFace, fontScale, thickness, &baseLine);
+  int text_gap = text_size.height * 1.5 * pos;
+  cv::putText(*output_item.image_buffer, text,
+              cv::Point(cx - 10, cy - text_gap), fontFace, fontScale,
+              text_color_, thickness, lineStyle, false);
+}
+
 size_t image_inference_impl::parse_inference_(
     const output_item_type &output_item, const std::string &results,
     const std::string &model_name, nlohmann::json &results_json,
@@ -448,11 +476,7 @@ size_t image_inference_impl::parse_inference_(
           prediction["freq"] = bbox_freq;
           if (rssi >= min_peak_points_) {
             ++rendered_predictions;
-            cv::rectangle(*output_item.image_buffer, bbox_rect, white);
-            int baseLine = 0;
-            cv::Size text_size = getTextSize("placeholder", fontFace, fontScale,
-                                             thickness, &baseLine);
-            int text_gap = text_size.height * 1.5;
+            cv::rectangle(*output_item.image_buffer, bbox_rect, text_color_);
             std::stringstream class_label_stream;
             class_label_stream << std::fixed << std::setprecision(2);
             class_label_stream << prediction_class.key() << ": " << conf;
@@ -462,15 +486,9 @@ size_t image_inference_impl::parse_inference_(
             std::stringstream freq_label_stream;
             freq_label_stream << std::fixed << std::setprecision(2);
             freq_label_stream << "freq: " << bbox_freq / 1e6;
-            cv::putText(*output_item.image_buffer, class_label_stream.str(),
-                        cv::Point(cx - 10, cy - text_gap * 3), fontFace,
-                        fontScale, white, thickness, lineStyle, false);
-            cv::putText(*output_item.image_buffer, freq_label_stream.str(),
-                        cv::Point(cx - 10, cy - text_gap * 2), fontFace,
-                        fontScale, white, thickness, lineStyle, false);
-            cv::putText(*output_item.image_buffer, rssi_label_stream.str(),
-                        cv::Point(cx - 10, cy - text_gap), fontFace, fontScale,
-                        white, thickness, lineStyle, false);
+            bbox_text(output_item, class_label_stream.str(), 3, cx, cy);
+            bbox_text(output_item, freq_label_stream.str(), 2, cx, cy);
+            bbox_text(output_item, rssi_label_stream.str(), 1, cx, cy);
           }
         }
         results_json[prediction_class.key()].emplace_back(prediction);

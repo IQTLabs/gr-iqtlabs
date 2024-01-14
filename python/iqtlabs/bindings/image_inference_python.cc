@@ -14,7 +14,7 @@
 /* BINDTOOL_GEN_AUTOMATIC(0)                                                       */
 /* BINDTOOL_USE_PYGCCXML(0)                                                        */
 /* BINDTOOL_HEADER_FILE(image_inference.h)                                        */
-/* BINDTOOL_HEADER_FILE_HASH(9dc1a31be140675bafbfff72bab97c5b)                     */
+/* BINDTOOL_HEADER_FILE_HASH(c4d0cffaadbf27185484acb5af42cf02)                     */
 /***********************************************************************************/
 
 #include <pybind11/complex.h>
@@ -60,6 +60,7 @@ void bind_image_inference(py::module& m)
              py::arg("n_image"),
              py::arg("n_inference"),
              py::arg("samp_rate"),
+             py::arg("text_color"),
              D(image_inference, make))
 
 

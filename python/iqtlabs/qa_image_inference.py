@@ -278,6 +278,7 @@ class qa_image_inference(gr_unittest.TestCase):
             0,
             0,
             int(samp_rate),
+            "0,255,191",
         )
         c2r = blocks.complex_to_real(1)
         stream2vector = blocks.stream_to_vector(gr.sizeof_float, fft_size)
@@ -314,7 +315,8 @@ class qa_image_inference(gr_unittest.TestCase):
     def test_instance(self):
         port = 11001
         model_name = "testmodel"
-        predictions_result = {"modulation": [{"conf": 0.9, "xywh": [50, 50, 10, 10]}]}
+        px = 100
+        predictions_result = {"modulation": [{"conf": 0.9, "xywh": [px, px, 10, 10]}]}
         if self.pid == 0:
             self.simulate_torchserve(port, model_name, predictions_result)
             return
@@ -353,7 +355,7 @@ class qa_image_inference(gr_unittest.TestCase):
                 self.assertTrue(
                     os.path.exists(metadata_result["predictions_image_path"])
                 )
-                bbox_freq = rx_freq - (samp_rate / 2) + ((50 / x) * samp_rate)
+                bbox_freq = rx_freq - (samp_rate / 2) + ((px/ x) * samp_rate)
                 self.assertEqual(
                     bbox_freq, result["predictions"]["modulation"][0]["freq"]
                 )
