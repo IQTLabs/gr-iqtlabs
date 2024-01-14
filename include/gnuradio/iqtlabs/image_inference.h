@@ -235,7 +235,7 @@ public:
                    double min_peak_points, const std::string &model_server,
                    const std::string &model_names, double confidence,
                    int max_rows, int rotate_secs, int n_image, int n_inference,
-                   int samp_rate);
+                   int samp_rate, const std::string &text_color);
 };
 
 } // namespace iqtlabs

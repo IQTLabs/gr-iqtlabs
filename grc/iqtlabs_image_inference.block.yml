@@ -44,6 +44,7 @@ documentation: |-
     n_image: if > 0, only log 1/n_image images.
     n_inference: if > 0, only run inference on 1/n_inference images.
     samp_rate: sample rate.
+    text_color: 3-tuple of BGR for text color.
 
 templates:
   imports: from gnuradio import iqtlabs
@@ -51,7 +52,8 @@ templates:
     iqtlabs.image_inference(${tag}, ${vlen}, ${x}, ${y}, ${image_dir},
     ${convert_alpha}, ${norm_alpha}, ${norm_beta}, ${norm_type}, ${colormap},
     ${interpolation}, ${model_server}, ${model_name}, ${confidence},
-    ${max_rows}, ${rotate_secs}, ${n_image}, ${n_inference}, ${samp_rate})
+    ${max_rows}, ${rotate_secs}, ${n_image}, ${n_inference}, ${samp_rate},
+    ${text_color})
 
 cpp_templates:
   includes: ['#include <gnuradio/iqtlabs/image_inference.h>']
@@ -61,7 +63,7 @@ cpp_templates:
     ${x}, ${y}, ${image_dir}, ${convert_alpha}, ${norm_alpha}, ${norm_beta},
     ${norm_type}, ${colormap}, ${interpolation}, ${model_server},
     ${model_name}, ${confidence}, ${max_rows}, ${rotate_secs}, ${n_image},
-    ${n_inference}, ${samp_rate})
+    ${n_inference}, ${samp_rate}, ${text_color})
   link: ['libgnuradio-iqtlabs.so']
 
 
@@ -116,6 +118,8 @@ parameters:
     dtype: int
   - id: samp_rate
     dtype: int
+  - id: text_color
+    dtype: str
 
 asserts:
   - ${ tag != "" }
