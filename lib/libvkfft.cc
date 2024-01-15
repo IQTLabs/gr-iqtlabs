@@ -17,6 +17,7 @@ static VkDeviceMemory stagingBufferMemory = {0};
 static uint64_t fftBufferSize = 0;
 static uint64_t stagingBufferSize = 0;
 static bool _shift = false;
+static char *data = NULL;
 
 VkFFTResult _setupCopy(VkCommandBuffer &commandBuffer,
                        VkBufferCopy &copyRegion) {
@@ -65,13 +66,7 @@ VkFFTResult _runCopy(VkCommandBuffer &commandBuffer) {
 VkFFTResult _transferDataFromCPU(char *cpu_arr) {
   VkResult res = VK_SUCCESS;
   VkBuffer *buffer = &vkConfiguration.buffer[0];
-  char *data;
-  res = vkMapMemory(vkGPU.device, stagingBufferMemory, 0, stagingBufferSize, 0,
-                    (void **)&data);
-  if (res != VK_SUCCESS)
-    return VKFFT_ERROR_MALLOC_FAILED;
   memcpy(data, cpu_arr, stagingBufferSize);
-  vkUnmapMemory(vkGPU.device, stagingBufferMemory);
   VkCommandBuffer commandBuffer = {0};
   VkBufferCopy copyRegion = {0};
   VkFFTResult setup_res = _setupCopy(commandBuffer, copyRegion);
@@ -98,11 +93,6 @@ VkFFTResult _transferDataToCPU(char *cpu_arr) {
   if (copy_res != VKFFT_SUCCESS) {
     return copy_res;
   }
-  char *data;
-  res = vkMapMemory(vkGPU.device, stagingBufferMemory, 0, stagingBufferSize, 0,
-                    (void **)&data);
-  if (res != VK_SUCCESS)
-    return VKFFT_ERROR_MALLOC_FAILED;
   if (_shift) {
     const size_t halfFftBufferSize = fftBufferSize / 2;
     for (int i = 0; i < vkConfiguration.numberBatches;
@@ -113,7 +103,6 @@ VkFFTResult _transferDataToCPU(char *cpu_arr) {
   } else {
     memcpy(cpu_arr, data, stagingBufferSize);
   }
-  vkUnmapMemory(vkGPU.device, stagingBufferMemory);
   return VKFFT_SUCCESS;
 }
 
@@ -231,10 +220,16 @@ int64_t init_vkfft(std::size_t batches, std::size_t nfft,
   if (resFFT != VKFFT_SUCCESS)
     return VKFFT_ERROR_MALLOC_FAILED;
 
+  res = vkMapMemory(vkGPU.device, stagingBufferMemory, 0, stagingBufferSize, 0,
+                    (void **)&data);
+  if (res != VK_SUCCESS)
+    return VKFFT_ERROR_MALLOC_FAILED;
+
   return VKFFT_SUCCESS;
 }
 
 void free_vkfft() {
+  vkUnmapMemory(vkGPU.device, stagingBufferMemory);
   vkDestroyBuffer(vkGPU.device, stagingBuffer, NULL);
   vkFreeMemory(vkGPU.device, stagingBufferMemory, NULL);
   for (uint64_t i = 0; i < kVkNumBuf; i++) {
