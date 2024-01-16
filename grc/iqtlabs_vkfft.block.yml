@@ -12,7 +12,7 @@ documentation: |-
     vector of complex, representing FFT output.
 
   parameters:
-    fft_batch_size: how many FFT windows in the input vector.
+    fft_batch_size: batch this many input vectors at once.
     nfft: number of FFT points.
     shift: if true, move DC component to center of output
            (see gnuradio fft shift parameter).

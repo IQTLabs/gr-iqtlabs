@@ -218,16 +218,15 @@ vkfft_short::sptr vkfft_short::make(std::size_t fft_batch_size,
 vkfft_short_impl::vkfft_short_impl(std::size_t fft_batch_size, std::size_t nfft,
                                    bool shift)
     : fft_batch_size_(fft_batch_size),
-      nfft_(nfft), gr::sync_block(
-                       "vkfft_short",
-                       gr::io_signature::make(1, 1,
-                                              sizeof(std::int16_t) * 2 * nfft *
-                                                  fft_batch_size),
-                       gr::io_signature::make(
-                           1, 1, sizeof(gr_complex) * nfft * fft_batch_size)) {
+      nfft_(nfft), gr::sync_block("vkfft_short",
+                                  gr::io_signature::make(
+                                      1, 1, sizeof(std::int16_t) * nfft * 2),
+                                  gr::io_signature::make(
+                                      1, 1, sizeof(gr_complex) * nfft)) {
   init_converter_();
   input_buffer_.reset(new gr_complex[nfft * fft_batch_size]);
   init_vkfft(fft_batch_size, nfft, sizeof(gr_complex), shift);
+  set_output_multiple(fft_batch_size);
 }
 
 void vkfft_short_impl::init_converter_() {
@@ -249,13 +248,14 @@ int vkfft_short_impl::work(int noutput_items,
       reinterpret_cast<const std::int16_t *const>(input_items[0]);
   gr_complex *const out = reinterpret_cast<gr_complex *const>(output_items[0]);
   auto *buffer = input_buffer_.get();
-  size_t buffer_index = 0;
+  size_t in_buffer_index = 0;
+  size_t out_buffer_index = 0;
+  size_t vlen = fft_batch_size_ * nfft_;
 
-  for (int i = 0; i < noutput_items;
-       ++i, buffer_index += fft_batch_size_ * nfft_ * 2) {
-    _converter->conv(&in[buffer_index], &buffer[0],
-                     fft_batch_size_ * nfft_ * 2);
-    vkfft_offload((char *)&buffer[0], (char *)&out[buffer_index]);
+  for (int i = 0; i < noutput_items / fft_batch_size_;
+       ++i, in_buffer_index += vlen * 2, out_buffer_index += vlen) {
+    _converter->conv(&in[in_buffer_index], &buffer[0], vlen * 2);
+    vkfft_offload((char *)&buffer[0], (char *)&out[out_buffer_index]);
   }
 
   return noutput_items;
