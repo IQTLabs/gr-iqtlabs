@@ -209,22 +209,25 @@
 namespace gr {
 namespace iqtlabs {
 
-vkfft_short::sptr vkfft_short::make(std::size_t vlen, std::size_t nfft,
-                                    bool shift) {
-  return gnuradio::make_block_sptr<vkfft_short_impl>(vlen, nfft, shift);
+vkfft_short::sptr vkfft_short::make(std::size_t fft_batch_size,
+                                    std::size_t nfft, bool shift) {
+  return gnuradio::make_block_sptr<vkfft_short_impl>(fft_batch_size, nfft,
+                                                     shift);
 }
 
-vkfft_short_impl::vkfft_short_impl(std::size_t vlen, std::size_t nfft,
+vkfft_short_impl::vkfft_short_impl(std::size_t fft_batch_size, std::size_t nfft,
                                    bool shift)
-    : vlen_(vlen),
-      nfft_(nfft), gr::sync_block("vkfft",
-                                  gr::io_signature::make(
-                                      1, 1, sizeof(std::int16_t) * 2 * vlen),
-                                  gr::io_signature::make(
-                                      1, 1, sizeof(gr_complex) * vlen)) {
+    : fft_batch_size_(fft_batch_size),
+      nfft_(nfft), gr::sync_block(
+                       "vkfft_short",
+                       gr::io_signature::make(1, 1,
+                                              sizeof(std::int16_t) * 2 * nfft *
+                                                  fft_batch_size),
+                       gr::io_signature::make(
+                           1, 1, sizeof(gr_complex) * nfft * fft_batch_size)) {
   init_converter_();
-  input_buffer_.reset(new gr_complex[vlen]);
-  init_vkfft((vlen / nfft), nfft, sizeof(gr_complex), shift);
+  input_buffer_.reset(new gr_complex[nfft * fft_batch_size]);
+  init_vkfft(fft_batch_size, nfft, sizeof(gr_complex), shift);
 }
 
 void vkfft_short_impl::init_converter_() {
@@ -248,8 +251,10 @@ int vkfft_short_impl::work(int noutput_items,
   auto *buffer = input_buffer_.get();
   size_t buffer_index = 0;
 
-  for (int i = 0; i < noutput_items; ++i, buffer_index += vlen_ * 2) {
-    _converter->conv(&in[buffer_index], &buffer[0], vlen_);
+  for (int i = 0; i < noutput_items;
+       ++i, buffer_index += fft_batch_size_ * nfft_ * 2) {
+    _converter->conv(&in[buffer_index], &buffer[0],
+                     fft_batch_size_ * nfft_ * 2);
     vkfft_offload((char *)&buffer[0], (char *)&out[buffer_index]);
   }
 

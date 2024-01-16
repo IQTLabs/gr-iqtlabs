@@ -209,18 +209,20 @@
 namespace gr {
 namespace iqtlabs {
 
-vkfft::sptr vkfft::make(std::size_t vlen, std::size_t nfft, bool shift) {
-  return gnuradio::make_block_sptr<vkfft_impl>(vlen, nfft, shift);
+vkfft::sptr vkfft::make(std::size_t fft_batch_size, std::size_t nfft,
+                        bool shift) {
+  return gnuradio::make_block_sptr<vkfft_impl>(fft_batch_size, nfft, shift);
 }
 
-vkfft_impl::vkfft_impl(std::size_t vlen, std::size_t nfft, bool shift)
-    : vlen_(vlen),
+vkfft_impl::vkfft_impl(std::size_t fft_batch_size, std::size_t nfft, bool shift)
+    : fft_batch_size_(fft_batch_size),
       nfft_(nfft), gr::sync_block(
                        "vkfft",
-                       gr::io_signature::make(1, 1, sizeof(gr_complex) * vlen),
-                       gr::io_signature::make(1, 1,
-                                              sizeof(gr_complex) * vlen)) {
-  init_vkfft((vlen / nfft), nfft, sizeof(gr_complex), shift);
+                       gr::io_signature::make(
+                           1, 1, sizeof(gr_complex) * nfft * fft_batch_size),
+                       gr::io_signature::make(
+                           1, 1, sizeof(gr_complex) * nfft * fft_batch_size)) {
+  init_vkfft(fft_batch_size, nfft, sizeof(gr_complex), shift);
 }
 
 vkfft_impl::~vkfft_impl() { free_vkfft(); }
@@ -232,7 +234,8 @@ int vkfft_impl::work(int noutput_items, gr_vector_const_void_star &input_items,
   gr_complex *const out = reinterpret_cast<gr_complex *const>(output_items[0]);
   size_t buffer_index = 0;
 
-  for (int i = 0; i < noutput_items; ++i, buffer_index += vlen_) {
+  for (int i = 0; i < noutput_items;
+       ++i, buffer_index += (fft_batch_size_ * nfft_)) {
     vkfft_offload((char *)&in[buffer_index], (char *)&out[buffer_index]);
   }
 

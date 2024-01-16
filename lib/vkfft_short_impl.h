@@ -216,13 +216,13 @@ namespace iqtlabs {
 class vkfft_short_impl : public vkfft_short, base_impl {
 private:
   std::size_t nfft_;
-  std::size_t vlen_;
+  std::size_t fft_batch_size_;
   boost::scoped_array<gr_complex> input_buffer_;
   uhd::convert::converter::sptr _converter;
   void init_converter_();
 
 public:
-  vkfft_short_impl(std::size_t nfft, std::size_t batch, bool shift);
+  vkfft_short_impl(std::size_t fft_batch_size, std::size_t nfft, bool shift);
   ~vkfft_short_impl();
 
   int work(int noutput_items, gr_vector_const_void_star &input_items,

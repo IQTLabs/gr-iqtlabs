@@ -229,7 +229,7 @@ public:
    * class. iqtlabs::vkfft::make is the public interface for
    * creating new instances.
    */
-  static sptr make(std::size_t vlen, std::size_t nfft, bool shift);
+  static sptr make(std::size_t fft_batch_size, std::size_t nfft, bool shift);
 };
 
 } // namespace iqtlabs

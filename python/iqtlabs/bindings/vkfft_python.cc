@@ -1,5 +1,5 @@
 /*
- * Copyright 2023 Free Software Foundation, Inc.
+ * Copyright 2024 Free Software Foundation, Inc.
  *
  * This file is part of GNU Radio
  *
@@ -14,7 +14,7 @@
 /* BINDTOOL_GEN_AUTOMATIC(0)                                                       */
 /* BINDTOOL_USE_PYGCCXML(0)                                                        */
 /* BINDTOOL_HEADER_FILE(vkfft.h)                                        */
-/* BINDTOOL_HEADER_FILE_HASH(6cb25f3bb6a1c44ef9863a98b7e83c77)                     */
+/* BINDTOOL_HEADER_FILE_HASH(573a4d7d80617702d8fa2355b3dc7749)                     */
 /***********************************************************************************/
 
 #include <pybind11/complex.h>
@@ -37,7 +37,7 @@ void bind_vkfft(py::module& m)
         m, "vkfft", D(vkfft))
 
         .def(py::init(&vkfft::make),
-             py::arg("vlen"),
+             py::arg("fft_batch_size"),
              py::arg("nfft"),
              py::arg("shift"),
              D(vkfft, make))
