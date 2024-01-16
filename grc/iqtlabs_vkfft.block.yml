@@ -24,7 +24,9 @@ templates:
 cpp_templates:
   includes: ['#include <gnuradio/iqtlabs/vkfft.h>']
   declarations: 'gr::iqtlabs::vkfft::sptr ${id};'
-  make: 'this->${id} = gr::iqtlabs::vkfft::make(${fft_batch_size}, ${nfft}, ${bool});'
+  make: >
+    this->${id} = gr::iqtlabs::vkfft::make(
+    ${fft_batch_size}, ${nfft}, ${bool});
   link: ['libgnuradio-iqtlabs.so']
 
 asserts:
