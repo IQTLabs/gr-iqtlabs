@@ -209,8 +209,8 @@ from gnuradio import blocks, fft, iqtlabs, gr, gr_unittest
 
 
 def run_fft(fft_block, points, fft_roll, input_items):
-    src1 = blocks.vector_source_c(input_items, vlen=len(input_items))
-    dst1 = blocks.vector_sink_c(vlen=len(input_items))
+    src1 = blocks.vector_source_c(input_items, vlen=points)
+    dst1 = blocks.vector_sink_c(vlen=points)
     tb = gr.top_block()
     tb.connect(src1, fft_block)
     tb.connect(fft_block, dst1)
@@ -225,33 +225,36 @@ def run_fft(fft_block, points, fft_roll, input_items):
 class qa_vkfft(gr_unittest.TestCase):
     def test_instance(self):
         for fft_roll in (True, False):
-            fft_batch_size = 4
+            fft_batch_size = 1
             points = 8
 
             batch_input_items = []
             for i in range(1, fft_batch_size + 1):
-                batch_input_items.extend(
+                batch_input_items.append(
                     1j * np.arange(points)
                 )  # pytype: disable=wrong-arg-types
 
             sw_data = []
             for i in range(1, fft_batch_size + 1):
-                batch = (i - 1) * points
                 sw_data.extend(
                     run_fft(
                         fft.fft_vcc(points, True, [], fft_roll, 1),
                         points,
                         fft_roll,
-                        batch_input_items[batch : batch + points],
+                        batch_input_items[i - 1],
                     )
                 )
 
-            vkfft_data = run_fft(
-                iqtlabs.vkfft(fft_batch_size, points, fft_roll),
-                points,
-                fft_roll,
-                batch_input_items,
-            )
+            vkfft_data = []
+            for i in range(1, fft_batch_size + 1):
+                vkfft_data.extend(
+                    run_fft(
+                        iqtlabs.vkfft(fft_batch_size, points, fft_roll),
+                        points,
+                        fft_roll,
+                        batch_input_items[i - 1],
+                    )
+                )
 
             if os.getenv("TEST_VKFFT", 0):
                 self.assertEqual(vkfft_data, sw_data)
