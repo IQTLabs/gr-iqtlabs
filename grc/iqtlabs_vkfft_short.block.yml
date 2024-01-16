@@ -4,35 +4,35 @@ label: vkfft_short
 category: '[iqtlabs]'
 flags: [python, cpp]
 documentation: |-
-  This block uses VkFFT to do FFT offload via Vulkan (short dtype version)
+  This block uses VkFFT to do FFT offload via Vulkan (short version).
 
   input:
-    vector of short, representing I/Q samples.
+    vector of complex, representing I/Q samples.
   output:
     vector of complex, representing FFT output.
 
   parameters:
-    vlen: length of FFT vector, as a multiple of nfft to achieve batching.
+    fft_batch_size: how many FFT windows in the input vector.
     nfft: number of FFT points.
     shift: if true, move DC component to center of output
            (see gnuradio fft shift parameter).
 
 templates:
   imports: from gnuradio import iqtlabs
-  make: iqtlabs.vkfft(${vlen}, ${nfft}, ${shift})
+  make: iqtlabs.vkfft_short(${fft_batch_size}, ${nfft}, ${shift})
 
 cpp_templates:
-  includes: ['#include <gnuradio/iqtlabs/vkfft.h>']
-  declarations: 'gr::iqtlabs::vkfft::sptr ${id};'
-  make: 'this->${id} = gr::iqtlabs::vkfft::make(${vlen}, ${nfft}, ${bool});'
+  includes: ['#include <gnuradio/iqtlabs/vkfft_short.h>']
+  declarations: 'gr::iqtlabs::vkfft_short::sptr ${id};'
+  make: 'this->${id} = gr::iqtlabs::vkfft_short::make(${fft_batch_size}, ${nfft}, ${bool});'
   link: ['libgnuradio-iqtlabs.so']
 
 asserts:
-  - ${ vlen >= nfft }
+  - ${ fft_batch_size > 0 }
   - ${ nfft > 0 }
 
 parameters:
-  - id: vlen
+  - id: fft_batch_size
     dtype: int
   - id: nfft
     dtype: int
@@ -43,12 +43,12 @@ inputs:
   - label: input
     domain: stream
     dtype: short
-    vlen: ${ vlen }
+    vlen: ${ fft_batch_size * nfft * 2}
 
 outputs:
   - label: output
     domain: stream
     dtype: complex
-    vlen: ${ vlen }
+    vlen: ${ fft_batch_size * nfft }
 
 file_format: 1

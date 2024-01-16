@@ -247,7 +247,7 @@ class qa_vkfft(gr_unittest.TestCase):
                 )
 
             vkfft_data = run_fft(
-                iqtlabs.vkfft(fft_batch_size * points, points, fft_roll),
+                iqtlabs.vkfft(fft_batch_size, points, fft_roll),
                 points,
                 fft_roll,
                 batch_input_items,

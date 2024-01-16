@@ -220,7 +220,7 @@ class qa_vkfft(gr_unittest.TestCase):
         # TODO: find workaround llvmpipe simulated gpu crashes under CI testing
         # TODO: old UHD library vesion does not have automatic host-order.
         try:
-            instance = vkfft_short(1024, 1, True)
+            instance = vkfft_short(1, 1024, True)
         except RuntimeError as e:
             print(e)
 
