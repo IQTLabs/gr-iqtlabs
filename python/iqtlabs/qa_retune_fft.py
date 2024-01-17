@@ -319,6 +319,7 @@ class qa_retune_fft_base:
                 True,
                 False,
                 False,
+                0,
             )
             pdu_decoder_0 = pdu_decoder()
             fft_vxx_0 = fft.fft_vcc(points, True, [], fft_roll, 1)

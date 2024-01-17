@@ -224,6 +224,8 @@ private:
   void retune_now_();
   void write_items_(const input_type *in);
   void sum_items_(const input_type *in);
+  void reset_items_();
+  void calc_peaks_();
   void add_output_tags_(uint64_t rx_time, double rx_freq, size_t produced);
   void process_items_(size_t c, const input_type *&in,
                       const input_type *&fft_output, size_t &produced);
@@ -243,6 +245,7 @@ private:
   pmt::pmt_t tag_;
   size_t vlen_;
   size_t nfft_;
+  size_t peak_fft_range_;
   uint64_t samp_rate_;
   uint64_t write_step_fft_;
   uint64_t rotate_secs_;
@@ -253,11 +256,12 @@ private:
   bool tag_now_;
   bool low_power_hold_down_;
 
-  double fft_min_;
-  double fft_max_;
+  float fft_min_;
+  float fft_max_;
 
   std::deque<output_type> out_buf_;
-  std::vector<double> sample_;
+  std::vector<float> sample_;
+  std::vector<float> peak_;
   size_t sample_count_;
   uint64_t write_step_fft_count_;
   size_t bucket_offset_;
@@ -274,7 +278,8 @@ public:
                   const std::string &sdir, uint64_t write_step_fft,
                   double bucket_range, const std::string &tuning_ranges,
                   const std::string &description, uint64_t rotate_secs,
-                  bool pre_fft, bool tag_now, bool low_power_hold_down);
+                  bool pre_fft, bool tag_now, bool low_power_hold_down,
+                  size_t peak_fft_range);
   ~retune_fft_impl();
   void forecast(int noutput_items, gr_vector_int &ninput_items_required);
   int general_work(int noutput_items, gr_vector_int &ninput_items,
