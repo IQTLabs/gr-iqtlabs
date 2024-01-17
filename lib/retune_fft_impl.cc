@@ -218,20 +218,19 @@ const pmt::pmt_t JSON_KEY = pmt::mp("json");
 const boost::iostreams::zstd_params zstd_params =
     boost::iostreams::zstd_params(boost::iostreams::zstd::default_compression);
 
-retune_fft::sptr
-retune_fft::make(const std::string &tag, size_t vlen, size_t nfft,
-                 uint64_t samp_rate, uint64_t freq_start, uint64_t freq_end,
-                 uint64_t tune_step_hz, uint64_t tune_step_fft,
-                 uint64_t skip_tune_step_fft, double fft_min, double fft_max,
-                 const std::string &sdir, uint64_t write_step_fft,
-                 double bucket_range, const std::string &tuning_ranges,
-                 const std::string &description, uint64_t rotate_secs,
-                 bool pre_fft, bool tag_now, bool low_power_hold_down) {
+retune_fft::sptr retune_fft::make(
+    const std::string &tag, size_t vlen, size_t nfft, uint64_t samp_rate,
+    uint64_t freq_start, uint64_t freq_end, uint64_t tune_step_hz,
+    uint64_t tune_step_fft, uint64_t skip_tune_step_fft, double fft_min,
+    double fft_max, const std::string &sdir, uint64_t write_step_fft,
+    double bucket_range, const std::string &tuning_ranges,
+    const std::string &description, uint64_t rotate_secs, bool pre_fft,
+    bool tag_now, bool low_power_hold_down, size_t peak_fft_range) {
   return gnuradio::make_block_sptr<retune_fft_impl>(
       tag, vlen, nfft, samp_rate, freq_start, freq_end, tune_step_hz,
       tune_step_fft, skip_tune_step_fft, fft_min, fft_max, sdir, write_step_fft,
       bucket_range, tuning_ranges, description, rotate_secs, pre_fft, tag_now,
-      low_power_hold_down);
+      low_power_hold_down, peak_fft_range);
 }
 
 retune_fft_impl::retune_fft_impl(
@@ -241,7 +240,7 @@ retune_fft_impl::retune_fft_impl(
     double fft_max, const std::string &sdir, uint64_t write_step_fft,
     double bucket_range, const std::string &tuning_ranges,
     const std::string &description, uint64_t rotate_secs, bool pre_fft,
-    bool tag_now, bool low_power_hold_down)
+    bool tag_now, bool low_power_hold_down, size_t peak_fft_range)
     : gr::block("retune_fft",
                 gr::io_signature::make(1 /* min inputs */, 1 /* max inputs */,
                                        vlen * sizeof(input_type)),
@@ -257,7 +256,7 @@ retune_fft_impl::retune_fft_impl(
       write_step_fft_count_(write_step_fft), bucket_range_(bucket_range),
       description_(description), rotate_secs_(rotate_secs), pre_fft_(pre_fft),
       tag_now_(tag_now), low_power_hold_down_(low_power_hold_down),
-      in_hold_down_(false) {
+      peak_fft_range_(peak_fft_range), in_hold_down_(false) {
   bucket_offset_ = round(float((vlen_ - round(bucket_range_ * vlen_)) / 2));
   outbuf_p.reset(new boost::iostreams::filtering_ostream());
   message_port_register_out(TUNE_KEY);
@@ -266,6 +265,29 @@ retune_fft_impl::retune_fft_impl(
   set_msg_handler(CMD_KEY,
                   [this](const pmt::pmt_t &msg) { next_retune_(host_now_()); });
   set_tag_propagation_policy(TPP_DONT);
+  for (size_t i = 0; i < nfft_; ++i) {
+    sample_.push_back(0);
+    peak_.push_back(fft_min_);
+  }
+  reset_items_();
+}
+
+void retune_fft_impl::reset_items_() {
+  for (size_t i = 0; i < nfft_; ++i) {
+    sample_[i] = 0;
+    peak_[i] = fft_min_;
+  }
+  sample_count_ = 0;
+}
+
+void retune_fft_impl::calc_peaks_() {
+  for (size_t k = 0; k < nfft_; ++k) {
+    float mean = sample_[k] / sample_count_;
+    mean = std::min(std::max(mean, fft_min_), fft_max_);
+    peak_[k] = std::max(mean, peak_[k]);
+    sample_[k] = 0;
+  }
+  sample_count_ = 0;
 }
 
 retune_fft_impl::~retune_fft_impl() { close_(); }
@@ -317,6 +339,9 @@ void retune_fft_impl::write_items_(const input_type *in) {
 void retune_fft_impl::sum_items_(const input_type *in) {
   for (size_t k = 0; k < nfft_; ++k) {
     sample_[k] += *in++;
+  }
+  if (peak_fft_range_ && sample_count_ && sample_count_ == peak_fft_range_) {
+    calc_peaks_();
   }
 }
 
@@ -415,7 +440,7 @@ void retune_fft_impl::write_buckets_(double host_now, uint64_t rx_freq) {
         bucket_freq > last_range.freq_end) {
       continue;
     }
-    buckets.push_back(std::pair<double, double>(bucket_freq, sample_[i]));
+    buckets.push_back(std::pair<double, double>(bucket_freq, peak_[i]));
   }
   if (buckets.size() == 0) {
     return;
@@ -456,16 +481,13 @@ void retune_fft_impl::write_buckets_(double host_now, uint64_t rx_freq) {
 
 void retune_fft_impl::process_buckets_(uint64_t rx_freq, double rx_time) {
   if (last_rx_freq_ && sample_count_) {
-    std::transform(
-        sample_.begin(), sample_.end(), sample_.begin(), [=](double &c) {
-          return std::max(fft_min_, std::min(c / sample_count_, fft_max_));
-        });
     reopen_(rx_time, rx_freq);
+    if (peak_fft_range_ == 0 || sample_count_ >= peak_fft_range_) {
+      calc_peaks_();
+    }
     write_buckets_(rx_time, rx_freq);
   }
-  std::transform(sample_.begin(), sample_.end(), sample_.begin(),
-                 [](double &c) { return 0; });
-  sample_count_ = 0;
+  reset_items_();
   fft_count_ = 0;
   skip_fft_count_ = skip_tune_step_fft_;
   write_step_fft_count_ = write_step_fft_;
