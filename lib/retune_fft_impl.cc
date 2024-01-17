@@ -211,6 +211,7 @@
 #include <iostream>
 #include <sstream>
 #include <stdexcept>
+#include <volk/volk.h>
 
 namespace gr {
 namespace iqtlabs {
@@ -251,13 +252,18 @@ retune_fft_impl::retune_fft_impl(
       retuner_impl(freq_start, freq_end, tune_step_hz, tune_step_fft,
                    skip_tune_step_fft, tuning_ranges),
       tag_(pmt::intern(tag)), vlen_(vlen), nfft_(nfft), samp_rate_(samp_rate),
-      fft_min_(fft_min), fft_max_(fft_max), sample_(nfft), sample_count_(0),
-      sdir_(sdir), write_step_fft_(write_step_fft),
-      write_step_fft_count_(write_step_fft), bucket_range_(bucket_range),
-      description_(description), rotate_secs_(rotate_secs), pre_fft_(pre_fft),
-      tag_now_(tag_now), low_power_hold_down_(low_power_hold_down),
+      fft_min_(fft_min), fft_max_(fft_max), sample_count_(0), sdir_(sdir),
+      write_step_fft_(write_step_fft), write_step_fft_count_(write_step_fft),
+      bucket_range_(bucket_range), description_(description),
+      rotate_secs_(rotate_secs), pre_fft_(pre_fft), tag_now_(tag_now),
+      low_power_hold_down_(low_power_hold_down),
       peak_fft_range_(peak_fft_range), in_hold_down_(false) {
   bucket_offset_ = round(float((vlen_ - round(bucket_range_ * vlen_)) / 2));
+  unsigned int alignment = volk_get_alignment();
+  sample_.reset((float *)volk_malloc(sizeof(float) * nfft_, alignment));
+  mean_.reset((float *)volk_malloc(sizeof(float) * nfft_, alignment));
+  peak_.reset((float *)volk_malloc(sizeof(float) * nfft_, alignment));
+  in_max_pos_.reset((uint16_t *)volk_malloc(sizeof(uint16_t), alignment));
   outbuf_p.reset(new boost::iostreams::filtering_ostream());
   message_port_register_out(TUNE_KEY);
   message_port_register_out(JSON_KEY);
@@ -265,10 +271,6 @@ retune_fft_impl::retune_fft_impl(
   set_msg_handler(CMD_KEY,
                   [this](const pmt::pmt_t &msg) { next_retune_(host_now_()); });
   set_tag_propagation_policy(TPP_DONT);
-  for (size_t i = 0; i < nfft_; ++i) {
-    sample_.push_back(0);
-    peak_.push_back(fft_min_);
-  }
   reset_items_();
 }
 
@@ -281,9 +283,10 @@ void retune_fft_impl::reset_items_() {
 }
 
 void retune_fft_impl::calc_peaks_() {
+  volk_32f_s32f_multiply_32f(mean_.get(), (const float *)sample_.get(),
+                             1 / float(sample_count_), nfft_);
   for (size_t k = 0; k < nfft_; ++k) {
-    float mean = sample_[k] / sample_count_;
-    mean = std::min(std::max(mean, fft_min_), fft_max_);
+    float mean = std::min(std::max(mean_[k], fft_min_), fft_max_);
     peak_[k] = std::max(mean, peak_[k]);
     sample_[k] = 0;
   }
@@ -337,9 +340,7 @@ void retune_fft_impl::write_items_(const input_type *in) {
 }
 
 void retune_fft_impl::sum_items_(const input_type *in) {
-  for (size_t k = 0; k < nfft_; ++k) {
-    sample_[k] += *in++;
-  }
+  volk_32f_x2_add_32f(sample_.get(), (const float *)sample_.get(), in, nfft_);
   if (peak_fft_range_ && sample_count_ && sample_count_ == peak_fft_range_) {
     calc_peaks_();
   }
@@ -368,7 +369,8 @@ void retune_fft_impl::process_items_(size_t c, const input_type *&in,
       // Discard windows where max power, is less than requested minimum.
       // Ettus radios periodically output low power after retuning. This
       // avoids having to use a static skip_fft_count setting.
-      input_type in_max = *std::max_element(in, in + nfft_);
+      volk_32f_index_max_16u(in_max_pos_.get(), in, nfft_);
+      float in_max = in[*in_max_pos_];
       if (in_max < fft_min_) {
         if (in_hold_down_) {
           in_hold_down_ = false;

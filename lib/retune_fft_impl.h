@@ -211,6 +211,7 @@
 #include <boost/iostreams/device/file.hpp>
 #include <boost/iostreams/filter/zstd.hpp>
 #include <boost/iostreams/filtering_stream.hpp>
+#include <boost/scoped_array.hpp>
 #include <boost/scoped_ptr.hpp>
 #include <gnuradio/iqtlabs/retune_fft.h>
 
@@ -260,13 +261,15 @@ private:
   float fft_max_;
 
   std::deque<output_type> out_buf_;
-  std::vector<float> sample_;
-  std::vector<float> peak_;
   size_t sample_count_;
   uint64_t write_step_fft_count_;
   size_t bucket_offset_;
   bool in_hold_down_;
 
+  boost::scoped_array<float> sample_;
+  boost::scoped_array<float> mean_;
+  boost::scoped_array<float> peak_;
+  boost::scoped_ptr<uint16_t> in_max_pos_;
   boost::scoped_ptr<boost::iostreams::filtering_ostream> outbuf_p;
   std::string file_;
 
