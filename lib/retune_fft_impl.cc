@@ -482,7 +482,7 @@ void retune_fft_impl::write_buckets_(double host_now, uint64_t rx_freq) {
 void retune_fft_impl::process_buckets_(uint64_t rx_freq, double rx_time) {
   if (last_rx_freq_ && sample_count_) {
     reopen_(rx_time, rx_freq);
-    if (peak_fft_range_ == 0 || sample_count_ >= peak_fft_range_) {
+    if (sample_count_) {
       calc_peaks_();
     }
     write_buckets_(rx_time, rx_freq);
