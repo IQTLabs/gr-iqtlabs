@@ -246,7 +246,6 @@ private:
   uint64_t last_rx_freq_;
   double convert_alpha_, norm_alpha_, norm_beta_, last_rx_time_,
       min_peak_points_, confidence_;
-  double points_min_, points_max_;
   boost::lockfree::spsc_queue<output_item_type> inference_q_{MAX_INFERENCE};
   boost::lockfree::spsc_queue<std::string> json_q_{MAX_INFERENCE};
   boost::scoped_ptr<cv::Mat> cmapped_buffer_, resized_buffer_,
@@ -281,6 +280,8 @@ private:
                           nlohmann::json &results_json, std::string &error);
   void bbox_text(const output_item_type &output_item, const std::string &text,
                  int pos, int cx, int cy);
+  void volk_min_max_mean(const cv::Mat &mat, float &min, float &max,
+                         float &mean);
 
 public:
   image_inference_impl(const std::string &tag, int vlen, int x, int y,
