@@ -244,7 +244,6 @@ private:
   void close_();
 
   pmt::pmt_t tag_;
-  size_t vlen_;
   size_t nfft_;
   size_t peak_fft_range_;
   uint64_t samp_rate_;
@@ -274,12 +273,12 @@ private:
   std::string file_;
 
 public:
-  retune_fft_impl(const std::string &tag, size_t vlen, size_t nfft,
-                  uint64_t samp_rate, uint64_t freq_start, uint64_t freq_end,
-                  uint64_t tune_step_hz, uint64_t tune_step_fft,
-                  uint64_t skip_tune_step_fft, double fft_min, double fft_max,
-                  const std::string &sdir, uint64_t write_step_fft,
-                  double bucket_range, const std::string &tuning_ranges,
+  retune_fft_impl(const std::string &tag, size_t nfft, uint64_t samp_rate,
+                  uint64_t freq_start, uint64_t freq_end, uint64_t tune_step_hz,
+                  uint64_t tune_step_fft, uint64_t skip_tune_step_fft,
+                  double fft_min, double fft_max, const std::string &sdir,
+                  uint64_t write_step_fft, double bucket_range,
+                  const std::string &tuning_ranges,
                   const std::string &description, uint64_t rotate_secs,
                   bool pre_fft, bool tag_now, bool low_power_hold_down,
                   size_t peak_fft_range);

@@ -30,8 +30,6 @@ documentation: |-
   parameters:
     tag: expected PMT tag containing center frequency
          (generally "rx_freq" for Soapy or UHD sources).
-    vlen: length of FFT vector (generally same as number of FFT points -
-          can be different when receiving multiple vectors at once).
     nfft: number of FFT points.
     samp_rate: sample rate.
     freq_start: frequency to start scan at in Hz (overridden by tuning_ranges).
@@ -70,7 +68,7 @@ documentation: |-
 templates:
   imports: from gnuradio import iqtlabs
   make: >
-    iqtlabs.retune_fft(${tag}, ${vlen}, ${nfft}, ${samp_rate}, ${freq_start},
+    iqtlabs.retune_fft(${tag}, ${nfft}, ${samp_rate}, ${freq_start},
     ${freq_end}, ${tune_step_hz}, ${tune_step_fft}, ${skip_tune_step_fft},
     ${fft_min}, ${fft_max}, ${sdir}, ${write_step_fft}, ${bucket_range},
     ${tuning_ranges}, ${description}, ${rotate_secs}, ${pre_fft}, ${tag_now},
@@ -80,7 +78,7 @@ cpp_templates:
   includes: ['#include <gnuradio/iqtlabs/retune_fft.h>']
   declarations: 'gr::iqtlabs::retune_fft::sptr ${id};'
   make: >
-    this->${id} = gr::iqtlabs::retune_fft::make(${tag}, ${vlen}, ${nfft},
+    this->${id} = gr::iqtlabs::retune_fft::make(${tag}, ${nfft},
     ${samp_rate}, ${freq_start}, ${freq_end}, ${tune_step_hz}, ${tune_step_fft},
     ${skip_tune_step_fft}, ${fft_min}, ${fft_max}, ${sdir}, ${write_step_fft},
     ${bucket_range}, ${tuning_ranges}, ${description}, ${rotate_secs},
@@ -89,7 +87,6 @@ cpp_templates:
 
 asserts:
   - ${ tag != "" }
-  - ${ vlen > 0 }
   - ${ nfft > 0 }
   - ${ samp_rate > 0 }
   - ${ freq_end > freq_start }
@@ -99,8 +96,6 @@ parameters:
   - id: tag
     dtype: string
     default: 'rx_freq'
-  - id: vlen
-    dtype: int
   - id: nfft
     dtype: int
   - id: samp_rate
@@ -142,7 +137,7 @@ inputs:
   - label: input
     domain: stream
     dtype: float
-    vlen: ${ vlen }
+    vlen: ${ nfft }
   - label: cmd
     domain: message
 
