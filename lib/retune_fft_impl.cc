@@ -220,7 +220,7 @@ const boost::iostreams::zstd_params zstd_params =
     boost::iostreams::zstd_params(boost::iostreams::zstd::default_compression);
 
 retune_fft::sptr retune_fft::make(
-    const std::string &tag, size_t vlen, size_t nfft, uint64_t samp_rate,
+    const std::string &tag, size_t nfft, uint64_t samp_rate,
     uint64_t freq_start, uint64_t freq_end, uint64_t tune_step_hz,
     uint64_t tune_step_fft, uint64_t skip_tune_step_fft, double fft_min,
     double fft_max, const std::string &sdir, uint64_t write_step_fft,
@@ -228,14 +228,14 @@ retune_fft::sptr retune_fft::make(
     const std::string &description, uint64_t rotate_secs, bool pre_fft,
     bool tag_now, bool low_power_hold_down, size_t peak_fft_range) {
   return gnuradio::make_block_sptr<retune_fft_impl>(
-      tag, vlen, nfft, samp_rate, freq_start, freq_end, tune_step_hz,
-      tune_step_fft, skip_tune_step_fft, fft_min, fft_max, sdir, write_step_fft,
-      bucket_range, tuning_ranges, description, rotate_secs, pre_fft, tag_now,
+      tag, nfft, samp_rate, freq_start, freq_end, tune_step_hz, tune_step_fft,
+      skip_tune_step_fft, fft_min, fft_max, sdir, write_step_fft, bucket_range,
+      tuning_ranges, description, rotate_secs, pre_fft, tag_now,
       low_power_hold_down, peak_fft_range);
 }
 
 retune_fft_impl::retune_fft_impl(
-    const std::string &tag, size_t vlen, size_t nfft, uint64_t samp_rate,
+    const std::string &tag, size_t nfft, uint64_t samp_rate,
     uint64_t freq_start, uint64_t freq_end, uint64_t tune_step_hz,
     uint64_t tune_step_fft, uint64_t skip_tune_step_fft, double fft_min,
     double fft_max, const std::string &sdir, uint64_t write_step_fft,
@@ -244,21 +244,21 @@ retune_fft_impl::retune_fft_impl(
     bool tag_now, bool low_power_hold_down, size_t peak_fft_range)
     : gr::block("retune_fft",
                 gr::io_signature::make(1 /* min inputs */, 1 /* max inputs */,
-                                       vlen * sizeof(input_type)),
+                                       nfft * sizeof(input_type)),
                 gr::io_signature::makev(
                     2 /* min outputs */, 2 /* max outputs */,
                     std::vector<int>{(int)sizeof(output_type),
                                      (int)(nfft * sizeof(input_type))})),
       retuner_impl(freq_start, freq_end, tune_step_hz, tune_step_fft,
                    skip_tune_step_fft, tuning_ranges),
-      tag_(pmt::intern(tag)), vlen_(vlen), nfft_(nfft), samp_rate_(samp_rate),
+      tag_(pmt::intern(tag)), nfft_(nfft), samp_rate_(samp_rate),
       fft_min_(fft_min), fft_max_(fft_max), sample_count_(0), sdir_(sdir),
       write_step_fft_(write_step_fft), write_step_fft_count_(write_step_fft),
       bucket_range_(bucket_range), description_(description),
       rotate_secs_(rotate_secs), pre_fft_(pre_fft), tag_now_(tag_now),
       low_power_hold_down_(low_power_hold_down),
       peak_fft_range_(peak_fft_range), in_hold_down_(false) {
-  bucket_offset_ = round(float((vlen_ - round(bucket_range_ * vlen_)) / 2));
+  bucket_offset_ = round(float((nfft_ - round(bucket_range_ * nfft_)) / 2));
   unsigned int alignment = volk_get_alignment();
   sample_.reset((float *)volk_malloc(sizeof(float) * nfft_, alignment));
   mean_.reset((float *)volk_malloc(sizeof(float) * nfft_, alignment));
@@ -360,38 +360,36 @@ void retune_fft_impl::add_output_tags_(uint64_t rx_time, double rx_freq,
 void retune_fft_impl::process_items_(size_t c, const input_type *&in,
                                      const input_type *&fft_output,
                                      size_t &produced) {
-  for (size_t i = 0; i < c; ++i) {
-    for (size_t j = 0; j < (vlen_ / nfft_); ++j, in += nfft_) {
-      if (skip_fft_count_) {
-        --skip_fft_count_;
-        continue;
+  for (size_t i = 0; i < c; ++i, in += nfft_) {
+    if (skip_fft_count_) {
+      --skip_fft_count_;
+      continue;
+    }
+    // Discard windows where max power, is less than requested minimum.
+    // Ettus radios periodically output low power after retuning. This
+    // avoids having to use a static skip_fft_count setting.
+    volk_32f_index_max_16u(in_max_pos_.get(), in, nfft_);
+    float in_max = in[*in_max_pos_];
+    if (in_max < fft_min_) {
+      if (in_hold_down_) {
+        in_hold_down_ = false;
+        add_output_tags_(last_rx_time_, last_rx_freq_, produced);
       }
-      // Discard windows where max power, is less than requested minimum.
-      // Ettus radios periodically output low power after retuning. This
-      // avoids having to use a static skip_fft_count setting.
-      volk_32f_index_max_16u(in_max_pos_.get(), in, nfft_);
-      float in_max = in[*in_max_pos_];
-      if (in_max < fft_min_) {
-        if (in_hold_down_) {
-          in_hold_down_ = false;
-          add_output_tags_(last_rx_time_, last_rx_freq_, produced);
-        }
-        continue;
-      }
-      if (in_hold_down_ && total_tune_count_ > 1) {
-        continue;
-      }
-      std::memcpy((void *)fft_output, (const void *)in,
-                  nfft_ * sizeof(input_type));
-      fft_output += nfft_;
-      write_items_(in);
-      sum_items_(in);
-      ++sample_count_;
-      ++produced;
-      if (need_retune_(1)) {
-        if (!pre_fft_) {
-          retune_now_();
-        }
+      continue;
+    }
+    if (in_hold_down_ && total_tune_count_ > 1) {
+      continue;
+    }
+    std::memcpy((void *)fft_output, (const void *)in,
+                nfft_ * sizeof(input_type));
+    fft_output += nfft_;
+    write_items_(in);
+    sum_items_(in);
+    ++sample_count_;
+    ++produced;
+    if (need_retune_(1)) {
+      if (!pre_fft_) {
+        retune_now_();
       }
     }
   }
@@ -400,7 +398,7 @@ void retune_fft_impl::process_items_(size_t c, const input_type *&in,
 void retune_fft_impl::forecast(int noutput_items,
                                gr_vector_int &ninput_items_required) {
   ninput_items_required[0] = 1;
-  ninput_items_required[1] = noutput_items * (vlen_ / nfft_);
+  ninput_items_required[1] = noutput_items * nfft_;
 }
 
 void retune_fft_impl::output_buckets_(
@@ -433,10 +431,10 @@ void retune_fft_impl::reopen_(double host_now, uint64_t rx_freq) {
 
 void retune_fft_impl::write_buckets_(double host_now, uint64_t rx_freq) {
   std::list<std::pair<double, double>> buckets;
-  const double bucket_size = samp_rate_ / vlen_;
+  const double bucket_size = samp_rate_ / nfft_;
   const double bucket_freq_start = last_rx_freq_ - (samp_rate_ / 2);
   const tuning_range_t &last_range = tuning_ranges_[last_tuning_range_];
-  for (size_t i = bucket_offset_; i < (vlen_ - bucket_offset_); ++i) {
+  for (size_t i = bucket_offset_; i < (nfft_ - bucket_offset_); ++i) {
     double bucket_freq = bucket_freq_start + (i * bucket_size);
     if (bucket_freq < last_range.freq_start ||
         bucket_freq > last_range.freq_end) {
@@ -553,7 +551,7 @@ int retune_fft_impl::general_work(int noutput_items,
       static_cast<const input_type *>(output_items[1]);
   const input_type *in = static_cast<const input_type *>(input_items[0]);
 
-  float max_input_items = noutput_items * nfft_ / vlen_;
+  float max_input_items = noutput_items;
   size_t in_count = std::min(ninput_items[0], int(max_input_items));
   size_t in_first = nitems_read(0);
   process_tags_(in, in_count, in_first, fft_output);

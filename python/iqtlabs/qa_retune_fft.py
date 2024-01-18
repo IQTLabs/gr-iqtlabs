@@ -301,7 +301,6 @@ class qa_retune_fft_base:
             iqtlabs_retune_fft_0 = retune_fft(
                 "rx_freq",
                 points,
-                points,
                 samp_rate,
                 int(freq_start),
                 int(freq_end),
