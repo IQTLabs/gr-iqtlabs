@@ -209,6 +209,7 @@
 #include <gnuradio/io_signature.h>
 #include <ios>
 #include <iostream>
+#include <volk/volk.h>
 
 namespace gr {
 namespace iqtlabs {
@@ -296,6 +297,24 @@ image_inference_impl::image_inference_impl(
       new std::thread(&image_inference_impl::background_run_inference_, this));
 }
 
+void image_inference_impl::volk_min_max_mean(const cv::Mat &mat, float &min,
+                                             float &max, float &mean) {
+  size_t mat_size = mat.rows * mat.cols;
+  const float *mat_data = (const float *)mat.data;
+  unsigned int alignment = volk_get_alignment();
+  boost::scoped_ptr<uint32_t> min_pos, max_pos;
+  boost::scoped_ptr<float> total;
+  min_pos.reset((uint32_t *)volk_malloc(sizeof(uint32_t), alignment));
+  max_pos.reset((uint32_t *)volk_malloc(sizeof(uint32_t), alignment));
+  total.reset((float *)volk_malloc(sizeof(float), alignment));
+  volk_32f_index_min_32u(min_pos.get(), mat_data, mat_size);
+  volk_32f_index_max_32u(max_pos.get(), mat_data, mat_size);
+  min = mat_data[*min_pos];
+  max = mat_data[*max_pos];
+  volk_32f_accumulator_s32f(total.get(), mat_data, mat_size);
+  mean = *total / mat_size;
+}
+
 void image_inference_impl::delete_output_item_(output_item_type &output_item) {
   if (output_item.image_buffer) {
     delete output_item.image_buffer;
@@ -352,15 +371,16 @@ void image_inference_impl::process_items_(size_t c, const input_type *&in) {
 void image_inference_impl::create_image_(bool discard) {
   if (points_buffer_ && !points_buffer_->empty()) {
     if (points_buffer_->rows >= max_rows_ || discard) {
-      cv::minMaxLoc(*points_buffer_, &points_min_, &points_max_);
-      if (points_max_ > min_peak_points_ && last_rx_freq_) {
+      float points_min, points_max, points_mean;
+      volk_min_max_mean(*points_buffer_, points_min, points_max, points_mean);
+      if (points_max > min_peak_points_ && last_rx_freq_) {
         output_item_type output_item;
         output_item.rx_freq = last_rx_freq_;
         output_item.ts = last_rx_time_;
-        output_item.points_min = points_min_;
-        output_item.points_max = points_max_;
+        output_item.points_min = points_min;
+        output_item.points_max = points_max;
         output_item.points_buffer = points_buffer_;
-        output_item.points_mean = cv::mean(*output_item.points_buffer)[0];
+        output_item.points_mean = points_mean;
         output_item.image_buffer = NULL;
         if (!inference_q_.push(output_item)) {
           d_logger->error("inference request queue full, size {}",
@@ -466,9 +486,8 @@ size_t image_inference_impl::parse_inference_(
           cv::Rect rssi_rect(int(tlx * xf), int(tly * yf), int(w * xf),
                              int(h * yf));
           cv::Mat rssi_points = (*output_item.points_buffer)(rssi_rect);
-          double rssi_min, rssi_max;
-          cv::minMaxLoc(rssi_points, &rssi_min, &rssi_max);
-          float rssi = cv::mean(rssi_points)[0];
+          float rssi_min, rssi_max, rssi;
+          volk_min_max_mean(rssi_points, rssi_min, rssi_max, rssi);
           prediction["rssi"] = rssi;
           prediction["rssi_samples"] = rssi_points.cols * rssi_points.rows;
           prediction["rssi_min"] = rssi_min;
