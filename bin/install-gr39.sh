@@ -1,0 +1,2 @@
+#!/bin/sh
+git clone https://github.com/gnuradio/gnuradio -b maint-3.9 && cd gnuradio && mkdir build && cd build && CXXFLAGS=-fext-numeric-literals CMAKE_CXX_STANDARD=17 cmake -DENABLE_DEFAULT=OFF -DENABLE_GRC=ON -DENABLE_PYTHON=ON -DENABLE_GNURADIO_RUNTIME=ON -DENABLE_GR_BLOCKS=ON -DENABLE_GR_FFT=ON -DENABLE_GR_FILTER=ON -DENABLE_GR_ANALOG=ON -DENABLE_GR_NETWORK=ON .. && make -j "$(nproc)" && sudo make install && sudo ln -s /usr/local/lib/python3/dist-packages/* /usr/local/lib/python3.*/dist-packages && sudo ldconfig && cd ../.. && python3 -c "import gnuradio"
