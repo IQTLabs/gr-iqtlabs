@@ -205,40 +205,37 @@
 #include "retune_pre_fft_impl.h"
 #include <boost/iostreams/copy.hpp>
 #include <gnuradio/io_signature.h>
+#include <volk/volk.h>
 
 namespace gr {
 namespace iqtlabs {
 
-using block_type = gr_complex;
-
-retune_pre_fft::sptr
-retune_pre_fft::make(size_t nfft, size_t fft_batch_size, const std::string &tag,
-                     uint64_t freq_start, uint64_t freq_end,
-                     uint64_t tune_step_hz, uint64_t tune_step_fft,
-                     uint64_t skip_tune_step_fft,
-                     const std::string &tuning_ranges, bool tag_now) {
+retune_pre_fft::sptr retune_pre_fft::make(
+    size_t nfft, const std::string &tag, uint64_t freq_start, uint64_t freq_end,
+    uint64_t tune_step_hz, uint64_t tune_step_fft, uint64_t skip_tune_step_fft,
+    const std::string &tuning_ranges, bool tag_now, bool low_power_hold_down) {
   return gnuradio::make_block_sptr<retune_pre_fft_impl>(
-      nfft, fft_batch_size, tag, freq_start, freq_end, tune_step_hz,
-      tune_step_fft, skip_tune_step_fft, tuning_ranges, tag_now);
+      nfft, tag, freq_start, freq_end, tune_step_hz, tune_step_fft,
+      skip_tune_step_fft, tuning_ranges, tag_now, low_power_hold_down);
 }
 
 retune_pre_fft_impl::retune_pre_fft_impl(
-    size_t nfft, size_t fft_batch_size, const std::string &tag,
-    uint64_t freq_start, uint64_t freq_end, uint64_t tune_step_hz,
-    uint64_t tune_step_fft, uint64_t skip_tune_step_fft,
-    const std::string &tuning_ranges, bool tag_now)
-    : gr::sync_decimator(
-          "retune_pre_fft",
-          gr::io_signature::make(1 /* min inputs */, 1 /* max inputs */,
-                                 sizeof(block_type)),
-          gr::io_signature::make(1 /* min outputs */, 1 /* max outputs */,
-                                 sizeof(block_type) * nfft * fft_batch_size),
-          nfft * fft_batch_size /*<+decimation+>*/),
+    size_t nfft, const std::string &tag, uint64_t freq_start, uint64_t freq_end,
+    uint64_t tune_step_hz, uint64_t tune_step_fft, uint64_t skip_tune_step_fft,
+    const std::string &tuning_ranges, bool tag_now, bool low_power_hold_down)
+    : gr::block("retune_pre_fft",
+                gr::io_signature::make(1 /* min inputs */, 1 /* max inputs */,
+                                       sizeof(block_type)),
+                gr::io_signature::make(1 /* min outputs */, 1 /* max outputs */,
+                                       sizeof(block_type) * nfft)),
       retuner_impl(freq_start, freq_end, tune_step_hz, tune_step_fft,
                    skip_tune_step_fft, tuning_ranges),
-      nfft_(nfft), fft_batch_size_(fft_batch_size), tag_(pmt::intern(tag)),
-      tag_now_(tag_now) {
+      nfft_(nfft), tag_(pmt::intern(tag)), tag_now_(tag_now),
+      low_power_hold_down_(low_power_hold_down), in_hold_down_(false) {
   message_port_register_out(TUNE_KEY);
+  unsigned int alignment = volk_get_alignment();
+  total_.reset((float *)volk_malloc(sizeof(float), alignment));
+  set_tag_propagation_policy(TPP_DONT);
 }
 
 retune_pre_fft_impl::~retune_pre_fft_impl() {}
@@ -252,43 +249,95 @@ void retune_pre_fft_impl::retune_now_() {
   const double host_now = host_now_();
   send_retune_(tune_freq_);
   next_retune_(host_now);
+  if (low_power_hold_down_ && !stare_mode_) {
+    in_hold_down_ = true;
+  }
 }
 
-int retune_pre_fft_impl::work(int noutput_items,
-                              gr_vector_const_void_star &input_items,
-                              gr_vector_void_star &output_items) {
+void retune_pre_fft_impl::add_output_tags_(uint64_t rx_time, double rx_freq,
+                                           size_t rel) {
+  std::stringstream str;
+  str << name() << unique_id();
+  pmt::pmt_t _id = pmt::string_to_symbol(str.str());
+  this->add_item_tag(0, nitems_written(0) + rel, RX_TIME_KEY,
+                     make_rx_time_key_(rx_time), _id);
+  this->add_item_tag(0, nitems_written(0) + rel, RX_FREQ_KEY,
+                     pmt::from_double(rx_freq), _id);
+}
+
+void retune_pre_fft_impl::forecast(int noutput_items,
+                                   gr_vector_int &ninput_items_required) {
+  ninput_items_required[0] = noutput_items * nfft_;
+}
+
+bool retune_pre_fft_impl::all_zeros_(const block_type *&in) {
+  const float *in_floats = (const float *)in;
+  volk_32f_accumulator_s32f(total_.get(), in_floats, nfft_ * 2);
+  return *total_ == 0;
+}
+
+void retune_pre_fft_impl::process_items_(size_t c, const block_type *&in,
+                                         const block_type *&out,
+                                         size_t &produced) {
+  for (size_t i = 0; i < c; ++i, in += nfft_) {
+    if (skip_fft_count_) {
+      --skip_fft_count_;
+      continue;
+    }
+    bool all_zeros = all_zeros_(in);
+    if (in_hold_down_) {
+      if (all_zeros) {
+        in_hold_down_ = false;
+        add_output_tags_(last_rx_time_, last_rx_freq_, produced);
+        // continue;
+      }
+    }
+    if (in_hold_down_ && total_tune_count_ > 1) {
+      continue;
+    }
+    std::memcpy((void *)out, (void *)in, sizeof(block_type) * nfft_);
+    out += nfft_;
+    ++produced;
+    if (!all_zeros || !total_tune_count_) {
+      if (need_retune_(1)) {
+        retune_now_();
+      }
+    }
+  }
+}
+
+int retune_pre_fft_impl::general_work(int noutput_items,
+                                      gr_vector_int &ninput_items,
+                                      gr_vector_const_void_star &input_items,
+                                      gr_vector_void_star &output_items) {
+  size_t in_count = ninput_items[0];
+  size_t c = std::min((int)(in_count / nfft_), noutput_items);
+  in_count = c * nfft_;
+  if (!c) {
+    return 0;
+  }
+  in_count = c * nfft_;
+
   const block_type *in = static_cast<const block_type *>(input_items[0]);
-  auto out = static_cast<block_type *>(output_items[0]);
-  const size_t block_size = nfft_ * fft_batch_size_;
-  const size_t out_ffts = noutput_items * fft_batch_size_;
-  size_t in_count = noutput_items * block_size;
+  const block_type *out = static_cast<const block_type *>(output_items[0]);
   size_t in_first = nitems_read(0);
   std::vector<tag_t> all_tags, rx_freq_tags;
   std::vector<double> rx_times;
   get_tags_in_window(all_tags, 0, 0, in_count);
   get_tags(tag_, all_tags, rx_freq_tags, rx_times, in_count);
+  size_t produced = 0;
 
-  if (skip_fft_count_) {
-    if (out_ffts > skip_fft_count_) {
-      skip_fft_count_ = 0;
-    } else {
-      skip_fft_count_ -= out_ffts;
-    }
-    return 0;
-  }
-
-  if (need_retune_(out_ffts)) {
-    retune_now_();
-  }
-
-  memcpy((void *)out, (void *)in,
-         sizeof(block_type) * block_size * noutput_items);
-
-  // TODO: handle more than one retune per batch.
-  for (size_t t = 0; t < rx_freq_tags.size(); ++t) {
-    const auto &tag = rx_freq_tags[t];
+  if (rx_freq_tags.empty()) {
+    process_items_(c, in, out, produced);
+  } else {
+    const auto &tag = rx_freq_tags[0];
+    const double rx_time = rx_times[0];
+    process_items_(0, in, out, produced);
     const uint64_t rx_freq = (uint64_t)pmt::to_double(tag.value);
-    const double rx_time = rx_times[t];
+    if (!low_power_hold_down_ || stare_mode_) {
+      add_output_tags_(rx_time, rx_freq, produced);
+    }
+
     d_logger->debug("new rx_freq tag: {}, last {}", rx_freq, last_rx_freq_);
     if (pending_retune_) {
       --pending_retune_;
@@ -299,7 +348,8 @@ int retune_pre_fft_impl::work(int noutput_items,
     }
   }
 
-  return noutput_items;
+  consume_each(in_count);
+  return 1;
 }
 
 } /* namespace iqtlabs */

@@ -1,5 +1,5 @@
 /*
- * Copyright 2023 Free Software Foundation, Inc.
+ * Copyright 2024 Free Software Foundation, Inc.
  *
  * This file is part of GNU Radio
  *
@@ -14,7 +14,7 @@
 /* BINDTOOL_GEN_AUTOMATIC(0)                                                       */
 /* BINDTOOL_USE_PYGCCXML(0)                                                        */
 /* BINDTOOL_HEADER_FILE(retune_pre_fft.h)                                        */
-/* BINDTOOL_HEADER_FILE_HASH(8b85264423963500dfd62650d0c0055a)                     */
+/* BINDTOOL_HEADER_FILE_HASH(3508efa1067c0f1cec7c248a027b71e9)                     */
 /***********************************************************************************/
 
 #include <pybind11/complex.h>
@@ -33,12 +33,13 @@ void bind_retune_pre_fft(py::module& m)
     using retune_pre_fft = ::gr::iqtlabs::retune_pre_fft;
 
 
-    py::class_<retune_pre_fft, gr::sync_decimator, std::shared_ptr<retune_pre_fft>>(
-        m, "retune_pre_fft", D(retune_pre_fft))
+    py::class_<retune_pre_fft,
+               gr::block,
+               gr::basic_block,
+               std::shared_ptr<retune_pre_fft>>(m, "retune_pre_fft", D(retune_pre_fft))
 
         .def(py::init(&retune_pre_fft::make),
              py::arg("nfft"),
-             py::arg("fft_batch_size"),
              py::arg("tag"),
              py::arg("freq_start"),
              py::arg("freq_end"),
@@ -47,6 +48,7 @@ void bind_retune_pre_fft(py::module& m)
              py::arg("skip_tune_step_fft"),
              py::arg("tuning_ranges"),
              py::arg("tag_now"),
+             py::arg("low_power_hold_down"),
              D(retune_pre_fft, make))
 
 

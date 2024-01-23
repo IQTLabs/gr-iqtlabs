@@ -206,7 +206,7 @@
 #define INCLUDED_IQTLABS_RETUNE_PRE_FFT_H
 
 #include <gnuradio/iqtlabs/api.h>
-#include <gnuradio/sync_decimator.h>
+#include <gnuradio/sync_block.h>
 
 namespace gr {
 namespace iqtlabs {
@@ -216,7 +216,7 @@ namespace iqtlabs {
  * \ingroup iqtlabs
  *
  */
-class IQTLABS_API retune_pre_fft : virtual public gr::sync_decimator {
+class IQTLABS_API retune_pre_fft : virtual public gr::block {
 public:
   typedef std::shared_ptr<retune_pre_fft> sptr;
 
@@ -229,11 +229,11 @@ public:
    * creating new instances.
    */
 
-  static sptr make(size_t nfft, size_t fft_batch_size, const std::string &tag,
-                   uint64_t freq_start, uint64_t freq_end,
-                   uint64_t tune_step_hz, uint64_t tune_step_fft,
-                   uint64_t skip_tune_step_fft,
-                   const std::string &tuning_ranges, bool tag_now);
+  static sptr make(size_t nfft, const std::string &tag, uint64_t freq_start,
+                   uint64_t freq_end, uint64_t tune_step_hz,
+                   uint64_t tune_step_fft, uint64_t skip_tune_step_fft,
+                   const std::string &tuning_ranges, bool tag_now,
+                   bool low_power_hold_down);
 };
 
 } // namespace iqtlabs

@@ -268,7 +268,8 @@ int tuneable_test_source_impl::work(int noutput_items,
     last_sample =
         gr_complex(last_freq / d_freq_divisor, last_freq / d_freq_divisor);
     tag_now = false;
-    d_logger->debug("tag now with frequency {}", last_freq);
+    d_logger->info("tag now with frequency {}, sample real {} imag {}",
+                   last_freq, last_sample.real(), last_sample.imag());
   }
   std::fill_n(out, noutput_items, last_sample);
   return noutput_items;

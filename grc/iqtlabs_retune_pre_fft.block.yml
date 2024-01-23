@@ -16,7 +16,6 @@ documentation: |-
 
   parameters:
     nfft: number of FFT points.
-    fft_batch_size: number of sample vectors to send to succeeding FFT block.
     tag: expected PMT tag containing center frequency
          (generally "rx_freq" for Soapy or UHD sources).
     freq_start: frequency to start scan at in Hz (overridden by tuning_ranges).
@@ -29,31 +28,30 @@ documentation: |-
                    in ascending order (non-linear scan), e.g.
                    "2.2e9-2.4e9,5.1e9-5.9e9".
     tag_now: if True, send "tag:now" tag along with tuning message.
+    low_power_hold_down: if True, suppress samples between sending a retune
+                         message and observing low power (Ettus retune delay
+                         workaround).
 
 templates:
   imports: from gnuradio import iqtlabs
   make: >
     iqtlabs.retune_pre_fft(
-    ${nfft}, ${fft_batch_size},
-    ${tag}, ${freq_start}, ${freq_end},
+    ${nfft}, ${tag}, ${freq_start}, ${freq_end},
     ${tune_step_hz}, ${tune_step_fft}, ${skip_tune_step_fft},
-    ${tuning_ranges}, ${tag_now})
+    ${tuning_ranges}, ${tag_now}, ${low_power_hold_down})
 
 cpp_templates:
   includes: ['#include <gnuradio/iqtlabs/retune_pre_fft.h>']
   declarations: 'gr::iqtlabs::retune_pre_fft::sptr ${id};'
   make: >
     this->${id} = gr::iqtlabs::retune_pre_fft::make(
-    ${nfft}, ${fft_batch_size},
-    ${tag}, {freq_start}, ${freq_end},
+    ${nfft}, ${tag}, {freq_start}, ${freq_end},
     ${tune_step_hz}, ${tune_step_fft}, ${skip_tune_step_fft},
-    ${tuning_ranges}, ${tag_now});
+    ${tuning_ranges}, ${tag_now}, ${low_power_hold_down});
   link: ['libgnuradio-iqtlabs.so']
 
 parameters:
   - id: nfft
-    dtype: int
-  - id: fft_batch_size
     dtype: int
   - id: tag
     dtype: string
@@ -72,6 +70,7 @@ parameters:
     dtype: string
   - id: tag_now
     dtype: bool
+  - id: low_power_hold_down
 
 inputs:
   - label: input
@@ -83,7 +82,7 @@ outputs:
   - label: input
     domain: stream
     dtype: complex
-    vlen: ${ nfft * fft_batch_size }
+    vlen: ${ nfft }
   - label: tune
     domain: message
 
