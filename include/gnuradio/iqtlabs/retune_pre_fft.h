@@ -229,9 +229,10 @@ public:
    * creating new instances.
    */
 
-  static sptr make(size_t nfft, const std::string &tag, uint64_t freq_start,
-                   uint64_t freq_end, uint64_t tune_step_hz,
-                   uint64_t tune_step_fft, uint64_t skip_tune_step_fft,
+  static sptr make(size_t nfft, size_t fft_batch_size, const std::string &tag,
+                   uint64_t freq_start, uint64_t freq_end,
+                   uint64_t tune_step_hz, uint64_t tune_step_fft,
+                   uint64_t skip_tune_step_fft,
                    const std::string &tuning_ranges, bool tag_now,
                    bool low_power_hold_down);
 };
