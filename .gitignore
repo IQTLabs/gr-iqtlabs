@@ -8,3 +8,4 @@ VkFFT/
 SPIRV-Tools/
 
 test_flow_graphs/test/
+*.swp

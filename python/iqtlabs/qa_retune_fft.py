@@ -287,7 +287,6 @@ class qa_retune_fft_base:
 
             iqtlabs_retune_pre_fft_0 = retune_pre_fft(
                 points,
-                fft_batch_size,
                 "rx_freq",
                 int(freq_start),
                 int(freq_end),
@@ -295,6 +294,7 @@ class qa_retune_fft_base:
                 tune_step_fft,
                 skip_tune_step_fft,
                 tuning_ranges,
+                False,
                 False,
             )
 
