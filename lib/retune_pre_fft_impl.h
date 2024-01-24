@@ -225,14 +225,17 @@ private:
   void add_output_tags_(uint64_t rx_time, double rx_freq, size_t rel);
 
   size_t nfft_;
+  size_t fft_batch_size_;
   pmt::pmt_t tag_;
   bool tag_now_;
   bool low_power_hold_down_;
   bool in_hold_down_;
+  bool reset_tags_;
   boost::scoped_ptr<float> total_;
 
 public:
-  retune_pre_fft_impl(size_t nfft, const std::string &tag, uint64_t freq_start,
+  retune_pre_fft_impl(size_t nfft, size_t fft_batch_size,
+                      const std::string &tag, uint64_t freq_start,
                       uint64_t freq_end, uint64_t tune_step_hz,
                       uint64_t tune_step_fft, uint64_t skip_tune_step_fft,
                       const std::string &tuning_ranges, bool tag_now,
