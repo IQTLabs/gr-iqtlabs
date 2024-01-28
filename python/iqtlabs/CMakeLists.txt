@@ -44,3 +44,4 @@ GR_ADD_TEST(qa_retune_fft ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/qa_re
 GR_ADD_TEST(qa_write_freq_samples ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/qa_write_freq_samples.py)
 GR_ADD_TEST(qa_image_inference ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/qa_image_inference.py)
 GR_ADD_TEST(qa_vector_to_json ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/qa_vector_to_json.py)
+GR_ADD_TEST(qa_iq_inference ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/qa_iq_inference.py)

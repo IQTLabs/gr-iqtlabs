@@ -8,6 +8,21 @@
 include(GrPlatform) # define LIB_SUFFIX
 
 set(SRC_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/..")
+
+list(
+  APPEND
+  iqtlabs_sources
+  base_impl.cc
+  image_inference_impl.cc
+  iq_inference_impl.cc
+  retune_fft_impl.cc
+  retune_pre_fft_impl.cc
+  retuner_impl.cc
+  tuneable_test_source_impl.cc
+  vector_roll_impl.cc
+  vector_to_json_impl.cc
+  write_freq_samples_impl.cc)
+
 if(VKFFT)
   set(VKFFT_LIB
       -Wl,--whole-archive
@@ -33,24 +48,8 @@ if(VKFFT)
       PUBLIC
       $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/../VkFFT/benchmark_scripts/vkFFT_scripts/include>
   )
-endif()
-
-if(VKFFT)
   list(APPEND iqtlabs_sources libvkfft.cc vkfft_impl.cc vkfft_short_impl.cc)
 endif()
-
-list(
-  APPEND
-  iqtlabs_sources
-  base_impl.cc
-  retuner_impl.cc
-  image_inference_impl.cc
-  retune_fft_impl.cc
-  retune_pre_fft_impl.cc
-  tuneable_test_source_impl.cc
-  write_freq_samples_impl.cc
-  vector_to_json_impl.cc
-  vector_roll_impl.cc)
 
 set(iqtlabs_sources
     "${iqtlabs_sources}"
