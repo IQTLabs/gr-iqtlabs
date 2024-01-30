@@ -5,16 +5,19 @@
 # ##############################################################################
 # Install public header files
 # ##############################################################################
-if(Vulkan_FOUND)
-  install(FILES vkfft.h vkfft_short.h DESTINATION include/gnuradio/iqtlabs)
-endif()
 install(
   FILES api.h
-        tuneable_test_source.h
+        image_inference.h
+        iq_inference.h
         retune_fft.h
         retune_pre_fft.h
-        write_freq_samples.h
-        image_inference.h
-        vector_to_json.h
+        tuneable_test_source.h
         vector_roll.h
+        vector_to_json.h
+        write_freq_samples.h
   DESTINATION include/gnuradio/iqtlabs)
+
+if(Vulkan_FOUND)
+  install(FILES vkfft.h vkfft_short.h iq_inference.h
+          DESTINATION include/gnuradio/iqtlabs)
+endif()

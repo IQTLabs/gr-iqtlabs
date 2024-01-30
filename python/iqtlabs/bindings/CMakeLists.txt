@@ -37,7 +37,8 @@ list(APPEND iqtlabs_python_files
     image_inference_python.cc
     vector_to_json_python.cc
     vector_roll_python.cc
-    retune_pre_fft_python.cc python_bindings.cc)
+    retune_pre_fft_python.cc
+    iq_inference_python.cc python_bindings.cc)
 
 GR_PYBIND_MAKE_OOT(iqtlabs
    ../../..

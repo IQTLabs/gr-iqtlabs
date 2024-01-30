@@ -1,0 +1,66 @@
+---
+id: iqtlabs_iq_inference
+label: iq_inference
+category: '[iqtlabs]'
+flags: [python, cpp]
+documentation: |-
+  Test IQ inference
+
+templates:
+  imports: from gnuradio import iqtlabs
+  make: >
+    iqtlabs.iq_inference(${tag}, ${vlen}, ${sample_buffer}, ${min_peak_points},
+    ${model_server}, ${model_names}, ${confidence}, ${n_inference}, ${samp_rate}
+
+cpp_templates:
+  includes: ['#include <gnuradio/iqtlabs/iq_inference.h>']
+  declarations: 'gr::iqtlabs::image_inference::sptr ${id};'
+  make: >
+    this->${id} = gr::iqtlabs::iq_inference::make(${tag}, ${vlen},
+    ${sample_buffer, ${min_peak_points}, ${model_server}, ${model_names},
+    ${confidence}, ${n_inference}, ${samp_rate})
+  link: ['libgnuradio-iqtlabs.so']
+
+parameters:
+  - id: tag
+    dtype: string
+    default: 'rx_freq'
+  - id: vlen
+    dtype: int
+  - id: sample_buffer
+    dtype: int
+  - id: min_peak_points
+    dtype: float
+  - id: model_server
+    dtype: str
+  - id: model_names
+    dtype: str
+  - id: confidence
+    dtype: float
+  - id: n_inference
+    dtype: int
+  - id: samp_rate
+    dtype: int
+
+asserts:
+  - ${ tag != "" }
+  - ${ vlen > 0 }
+  - ${ sample_buffer > 0 }
+
+inputs:
+  - label: samples
+    domain: stream
+    dtype: complex
+    vlen: ${ vlen }
+  - label: FFT power
+    domain: stream
+    dtype: float
+    vlen: ${ vlen }
+
+outputs:
+  - label: inference json
+    domain: stream
+    dtype: byte
+    vlen: 1
+
+file_format: 1

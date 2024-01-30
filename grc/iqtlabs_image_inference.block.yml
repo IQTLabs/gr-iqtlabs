@@ -127,13 +127,13 @@ asserts:
   - ${ !model_server || (model_server && model_names) }
 
 inputs:
-  - label: input
+  - label: FFT power
     domain: stream
     dtype: float
     vlen: ${ vlen }
 
 outputs:
-  - label: input
+  - label: inference json
     domain: stream
     dtype: byte
     vlen: 1
