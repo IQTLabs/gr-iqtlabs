@@ -341,6 +341,7 @@ void retune_fft_impl::write_items_(const input_type *in) {
 
 void retune_fft_impl::sum_items_(const input_type *in) {
   volk_32f_x2_add_32f(sample_.get(), (const float *)sample_.get(), in, nfft_);
+  ++sample_count_;
   if (peak_fft_range_ && sample_count_ && sample_count_ == peak_fft_range_) {
     calc_peaks_();
   }
@@ -385,7 +386,6 @@ void retune_fft_impl::process_items_(size_t c, const input_type *&in,
     fft_output += nfft_;
     write_items_(in);
     sum_items_(in);
-    ++sample_count_;
     ++produced;
     if (need_retune_(1)) {
       if (!pre_fft_) {
