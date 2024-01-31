@@ -229,6 +229,7 @@ class qa_iq_inference(gr_unittest.TestCase):
         instance = iq_inference(
             "rx_freq", 1024, 512, 0.1, "server", "model", 0.1, 0, int(20e6)
         )
+        instance.stop()
 
 
 if __name__ == "__main__":
