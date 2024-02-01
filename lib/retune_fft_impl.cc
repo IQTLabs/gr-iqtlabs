@@ -280,17 +280,21 @@ void retune_fft_impl::reset_items_() {
     peak_[i] = fft_min_;
   }
   sample_count_ = 0;
+  fft_count_ = 0;
 }
 
 void retune_fft_impl::calc_peaks_() {
-  volk_32f_s32f_multiply_32f(mean_.get(), (const float *)sample_.get(),
-                             1 / float(sample_count_), nfft_);
-  for (size_t k = 0; k < nfft_; ++k) {
-    float mean = std::min(std::max(mean_[k], fft_min_), fft_max_);
-    peak_[k] = std::max(mean, peak_[k]);
-    sample_[k] = 0;
+  if (sample_count_) {
+    volk_32f_s32f_multiply_32f(mean_.get(), (const float *)sample_.get(),
+                               1 / float(sample_count_), nfft_);
+    for (size_t k = 0; k < nfft_; ++k) {
+      float mean = std::min(std::max(mean_[k], fft_min_), fft_max_);
+      peak_[k] = std::max(mean, peak_[k]);
+      sample_[k] = 0;
+    }
+
+    sample_count_ = 0;
   }
-  sample_count_ = 0;
 }
 
 retune_fft_impl::~retune_fft_impl() { close_(); }
@@ -342,7 +346,7 @@ void retune_fft_impl::write_items_(const input_type *in) {
 void retune_fft_impl::sum_items_(const input_type *in) {
   volk_32f_x2_add_32f(sample_.get(), (const float *)sample_.get(), in, nfft_);
   ++sample_count_;
-  if (peak_fft_range_ && sample_count_ && sample_count_ == peak_fft_range_) {
+  if (peak_fft_range_ && sample_count_ == peak_fft_range_) {
     calc_peaks_();
   }
 }
@@ -386,6 +390,7 @@ void retune_fft_impl::process_items_(size_t c, const input_type *&in,
     fft_output += nfft_;
     write_items_(in);
     sum_items_(in);
+    ++fft_count_;
     ++produced;
     if (need_retune_(1)) {
       if (!pre_fft_) {
@@ -480,15 +485,14 @@ void retune_fft_impl::write_buckets_(double host_now, uint64_t rx_freq) {
 }
 
 void retune_fft_impl::process_buckets_(uint64_t rx_freq, double rx_time) {
-  if (last_rx_freq_ && sample_count_) {
+  if (last_rx_freq_ && fft_count_) {
     reopen_(rx_time, rx_freq);
-    if (sample_count_) {
+    if (!peak_fft_range_) {
       calc_peaks_();
     }
     write_buckets_(rx_time, rx_freq);
   }
   reset_items_();
-  fft_count_ = 0;
   skip_fft_count_ = skip_tune_step_fft_;
   write_step_fft_count_ = write_step_fft_;
   last_rx_freq_ = rx_freq;
@@ -513,6 +517,7 @@ void retune_fft_impl::process_tags_(const input_type *in, size_t in_count,
       const auto rel = tag.offset - in_first;
       in_first += rel;
 
+      // TODO: process leftover untagged items.
       if (rel > 0) {
         process_items_(rel, in, fft_output, produced);
       }

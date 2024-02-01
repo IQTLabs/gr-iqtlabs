@@ -577,6 +577,7 @@ void image_inference_impl::run_inference_() {
 
         // attempt to re-use existing connection. may fail if an http 1.1 server
         // has dropped the connection to use in the meantime.
+        // TODO: handle case where model server is up but blocks us forever.
         if (inference_connected_) {
           try {
             boost::beast::flat_buffer buffer;
@@ -677,6 +678,7 @@ int image_inference_impl::general_work(int noutput_items,
       const auto rel = tag.offset - in_first;
       in_first += rel;
 
+      // TODO: process leftover untagged items.
       if (rel > 0) {
         process_items_(rel, in);
       }
