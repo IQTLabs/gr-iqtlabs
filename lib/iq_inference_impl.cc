@@ -311,9 +311,9 @@ void iq_inference_impl::run_inference_() {
       size_t rendered_predictions = 0;
 
       for (auto model_name : model_names_) {
-        const std::string_view body(reinterpret_cast<char const *>(
-            output_item.samples,
-            output_item.sample_count * sizeof(gr_complex)));
+        const std::string_view body(
+            reinterpret_cast<char const *>(output_item.samples),
+            output_item.sample_count * sizeof(gr_complex));
         boost::beast::http::request<boost::beast::http::string_body> req{
             boost::beast::http::verb::post, "/predictions/" + model_name, 11};
         req.keep_alive(true);
@@ -326,9 +326,12 @@ void iq_inference_impl::run_inference_() {
         req.body() = body;
         req.prepare_payload();
         std::string results;
+        // TODO: troubleshoot test flask server hang after one request.
+        inference_connected_ = false;
 
         // attempt to re-use existing connection. may fail if an http 1.1 server
         // has dropped the connection to use in the meantime.
+        // TODO: handle case where model server is up but blocks us forever.
         if (inference_connected_) {
           try {
             boost::beast::flat_buffer buffer;
@@ -377,7 +380,8 @@ void iq_inference_impl::run_inference_() {
               for (auto &prediction_ref : prediction_class.value().items()) {
                 auto prediction = prediction_ref.value();
                 prediction["model"] = model_name;
-                float conf = prediction["conf"];
+                // TODO: gate on minimum confidence.
+                // float conf = prediction["conf"];
                 results_json[prediction_class.key()].emplace_back(prediction);
               }
             }
@@ -437,10 +441,6 @@ void iq_inference_impl::process_items_(size_t power_in_count,
       delete_output_item_(output_item);
       d_logger->error("inference queue full");
     }
-    // volk_32f_accumulator_s32f(
-    //     total_.get(), (const float *)&samples_lookback_[j * vlen_], vlen_ *
-    //     2);
-    // d_logger->info("max: {}, total: {}, {}", power_max, *total_, j);
   }
 }
 
@@ -456,6 +456,23 @@ int iq_inference_impl::general_work(int noutput_items,
   const float *power_in = static_cast<const float *>(input_items[1]);
   std::vector<tag_t> all_tags, rx_freq_tags;
   std::vector<double> rx_times;
+  size_t leftover = 0;
+
+  while (!json_q_.empty()) {
+    std::string json;
+    json_q_.pop(json);
+    out_buf_.insert(out_buf_.end(), json.begin(), json.end());
+  }
+
+  if (!out_buf_.empty()) {
+    auto out = static_cast<char *>(output_items[0]);
+    leftover = std::min(out_buf_.size(), (size_t)noutput_items);
+    auto from = out_buf_.begin();
+    auto to = from + leftover;
+    std::copy(from, to, out);
+    out_buf_.erase(from, to);
+  }
+
   get_tags_in_window(all_tags, 1, 0, power_in_count);
   get_tags(tag_, all_tags, rx_freq_tags, rx_times, power_in_count);
 
@@ -475,6 +492,7 @@ int iq_inference_impl::general_work(int noutput_items,
       const auto rel = tag.offset - in_first;
       in_first += rel;
 
+      // TODO: process leftover untagged items.
       if (rel > 0) {
         process_items_(rel, power_read, power_in);
       }
@@ -488,24 +506,6 @@ int iq_inference_impl::general_work(int noutput_items,
 
   consume(0, samples_in_count);
   consume(1, power_in_count);
-
-  size_t leftover = 0;
-
-  while (!json_q_.empty()) {
-    std::string json;
-    json_q_.pop(json);
-    out_buf_.insert(out_buf_.end(), json.begin(), json.end());
-  }
-
-  if (!out_buf_.empty()) {
-    auto out = static_cast<char *>(output_items[0]);
-    leftover = std::min(out_buf_.size(), (size_t)noutput_items);
-    auto from = out_buf_.begin();
-    auto to = from + leftover;
-    std::copy(from, to, out);
-    out_buf_.erase(from, to);
-  }
-
   return leftover;
 }
 
