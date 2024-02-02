@@ -6,7 +6,11 @@ This repo contains gnuradio OOT blocks, used by IQTLabs projects (including [gam
 
 ### [image_inference](grc/iqtlabs_image_inference.block.yml)
 
-Produce a spectrogram like image that may be used by machine learning pipelines (typically torchserve based) to infer the presence of signals in FFT output.
+Produce a spectrogram like image for inference pipelines (typically Torchserve based) to infer the presence of signals in FFT output.
+
+### [image_inference](grc/iqtlabs_iq_inference.block.yml)
+
+Correlate samples and power for inference pipelines (typically Torchserve based) to infer the presence of signals raw I/Q samples.
 
 ### [retune_pre_fft](grc/iqtlabs_retune_pre_fft.block.yml)
 

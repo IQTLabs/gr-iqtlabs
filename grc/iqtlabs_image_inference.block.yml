@@ -5,7 +5,7 @@ category: '[iqtlabs]'
 flags: [python, cpp]
 documentation: |-
   This block accepts dB values from retune_fft, reformats them
-  as images and runs inference on them via torchserve. The inference
+  as images and runs inference on them via Torchserve. The inference
   results are used to annotate the images with bounding boxes
   and RSSI values (the bounding boxes are used to select the original
   dB power values within the boxes).
@@ -13,8 +13,7 @@ documentation: |-
   Torchserve inference is done in a background thread, to avoid
   blocking the flowgraph. Torchserve batching is currently not done,
   to trade inference latency for efficiency (generally, the inference
-  response time is much less than scanner dwell time). Also currently,
-  only one model name/server is supported.
+  response time is much less than scanner dwell time).
 
   input:
     vector of floats, representing FFT dB power values,

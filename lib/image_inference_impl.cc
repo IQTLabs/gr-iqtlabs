@@ -456,7 +456,7 @@ void image_inference_impl::bbox_text(const output_item_type &output_item,
 size_t image_inference_impl::parse_inference_(
     const output_item_type &output_item, const std::string &results,
     const std::string &model_name, nlohmann::json &results_json,
-    std::string &error) {
+    std::string &error, bool &valid_json) {
   size_t rendered_predictions = 0;
   const float xf = float(output_item.points_buffer->cols) /
                    float(output_item.image_buffer->cols);
@@ -515,6 +515,7 @@ size_t image_inference_impl::parse_inference_(
     }
   } catch (std::exception &ex) {
     error = "invalid json: " + std::string(ex.what()) + " " + results;
+    valid_json = false;
   }
   return rendered_predictions;
 }
@@ -574,6 +575,7 @@ void image_inference_impl::run_inference_() {
         req.body() = body;
         req.prepare_payload();
         std::string results;
+        bool valid_json = true;
 
         // attempt to re-use existing connection. may fail if an http 1.1 server
         // has dropped the connection to use in the meantime.
@@ -613,16 +615,22 @@ void image_inference_impl::run_inference_() {
         if (error.size() == 0 &&
             (results.size() == 0 || !nlohmann::json::accept(results))) {
           error = "invalid json: " + results;
+          valid_json = false;
         }
 
         if (error.size() == 0) {
-          rendered_predictions += parse_inference_(
-              output_item, results, model_name, results_json, error);
+          rendered_predictions +=
+              parse_inference_(output_item, results, model_name, results_json,
+                               error, valid_json);
         }
 
         if (error.size()) {
           d_logger->error(error);
-          output_json["error"] = error;
+          if (valid_json) {
+            output_json["error"] = error;
+          } else {
+            output_json["error"] = "invalid json";
+          }
           inference_connected_ = false;
         }
       }

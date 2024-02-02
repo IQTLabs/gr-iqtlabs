@@ -4,7 +4,31 @@ label: iq_inference
 category: '[iqtlabs]'
 flags: [python, cpp]
 documentation: |-
-  Test IQ inference
+  This block accepts a stream of complex I/Q samples and dB values,
+  correlates them in time, and runs inference on the samples via Torchserve.
+
+  Torchserve inference is done in a background thread, to avoid
+  blocking the flowgraph. Torchserve batching is currently not done,
+  to trade inference latency for efficiency (generally, the inference
+  response time is much less than scanner dwell time).
+
+  input:
+    vector of complex, representing original I/Q samples,
+    tagged with center frequency.
+    vector of floats, representing FFT dB power values,
+    tagged with center frequency.
+  output:
+    JSON inference results.
+
+  parameters:
+    tag: received frequency tag name.
+    vlen: length of complex/FFT dB vector.
+    min_peak_points: Only run inference on buckets with this minimum dB power.
+    model_names: if not empty, comma separated list of model names.
+    model_server: if not empty, do torchserve inference to this address.
+    confidence: Only output inference results where confidence is greater.
+    n_inference: if > 0, only run inference on 1/n_inference images.
+    samp_rate: sample rate.
 
 templates:
   imports: from gnuradio import iqtlabs
