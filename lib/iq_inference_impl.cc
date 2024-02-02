@@ -328,6 +328,7 @@ void iq_inference_impl::run_inference_() {
         std::string results;
         // TODO: troubleshoot test flask server hang after one request.
         inference_connected_ = false;
+        bool valid_json = true;
 
         // attempt to re-use existing connection. may fail if an http 1.1 server
         // has dropped the connection to use in the meantime.
@@ -367,6 +368,7 @@ void iq_inference_impl::run_inference_() {
         if (error.size() == 0 &&
             (results.size() == 0 || !nlohmann::json::accept(results))) {
           error = "invalid json: " + results;
+          valid_json = false;
         }
 
         if (error.size() == 0) {
@@ -387,12 +389,17 @@ void iq_inference_impl::run_inference_() {
             }
           } catch (std::exception &ex) {
             error = "invalid json: " + std::string(ex.what()) + " " + results;
+            valid_json = false;
           }
         }
 
         if (error.size()) {
           d_logger->error(error);
-          output_json["error"] = error;
+          if (valid_json) {
+            output_json["error"] = error;
+          } else {
+            output_json["error"] = "invalid json";
+          }
           inference_connected_ = false;
         }
       }
