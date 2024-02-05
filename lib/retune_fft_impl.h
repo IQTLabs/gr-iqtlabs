@@ -227,7 +227,7 @@ private:
   void sum_items_(const input_type *in);
   void reset_items_();
   void calc_peaks_();
-  void add_output_tags_(uint64_t rx_time, double rx_freq, size_t produced);
+  void add_output_tags_(double rx_time, double rx_freq, size_t produced);
   void process_items_(size_t c, const input_type *&in,
                       const input_type *&fft_output, size_t &produced);
   void output_buckets_(const std::string &name,
