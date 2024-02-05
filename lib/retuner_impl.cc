@@ -288,7 +288,7 @@ void retuner_impl::parse_tuning_ranges_(const std::string &tuning_ranges) {
   }
 }
 
-void retuner_impl::next_retune_(double host_now) {
+void retuner_impl::next_retune_(TIME_T host_now) {
   ++total_tune_count_;
   ++pending_retune_;
   last_tuning_range_ = tuning_range_;

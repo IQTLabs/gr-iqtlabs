@@ -202,94 +202,18 @@
  *    limitations under the License.
  */
 
-#ifndef INCLUDED_IQTLABS_RETUNE_FFT_IMPL_H
-#define INCLUDED_IQTLABS_RETUNE_FFT_IMPL_H
+#ifndef INCLUDED_IQTLABS_TYPES_H
+#define INCLUDED_IQTLABS_TYPES_H
 
-#include "base_impl.h"
-#include "retuner_impl.h"
-#include <boost/filesystem.hpp>
-#include <boost/iostreams/device/file.hpp>
-#include <boost/iostreams/filter/zstd.hpp>
-#include <boost/iostreams/filtering_stream.hpp>
-#include <boost/scoped_array.hpp>
-#include <boost/scoped_ptr.hpp>
-#include <gnuradio/iqtlabs/retune_fft.h>
+#include <cstdint>
 
 namespace gr {
 namespace iqtlabs {
-using input_type = float;
-using output_type = char;
 
-class retune_fft_impl : public retune_fft, base_impl, retuner_impl {
-private:
-  void retune_now_();
-  void write_items_(const input_type *in);
-  void sum_items_(const input_type *in);
-  void reset_items_();
-  void calc_peaks_();
-  void add_output_tags_(TIME_T rx_time, double rx_freq, size_t produced);
-  void process_items_(size_t c, const input_type *&in,
-                      const input_type *&fft_output, size_t &produced);
-  void output_buckets_(const std::string &name,
-                       const std::list<std::pair<double, double>> &buckets,
-                       std::stringstream &ss);
-  void reopen_(TIME_T host_now, uint64_t rx_freq);
-  void send_retune_(uint64_t tune_freq);
-  void process_buckets_(uint64_t rx_freq, TIME_T rx_time);
-  void write_buckets_(TIME_T host_now, uint64_t rx_freq);
-  void process_tags_(const input_type *in, size_t in_count, size_t in_first,
-                     const input_type *fft_output);
-  void write_(const char *data, size_t len);
-  void open_(const std::string &file);
-  void close_();
+typedef double TIME_T;
+typedef uint64_t FREQ_T;
 
-  pmt::pmt_t tag_;
-  size_t nfft_;
-  size_t peak_fft_range_;
-  uint64_t samp_rate_;
-  uint64_t write_step_fft_;
-  uint64_t rotate_secs_;
-  double bucket_range_;
-  std::string sdir_;
-  std::string description_;
-  bool pre_fft_;
-  bool tag_now_;
-  bool low_power_hold_down_;
+} /* namespace iqtlabs */
+} /* namespace gr */
 
-  float fft_min_;
-  float fft_max_;
-
-  std::deque<output_type> out_buf_;
-  size_t sample_count_;
-  uint64_t write_step_fft_count_;
-  size_t bucket_offset_;
-  bool in_hold_down_;
-
-  boost::scoped_array<float> sample_;
-  boost::scoped_array<float> mean_;
-  boost::scoped_array<float> peak_;
-  boost::scoped_ptr<uint16_t> in_max_pos_;
-  boost::scoped_ptr<boost::iostreams::filtering_ostream> outbuf_p;
-  std::string file_;
-
-public:
-  retune_fft_impl(const std::string &tag, size_t nfft, uint64_t samp_rate,
-                  uint64_t freq_start, uint64_t freq_end, uint64_t tune_step_hz,
-                  uint64_t tune_step_fft, uint64_t skip_tune_step_fft,
-                  double fft_min, double fft_max, const std::string &sdir,
-                  uint64_t write_step_fft, double bucket_range,
-                  const std::string &tuning_ranges,
-                  const std::string &description, uint64_t rotate_secs,
-                  bool pre_fft, bool tag_now, bool low_power_hold_down,
-                  size_t peak_fft_range);
-  ~retune_fft_impl();
-  void forecast(int noutput_items, gr_vector_int &ninput_items_required);
-  int general_work(int noutput_items, gr_vector_int &ninput_items,
-                   gr_vector_const_void_star &input_items,
-                   gr_vector_void_star &output_items);
-};
-
-} // namespace iqtlabs
-} // namespace gr
-
-#endif /* INCLUDED_IQTLABS_RETUNE_FFT_IMPL_H */
+#endif

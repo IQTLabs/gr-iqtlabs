@@ -226,26 +226,26 @@ std::string base_impl::get_dotfile_(const std::string &file) {
   return get_prefix_file_(file, ".");
 }
 
-double base_impl::host_now_() {
+TIME_T base_impl::host_now_() {
   const auto now_millis = std::chrono::duration_cast<std::chrono::milliseconds>(
       std::chrono::high_resolution_clock::now().time_since_epoch());
-  double now = double(now_millis.count()) / 1e3;
+  TIME_T now = double(now_millis.count()) / 1e3;
   return now;
 }
 
-std::string base_impl::host_now_str_(double host_now) {
+std::string base_impl::host_now_str_(TIME_T host_now) {
   std::ostringstream ss;
   ss << std::fixed << std::setprecision(3) << host_now;
   return ss.str();
 }
 
-pmt::pmt_t base_impl::make_rx_time_key_(double now) {
+pmt::pmt_t base_impl::make_rx_time_key_(TIME_T now) {
   uint64_t now_sec = uint64_t(now);
   return pmt::make_tuple(pmt::from_uint64(now_sec),
                          pmt::from_double(now - now_sec));
 }
 
-double base_impl::rx_time_from_tag_(const gr::tag_t tag) {
+TIME_T base_impl::rx_time_from_tag_(const gr::tag_t tag) {
   return pmt::to_uint64(pmt::tuple_ref(tag.value, 0)) +
          pmt::to_double(pmt::tuple_ref(tag.value, 1));
 }
@@ -296,7 +296,7 @@ void base_impl::write_sigmf(const std::string &filename,
 void base_impl::get_tags(const pmt::pmt_t want_tag,
                          const std::vector<tag_t> &all_tags,
                          std::vector<tag_t> &rx_freq_tags,
-                         std::vector<double> &rx_times, size_t in_count) {
+                         std::vector<TIME_T> &rx_times, size_t in_count) {
   for (size_t t = 0; t < all_tags.size(); ++t) {
     const auto &tag = all_tags[t];
     if (tag.key == want_tag) {

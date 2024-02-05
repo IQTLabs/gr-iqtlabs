@@ -673,7 +673,7 @@ int image_inference_impl::general_work(int noutput_items,
   }
 
   std::vector<tag_t> all_tags, rx_freq_tags;
-  std::vector<double> rx_times;
+  std::vector<TIME_T> rx_times;
   get_tags_in_window(all_tags, 0, 0, in_count);
   get_tags(tag_, all_tags, rx_freq_tags, rx_times, in_count);
 
@@ -682,7 +682,7 @@ int image_inference_impl::general_work(int noutput_items,
   } else {
     for (size_t t = 0; t < rx_freq_tags.size(); ++t) {
       const auto &tag = rx_freq_tags[t];
-      const double rx_time = rx_times[t];
+      const TIME_T rx_time = rx_times[t];
       const auto rel = tag.offset - in_first;
       in_first += rel;
 
