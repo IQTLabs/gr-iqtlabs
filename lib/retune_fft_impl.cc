@@ -351,7 +351,7 @@ void retune_fft_impl::sum_items_(const input_type *in) {
   }
 }
 
-void retune_fft_impl::add_output_tags_(uint64_t rx_time, double rx_freq,
+void retune_fft_impl::add_output_tags_(double rx_time, double rx_freq,
                                        size_t rel) {
   std::stringstream str;
   str << name() << unique_id();

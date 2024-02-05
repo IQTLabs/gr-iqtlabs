@@ -222,7 +222,7 @@ private:
   bool all_zeros_(const block_type *&in);
   void process_items_(size_t c, const block_type *&in, const block_type *&out,
                       size_t &produced);
-  void add_output_tags_(uint64_t rx_time, double rx_freq, size_t rel);
+  void add_output_tags_(double rx_time, double rx_freq, size_t rel);
 
   size_t nfft_;
   size_t fft_batch_size_;
