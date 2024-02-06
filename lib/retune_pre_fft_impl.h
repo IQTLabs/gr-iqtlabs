@@ -217,8 +217,6 @@ using block_type = gr_complex;
 
 class retune_pre_fft_impl : public retune_pre_fft, base_impl, retuner_impl {
 private:
-  void send_retune_(uint64_t tune_freq);
-  void retune_now_();
   bool all_zeros_(const block_type *&in);
   void process_items_(size_t c, const block_type *&in, const block_type *&out,
                       size_t &produced);
@@ -227,7 +225,6 @@ private:
   size_t nfft_;
   size_t fft_batch_size_;
   pmt::pmt_t tag_;
-  bool tag_now_;
   boost::scoped_ptr<float> total_;
 
 public:

@@ -222,7 +222,6 @@ using output_type = char;
 
 class retune_fft_impl : public retune_fft, base_impl, retuner_impl {
 private:
-  void retune_now_();
   void write_items_(const input_type *in);
   void sum_items_(const input_type *in);
   void reset_items_();
@@ -234,7 +233,6 @@ private:
                        const std::list<std::pair<double, double>> &buckets,
                        std::stringstream &ss);
   void reopen_(TIME_T host_now, uint64_t rx_freq);
-  void send_retune_(uint64_t tune_freq);
   void process_buckets_(uint64_t rx_freq, TIME_T rx_time);
   void write_buckets_(TIME_T host_now, uint64_t rx_freq);
   void process_tags_(const input_type *in, size_t in_count, size_t in_first,
@@ -253,7 +251,6 @@ private:
   std::string sdir_;
   std::string description_;
   bool pre_fft_;
-  bool tag_now_;
 
   float fft_min_;
   float fft_max_;

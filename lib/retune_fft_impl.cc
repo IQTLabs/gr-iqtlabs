@@ -250,12 +250,13 @@ retune_fft_impl::retune_fft_impl(
                     std::vector<int>{(int)sizeof(output_type),
                                      (int)(nfft * sizeof(input_type))})),
       retuner_impl(freq_start, freq_end, tune_step_hz, tune_step_fft,
-                   skip_tune_step_fft, tuning_ranges, low_power_hold_down),
+                   skip_tune_step_fft, tuning_ranges, low_power_hold_down,
+                   tag_now),
       tag_(pmt::intern(tag)), nfft_(nfft), samp_rate_(samp_rate),
       fft_min_(fft_min), fft_max_(fft_max), sample_count_(0), sdir_(sdir),
       write_step_fft_(write_step_fft), write_step_fft_count_(write_step_fft),
       bucket_range_(bucket_range), description_(description),
-      rotate_secs_(rotate_secs), pre_fft_(pre_fft), tag_now_(tag_now),
+      rotate_secs_(rotate_secs), pre_fft_(pre_fft),
       peak_fft_range_(peak_fft_range) {
   bucket_offset_ = round(float((nfft_ - round(bucket_range_ * nfft_)) / 2));
   unsigned int alignment = volk_get_alignment();
@@ -321,17 +322,6 @@ void retune_fft_impl::close_() {
   }
 }
 
-void retune_fft_impl::send_retune_(uint64_t tune_freq) {
-  d_logger->debug("retuning to {}", tune_freq);
-  message_port_pub(TUNE_KEY, tune_rx_msg(tune_freq, tag_now_));
-}
-
-void retune_fft_impl::retune_now_() {
-  const TIME_T host_now = host_now_();
-  send_retune_(tune_freq_);
-  next_retune_(host_now);
-}
-
 void retune_fft_impl::write_items_(const input_type *in) {
   if (write_step_fft_count_) {
     write_((const char *)in, sizeof(input_type) * nfft_);
@@ -384,7 +374,7 @@ void retune_fft_impl::process_items_(size_t c, const input_type *&in,
     ++produced;
     if (need_retune_(1)) {
       if (!pre_fft_) {
-        retune_now_();
+        RETUNE_NOW();
       }
     }
   }

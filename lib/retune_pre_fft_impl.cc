@@ -233,9 +233,9 @@ retune_pre_fft_impl::retune_pre_fft_impl(
           gr::io_signature::make(1 /* min outputs */, 1 /* max outputs */,
                                  sizeof(block_type) * nfft * fft_batch_size)),
       retuner_impl(freq_start, freq_end, tune_step_hz, tune_step_fft,
-                   skip_tune_step_fft, tuning_ranges, low_power_hold_down),
-      nfft_(nfft), fft_batch_size_(fft_batch_size), tag_(pmt::intern(tag)),
-      tag_now_(tag_now) {
+                   skip_tune_step_fft, tuning_ranges, low_power_hold_down,
+                   tag_now),
+      nfft_(nfft), fft_batch_size_(fft_batch_size), tag_(pmt::intern(tag)) {
   message_port_register_out(TUNE_KEY);
   unsigned int alignment = volk_get_alignment();
   total_.reset((float *)volk_malloc(sizeof(float), alignment));
@@ -243,17 +243,6 @@ retune_pre_fft_impl::retune_pre_fft_impl(
 }
 
 retune_pre_fft_impl::~retune_pre_fft_impl() {}
-
-void retune_pre_fft_impl::send_retune_(uint64_t tune_freq) {
-  d_logger->debug("retuning to {}", tune_freq);
-  message_port_pub(TUNE_KEY, tune_rx_msg(tune_freq, tag_now_));
-}
-
-void retune_pre_fft_impl::retune_now_() {
-  const TIME_T host_now = host_now_();
-  send_retune_(tune_freq_);
-  next_retune_(host_now);
-}
 
 void retune_pre_fft_impl::add_output_tags_(TIME_T rx_time, double rx_freq,
                                            size_t rel) {
@@ -294,7 +283,7 @@ void retune_pre_fft_impl::process_items_(size_t c, const block_type *&in,
       ++produced;
       if (!all_zeros || !total_tune_count_) {
         if (need_retune_(1)) {
-          retune_now_();
+          RETUNE_NOW();
         }
       }
     }
@@ -308,7 +297,7 @@ void retune_pre_fft_impl::process_items_(size_t c, const block_type *&in,
       out += nfft_;
       ++produced;
       if (need_retune_(1)) {
-        retune_now_();
+        RETUNE_NOW();
       }
     }
   }
