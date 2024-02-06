@@ -244,7 +244,6 @@ private:
   pmt::pmt_t tag_;
   size_t nfft_;
   size_t peak_fft_range_;
-  uint64_t samp_rate_;
   uint64_t write_step_fft_;
   uint64_t rotate_secs_;
   double bucket_range_;

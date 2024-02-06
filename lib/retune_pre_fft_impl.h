@@ -228,7 +228,7 @@ private:
   boost::scoped_ptr<float> total_;
 
 public:
-  retune_pre_fft_impl(size_t nfft, size_t fft_batch_size,
+  retune_pre_fft_impl(size_t nfft, size_t samp_rate, size_t fft_batch_size,
                       const std::string &tag, uint64_t freq_start,
                       uint64_t freq_end, uint64_t tune_step_hz,
                       uint64_t tune_step_fft, uint64_t skip_tune_step_fft,

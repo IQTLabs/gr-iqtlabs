@@ -252,14 +252,13 @@ retune_fft_impl::retune_fft_impl(
                     2 /* min outputs */, 2 /* max outputs */,
                     std::vector<int>{(int)sizeof(output_type),
                                      (int)(nfft * sizeof(input_type))})),
-      retuner_impl(freq_start, freq_end, tune_step_hz, tune_step_fft,
+      retuner_impl(samp_rate, freq_start, freq_end, tune_step_hz, tune_step_fft,
                    skip_tune_step_fft, tuning_ranges, tag_now,
                    low_power_hold_down, slew_rx_time),
-      tag_(pmt::intern(tag)), nfft_(nfft), samp_rate_(samp_rate),
-      fft_min_(fft_min), fft_max_(fft_max), sample_count_(0), sdir_(sdir),
-      write_step_fft_(write_step_fft), write_step_fft_count_(write_step_fft),
-      bucket_range_(bucket_range), description_(description),
-      rotate_secs_(rotate_secs), pre_fft_(pre_fft),
+      tag_(pmt::intern(tag)), nfft_(nfft), fft_min_(fft_min), fft_max_(fft_max),
+      sample_count_(0), sdir_(sdir), write_step_fft_(write_step_fft),
+      write_step_fft_count_(write_step_fft), bucket_range_(bucket_range),
+      description_(description), rotate_secs_(rotate_secs), pre_fft_(pre_fft),
       peak_fft_range_(peak_fft_range) {
   bucket_offset_ = round(float((nfft_ - round(bucket_range_ * nfft_)) / 2));
   unsigned int alignment = volk_get_alignment();
@@ -342,7 +341,7 @@ void retune_fft_impl::sum_items_(const input_type *in) {
 
 void retune_fft_impl::add_output_tags_(TIME_T rx_time, FREQ_T rx_freq,
                                        size_t rel) {
-  OUTPUT_TAGS(rx_time, rx_freq, 1, rel);
+  OUTPUT_TAGS(apply_rx_time_slew_(rx_time), rx_freq, 1, rel);
 }
 
 void retune_fft_impl::process_items_(size_t c, const input_type *&in,
@@ -351,6 +350,7 @@ void retune_fft_impl::process_items_(size_t c, const input_type *&in,
   for (size_t i = 0; i < c; ++i, in += nfft_) {
     if (skip_fft_count_) {
       --skip_fft_count_;
+      slew_samples_ += nfft_;
       continue;
     }
     // Discard windows where max power, is less than requested minimum.
@@ -366,6 +366,7 @@ void retune_fft_impl::process_items_(size_t c, const input_type *&in,
       continue;
     }
     if (in_hold_down_ && total_tune_count_ > 1) {
+      slew_samples_ += nfft_;
       continue;
     }
     std::memcpy((void *)fft_output, (const void *)in,
