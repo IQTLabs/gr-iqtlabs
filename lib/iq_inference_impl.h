@@ -224,7 +224,7 @@ namespace iqtlabs {
 const size_t MAX_INFERENCE = 5;
 
 typedef struct output_item {
-  uint64_t rx_freq;
+  FREQ_T rx_freq;
   TIME_T rx_time;
   double points_max;
   size_t sample_count;
@@ -251,7 +251,7 @@ private:
   boost::lockfree::spsc_queue<std::string> json_q_{MAX_INFERENCE};
   bool running_;
   TIME_T last_rx_time_;
-  uint64_t last_rx_freq_;
+  FREQ_T last_rx_freq_;
   std::deque<char> out_buf_;
   std::string host_, port_;
   bool inference_connected_;

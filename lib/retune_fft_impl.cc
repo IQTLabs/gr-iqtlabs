@@ -337,7 +337,7 @@ void retune_fft_impl::sum_items_(const input_type *in) {
   }
 }
 
-void retune_fft_impl::add_output_tags_(TIME_T rx_time, double rx_freq,
+void retune_fft_impl::add_output_tags_(TIME_T rx_time, FREQ_T rx_freq,
                                        size_t rel) {
   OUTPUT_TAGS(rx_time, rx_freq, 1, rel);
 }
@@ -403,18 +403,18 @@ void retune_fft_impl::output_buckets_(
   ss << "}";
 }
 
-void retune_fft_impl::reopen_(TIME_T host_now, uint64_t rx_freq) {
+void retune_fft_impl::reopen_(TIME_T host_now, FREQ_T rx_freq) {
   if (sdir_.length()) {
     std::string bucket_path =
         secs_dir(sdir_, rotate_secs_) + "fft_" + host_now_str_(host_now) + "_" +
         std::to_string(uint64_t(nfft_)) + "points_" +
-        std::to_string(uint64_t(rx_freq)) + "Hz_" +
+        std::to_string(FREQ_T(rx_freq)) + "Hz_" +
         std::to_string(uint64_t(samp_rate_)) + "sps.raw.zst";
     open_(bucket_path);
   }
 }
 
-void retune_fft_impl::write_buckets_(TIME_T host_now, uint64_t rx_freq) {
+void retune_fft_impl::write_buckets_(TIME_T host_now, FREQ_T rx_freq) {
   std::list<std::pair<double, double>> buckets;
   const double bucket_size = samp_rate_ / nfft_;
   const double bucket_freq_start = last_rx_freq_ - (samp_rate_ / 2);
@@ -464,7 +464,7 @@ void retune_fft_impl::write_buckets_(TIME_T host_now, uint64_t rx_freq) {
   message_port_pub(JSON_KEY, pdu);
 }
 
-void retune_fft_impl::process_buckets_(uint64_t rx_freq, TIME_T rx_time) {
+void retune_fft_impl::process_buckets_(FREQ_T rx_freq, TIME_T rx_time) {
   if (last_rx_freq_ && fft_count_) {
     reopen_(rx_time, rx_freq);
     if (!peak_fft_range_) {
@@ -502,7 +502,7 @@ void retune_fft_impl::process_tags_(const input_type *in, size_t in_count,
         process_items_(rel, in, fft_output, produced);
       }
 
-      const uint64_t rx_freq = (uint64_t)pmt::to_double(tag.value);
+      const uint64_t rx_freq = pmt::to_uint64(tag.value);
       if (!reset_tags_) {
         add_output_tags_(rx_time, rx_freq, produced);
       }

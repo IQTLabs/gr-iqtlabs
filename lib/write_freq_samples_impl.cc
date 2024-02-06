@@ -253,7 +253,7 @@ void write_freq_samples_impl::open_(size_t zlevel) {
   double now = host_now_();
   std::string samples_path = secs_dir(sdir_, rotate_secs_) + prefix_ + "_" +
                              std::to_string(now) + "_" +
-                             std::to_string(uint64_t(last_rx_freq_)) + "Hz_" +
+                             std::to_string(FREQ_T(last_rx_freq_)) + "Hz_" +
                              std::to_string(uint64_t(samp_rate_)) + "sps.raw";
   zstfile_ = samples_path + ".zst";
   sigmffile_ = samples_path + ".sigmf-meta";
@@ -314,7 +314,7 @@ int write_freq_samples_impl::general_work(
         write_samples_(rel, in);
       }
 
-      const uint64_t rx_freq = (uint64_t)pmt::to_double(tag.value);
+      const FREQ_T rx_freq = pmt::to_uint64(tag.value);
       d_logger->debug("new rx_freq tag: {}, last {}", rx_freq, last_rx_freq_);
       last_rx_freq_ = rx_freq;
       skip_tune_step_samples_count_ = skip_tune_step_samples_;

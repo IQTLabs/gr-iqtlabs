@@ -691,7 +691,7 @@ int image_inference_impl::general_work(int noutput_items,
         process_items_(rel, in);
       }
 
-      uint64_t rx_freq = (uint64_t)pmt::to_double(tag.value);
+      FREQ_T rx_freq = pmt::to_uint64(tag.value);
       if (rx_freq != last_rx_freq_) {
         create_image_(true);
       }

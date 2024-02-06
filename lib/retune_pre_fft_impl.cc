@@ -244,7 +244,7 @@ retune_pre_fft_impl::retune_pre_fft_impl(
 
 retune_pre_fft_impl::~retune_pre_fft_impl() {}
 
-void retune_pre_fft_impl::add_output_tags_(TIME_T rx_time, double rx_freq,
+void retune_pre_fft_impl::add_output_tags_(TIME_T rx_time, FREQ_T rx_freq,
                                            size_t rel) {
   OUTPUT_TAGS(rx_time, rx_freq, 0, (rel / fft_batch_size_));
 }
@@ -332,7 +332,7 @@ int retune_pre_fft_impl::general_work(int noutput_items,
     // abstraction like VkFFT
     const auto &tag = rx_freq_tags[0];
     const TIME_T rx_time = rx_times[0];
-    const uint64_t rx_freq = (uint64_t)pmt::to_double(tag.value);
+    const FREQ_T rx_freq = pmt::to_uint64(tag.value);
     // Discard trailing samples up to new tag (i.e. between retune
     // request/response).
     d_logger->debug("new rx_freq tag: {}, last {}", rx_freq, last_rx_freq_);

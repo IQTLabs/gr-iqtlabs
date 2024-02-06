@@ -243,8 +243,8 @@ public:
   bool tag_now_;
 
   uint64_t skip_fft_count_;
-  uint64_t tune_freq_;
-  uint64_t last_rx_freq_;
+  FREQ_T tune_freq_;
+  FREQ_T last_rx_freq_;
   TIME_T last_rx_time_;
   TIME_T last_sweep_start_;
   size_t tuning_range_;

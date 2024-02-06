@@ -504,7 +504,7 @@ int iq_inference_impl::general_work(int noutput_items,
         process_items_(rel, power_read, power_in);
       }
 
-      const uint64_t rx_freq = (uint64_t)pmt::to_double(tag.value);
+      const FREQ_T rx_freq = pmt::to_uint64(tag.value);
       d_logger->debug("new rx_freq tag: {}", rx_freq);
       last_rx_freq_ = rx_freq;
       last_rx_time_ = rx_time;
