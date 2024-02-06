@@ -202,6 +202,7 @@
  *    limitations under the License.
  */
 
+#include "iqtlabs_types.h"
 #include <cstddef>
 #include <cstdint>
 #include <string>
@@ -220,22 +221,23 @@ class retuner_impl {
 public:
   retuner_impl(uint64_t freq_start, uint64_t freq_end, uint64_t tune_step_hz,
                uint64_t tune_step_fft, uint64_t skip_tune_step_fft,
-               const std::string &tuning_ranges);
+               const std::string &tuning_ranges, bool low_power_hold_down);
   void add_range_(uint64_t freq_start, uint64_t freq_end);
   bool need_retune_(size_t n);
   void parse_tuning_ranges_(const std::string &tuning_ranges);
-  void next_retune_(double host_now);
+  void next_retune_(TIME_T host_now);
   uint64_t freq_start_;
   uint64_t freq_end_;
   uint64_t tune_step_hz_;
   uint64_t tune_step_fft_;
   uint64_t skip_tune_step_fft_;
+  bool low_power_hold_down_;
 
   uint64_t skip_fft_count_;
   uint64_t tune_freq_;
   uint64_t last_rx_freq_;
-  double last_rx_time_;
-  double last_sweep_start_;
+  TIME_T last_rx_time_;
+  TIME_T last_sweep_start_;
   size_t tuning_range_;
   size_t last_tuning_range_;
   size_t tuning_range_step_;
@@ -244,6 +246,8 @@ public:
   size_t total_tune_count_;
   std::vector<tuning_range_t> tuning_ranges_;
   bool stare_mode_;
+  bool in_hold_down_;
+  bool reset_tags_;
 };
 } /* namespace iqtlabs */
 } /* namespace gr */

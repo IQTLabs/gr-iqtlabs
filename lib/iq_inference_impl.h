@@ -225,7 +225,7 @@ const size_t MAX_INFERENCE = 5;
 
 typedef struct output_item {
   uint64_t rx_freq;
-  double rx_time;
+  TIME_T rx_time;
   double points_max;
   size_t sample_count;
   gr_complex *samples;
@@ -250,7 +250,7 @@ private:
   boost::lockfree::spsc_queue<output_item_type> inference_q_{MAX_INFERENCE};
   boost::lockfree::spsc_queue<std::string> json_q_{MAX_INFERENCE};
   bool running_;
-  double last_rx_time_;
+  TIME_T last_rx_time_;
   uint64_t last_rx_freq_;
   std::deque<char> out_buf_;
   std::string host_, port_;

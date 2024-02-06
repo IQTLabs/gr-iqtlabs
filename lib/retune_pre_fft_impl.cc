@@ -233,17 +233,13 @@ retune_pre_fft_impl::retune_pre_fft_impl(
           gr::io_signature::make(1 /* min outputs */, 1 /* max outputs */,
                                  sizeof(block_type) * nfft * fft_batch_size)),
       retuner_impl(freq_start, freq_end, tune_step_hz, tune_step_fft,
-                   skip_tune_step_fft, tuning_ranges),
+                   skip_tune_step_fft, tuning_ranges, low_power_hold_down),
       nfft_(nfft), fft_batch_size_(fft_batch_size), tag_(pmt::intern(tag)),
-      tag_now_(tag_now), low_power_hold_down_(low_power_hold_down),
-      in_hold_down_(false), reset_tags_(false) {
+      tag_now_(tag_now) {
   message_port_register_out(TUNE_KEY);
   unsigned int alignment = volk_get_alignment();
   total_.reset((float *)volk_malloc(sizeof(float), alignment));
   set_tag_propagation_policy(TPP_DONT);
-  if (low_power_hold_down_ && !stare_mode_) {
-    reset_tags_ = true;
-  }
 }
 
 retune_pre_fft_impl::~retune_pre_fft_impl() {}
@@ -254,23 +250,14 @@ void retune_pre_fft_impl::send_retune_(uint64_t tune_freq) {
 }
 
 void retune_pre_fft_impl::retune_now_() {
-  const double host_now = host_now_();
+  const TIME_T host_now = host_now_();
   send_retune_(tune_freq_);
   next_retune_(host_now);
-  if (reset_tags_) {
-    in_hold_down_ = true;
-  }
 }
 
-void retune_pre_fft_impl::add_output_tags_(double rx_time, double rx_freq,
+void retune_pre_fft_impl::add_output_tags_(TIME_T rx_time, double rx_freq,
                                            size_t rel) {
-  std::stringstream str;
-  str << name() << unique_id();
-  pmt::pmt_t _id = pmt::string_to_symbol(str.str());
-  size_t rel_batch = nitems_written(0) + (rel / fft_batch_size_);
-  this->add_item_tag(0, rel_batch, RX_TIME_KEY, make_rx_time_key_(rx_time),
-                     _id);
-  this->add_item_tag(0, rel_batch, RX_FREQ_KEY, pmt::from_double(rx_freq), _id);
+  OUTPUT_TAGS(rx_time, rx_freq, 0, (rel / fft_batch_size_));
 }
 
 void retune_pre_fft_impl::forecast(int noutput_items,
@@ -344,7 +331,7 @@ int retune_pre_fft_impl::general_work(int noutput_items,
   const block_type *in = static_cast<const block_type *>(input_items[0]);
   const block_type *out = static_cast<const block_type *>(output_items[0]);
   std::vector<tag_t> all_tags, rx_freq_tags;
-  std::vector<double> rx_times;
+  std::vector<TIME_T> rx_times;
   get_tags_in_window(all_tags, 0, 0, in_count);
   get_tags(tag_, all_tags, rx_freq_tags, rx_times, in_count);
   size_t produced = 0;
@@ -355,7 +342,7 @@ int retune_pre_fft_impl::general_work(int noutput_items,
     // TODO: deprecate fft_batch_size, gr-wavelearner could use set_multiple
     // abstraction like VkFFT
     const auto &tag = rx_freq_tags[0];
-    const double rx_time = rx_times[0];
+    const TIME_T rx_time = rx_times[0];
     const uint64_t rx_freq = (uint64_t)pmt::to_double(tag.value);
     // Discard trailing samples up to new tag (i.e. between retune
     // request/response).

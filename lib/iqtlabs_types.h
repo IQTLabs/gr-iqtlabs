@@ -202,46 +202,18 @@
  *    limitations under the License.
  */
 
-#include "iqtlabs_types.h"
-#include <gnuradio/tags.h>
-#include <string>
+#ifndef INCLUDED_IQTLABS_TYPES_H
+#define INCLUDED_IQTLABS_TYPES_H
+
+#include <cstdint>
 
 namespace gr {
 namespace iqtlabs {
-const pmt::pmt_t CMD_KEY = pmt::mp("cmd");
-const pmt::pmt_t FREQ_KEY = pmt::mp("freq");
-const pmt::pmt_t TUNE_KEY = pmt::mp("tune");
-const pmt::pmt_t RX_TIME_KEY = pmt::string_to_symbol("rx_time");
-const pmt::pmt_t RX_FREQ_KEY = pmt::string_to_symbol("rx_freq");
 
-#define OUTPUT_TAGS(rx_time, rx_freq, stream, offset)                          \
-  {                                                                            \
-    std::stringstream str;                                                     \
-    str << name() << unique_id();                                              \
-    pmt::pmt_t _id = pmt::string_to_symbol(str.str());                         \
-    this->add_item_tag(stream, nitems_written(stream) + offset, RX_TIME_KEY,   \
-                       make_rx_time_key_(rx_time), _id);                       \
-    this->add_item_tag(stream, nitems_written(stream) + offset, RX_FREQ_KEY,   \
-                       pmt::from_double(rx_freq), _id);                        \
-  }
+typedef double TIME_T;
+typedef uint64_t FREQ_T;
 
-class base_impl {
-public:
-  std::string get_prefix_file_(const std::string &file,
-                               const std::string &prefix);
-  std::string get_dotfile_(const std::string &file);
-  TIME_T host_now_();
-  std::string host_now_str_(TIME_T host_now);
-  pmt::pmt_t make_rx_time_key_(TIME_T host_now);
-  TIME_T rx_time_from_tag_(const gr::tag_t tag);
-  std::string secs_dir(const std::string &dir, uint64_t rotate_secs);
-  void write_sigmf(const std::string &filename, const std::string &source_file,
-                   double timestamp, const std::string &datatype,
-                   double sample_rate, double frequency, double gain);
-  void get_tags(const pmt::pmt_t want_tag, const std::vector<tag_t> &all_tags,
-                std::vector<tag_t> &rx_freq_tags, std::vector<TIME_T> &rx_times,
-                size_t in_count);
-  pmt::pmt_t tune_rx_msg(uint64_t tune_freq, bool tag_now);
-};
 } /* namespace iqtlabs */
 } /* namespace gr */
+
+#endif

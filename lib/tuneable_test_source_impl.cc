@@ -258,13 +258,7 @@ int tuneable_test_source_impl::work(int noutput_items,
                                     gr_vector_void_star &output_items) {
   auto out = static_cast<output_type *>(output_items[0]);
   if (tag_now) {
-    std::stringstream str;
-    str << name() << unique_id();
-    pmt::pmt_t _id = pmt::string_to_symbol(str.str());
-    this->add_item_tag(0, nitems_written(0), RX_TIME_KEY,
-                       make_rx_time_key_(host_now_()), _id);
-    this->add_item_tag(0, nitems_written(0), RX_FREQ_KEY,
-                       pmt::from_double(last_freq), _id);
+    OUTPUT_TAGS(host_now_(), last_freq, 0, 0);
     last_sample =
         gr_complex(last_freq / d_freq_divisor, last_freq / d_freq_divisor);
     tag_now = false;

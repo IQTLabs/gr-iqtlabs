@@ -462,7 +462,7 @@ int iq_inference_impl::general_work(int noutput_items,
       static_cast<const gr_complex *>(input_items[0]);
   const float *power_in = static_cast<const float *>(input_items[1]);
   std::vector<tag_t> all_tags, rx_freq_tags;
-  std::vector<double> rx_times;
+  std::vector<TIME_T> rx_times;
   size_t leftover = 0;
 
   while (!json_q_.empty()) {
@@ -495,7 +495,7 @@ int iq_inference_impl::general_work(int noutput_items,
   } else {
     for (size_t t = 0; t < rx_freq_tags.size(); ++t) {
       const auto &tag = rx_freq_tags[t];
-      const double rx_time = rx_times[t];
+      const TIME_T rx_time = rx_times[t];
       const auto rel = tag.offset - in_first;
       in_first += rel;
 

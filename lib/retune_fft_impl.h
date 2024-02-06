@@ -227,16 +227,16 @@ private:
   void sum_items_(const input_type *in);
   void reset_items_();
   void calc_peaks_();
-  void add_output_tags_(double rx_time, double rx_freq, size_t produced);
+  void add_output_tags_(TIME_T rx_time, double rx_freq, size_t produced);
   void process_items_(size_t c, const input_type *&in,
                       const input_type *&fft_output, size_t &produced);
   void output_buckets_(const std::string &name,
                        const std::list<std::pair<double, double>> &buckets,
                        std::stringstream &ss);
-  void reopen_(double host_now, uint64_t rx_freq);
+  void reopen_(TIME_T host_now, uint64_t rx_freq);
   void send_retune_(uint64_t tune_freq);
-  void process_buckets_(uint64_t rx_freq, double rx_time);
-  void write_buckets_(double host_now, uint64_t rx_freq);
+  void process_buckets_(uint64_t rx_freq, TIME_T rx_time);
+  void write_buckets_(TIME_T host_now, uint64_t rx_freq);
   void process_tags_(const input_type *in, size_t in_count, size_t in_first,
                      const input_type *fft_output);
   void write_(const char *data, size_t len);
@@ -254,7 +254,6 @@ private:
   std::string description_;
   bool pre_fft_;
   bool tag_now_;
-  bool low_power_hold_down_;
 
   float fft_min_;
   float fft_max_;
@@ -263,7 +262,6 @@ private:
   size_t sample_count_;
   uint64_t write_step_fft_count_;
   size_t bucket_offset_;
-  bool in_hold_down_;
 
   boost::scoped_array<float> sample_;
   boost::scoped_array<float> mean_;

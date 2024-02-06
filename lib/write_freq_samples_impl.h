@@ -239,7 +239,7 @@ private:
   uint64_t skip_tune_step_samples_count_;
   uint64_t last_rx_freq_;
   uint64_t rotate_secs_;
-  double open_time_;
+  TIME_T open_time_;
 
   boost::scoped_ptr<boost::iostreams::filtering_ostream> outbuf_p;
   std::string zstfile_;

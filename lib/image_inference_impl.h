@@ -230,7 +230,7 @@ const size_t MAX_INFERENCE = 5;
 
 typedef struct output_item {
   uint64_t rx_freq;
-  double ts;
+  TIME_T ts;
   cv::Mat *image_buffer;
   cv::Mat *points_buffer;
   double points_min;
