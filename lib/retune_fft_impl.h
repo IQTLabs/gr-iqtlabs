@@ -254,7 +254,6 @@ private:
   std::string description_;
   bool pre_fft_;
   bool tag_now_;
-  bool low_power_hold_down_;
 
   float fft_min_;
   float fft_max_;
@@ -263,7 +262,6 @@ private:
   size_t sample_count_;
   uint64_t write_step_fft_count_;
   size_t bucket_offset_;
-  bool in_hold_down_;
 
   boost::scoped_array<float> sample_;
   boost::scoped_array<float> mean_;

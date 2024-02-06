@@ -228,9 +228,6 @@ private:
   size_t fft_batch_size_;
   pmt::pmt_t tag_;
   bool tag_now_;
-  bool low_power_hold_down_;
-  bool in_hold_down_;
-  bool reset_tags_;
   boost::scoped_ptr<float> total_;
 
 public:

@@ -233,17 +233,13 @@ retune_pre_fft_impl::retune_pre_fft_impl(
           gr::io_signature::make(1 /* min outputs */, 1 /* max outputs */,
                                  sizeof(block_type) * nfft * fft_batch_size)),
       retuner_impl(freq_start, freq_end, tune_step_hz, tune_step_fft,
-                   skip_tune_step_fft, tuning_ranges),
+                   skip_tune_step_fft, tuning_ranges, low_power_hold_down),
       nfft_(nfft), fft_batch_size_(fft_batch_size), tag_(pmt::intern(tag)),
-      tag_now_(tag_now), low_power_hold_down_(low_power_hold_down),
-      in_hold_down_(false), reset_tags_(false) {
+      tag_now_(tag_now) {
   message_port_register_out(TUNE_KEY);
   unsigned int alignment = volk_get_alignment();
   total_.reset((float *)volk_malloc(sizeof(float), alignment));
   set_tag_propagation_policy(TPP_DONT);
-  if (low_power_hold_down_ && !stare_mode_) {
-    reset_tags_ = true;
-  }
 }
 
 retune_pre_fft_impl::~retune_pre_fft_impl() {}
@@ -257,9 +253,6 @@ void retune_pre_fft_impl::retune_now_() {
   const TIME_T host_now = host_now_();
   send_retune_(tune_freq_);
   next_retune_(host_now);
-  if (reset_tags_) {
-    in_hold_down_ = true;
-  }
 }
 
 void retune_pre_fft_impl::add_output_tags_(TIME_T rx_time, double rx_freq,
