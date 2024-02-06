@@ -18,8 +18,7 @@ Command a source block with PMT tuning messages to sweep over a set of frequency
 
 ### [retune_fft](grc/iqtlabs_retune_fft.block.yml)
 
-Command a source block with PMT tuning messages to sweep over a set of frequency ranges, retuning after a configurable nunber of FFT points are received over a configurable threshold
-(while validating power values are in a valid range).
+Command a source block with PMT tuning messages to sweep over a set of frequency ranges, retuning after a configurable nunber of FFT points are received over a configurable threshold (while validating power values are in a valid range).
 
 ### [tuneable_test_source](grc/iqtlabs_tuneable_test_source.block.yml)
 

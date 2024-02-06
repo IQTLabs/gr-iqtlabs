@@ -353,9 +353,14 @@ void retune_fft_impl::process_items_(size_t c, const input_type *&in,
       slew_samples_ += nfft_;
       continue;
     }
-    // Discard windows where max power, is less than requested minimum.
-    // Ettus radios periodically output low power after retuning. This
-    // avoids having to use a static skip_fft_count setting.
+    // Implement the low power hold down workaround (typically for Ettus).
+    // When retuning the radio, typically the radio responds relatively quickly
+    // with new rx_time and rx_freq tags acknowledging the request. However,
+    // we continue to observe samples for the previous frequency for some time.
+    // Then, we receive all complex 0's for a time, and then we receive samples
+    // for actual frequency requested. We detect the all-zeros condition (by
+    // observing implausibly low power) condition and move the rx_time and
+    // rx_freq tags to this position.
     volk_32f_index_max_16u(in_max_pos_.get(), in, nfft_);
     float in_max = in[*in_max_pos_];
     if (in_max < fft_min_) {
