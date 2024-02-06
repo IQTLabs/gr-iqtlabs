@@ -214,7 +214,7 @@ namespace iqtlabs {
 class tuneable_test_source_impl : public tuneable_test_source, base_impl {
 private:
   double d_freq_divisor;
-  double last_freq;
+  FREQ_T last_freq;
   gr_complex last_sample;
   bool tag_now;
 

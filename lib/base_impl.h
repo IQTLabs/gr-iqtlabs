@@ -222,8 +222,11 @@ const pmt::pmt_t RX_FREQ_KEY = pmt::string_to_symbol("rx_freq");
     this->add_item_tag(stream, nitems_written(stream) + offset, RX_TIME_KEY,   \
                        make_rx_time_key_(rx_time), _id);                       \
     this->add_item_tag(stream, nitems_written(stream) + offset, RX_FREQ_KEY,   \
-                       pmt::from_uint64(rx_freq), _id);                        \
+                       pmt::from_double((double)rx_freq), _id);                \
   }
+
+// A driver block might give us float style (e.g. 2.5e9) or unsigned lon.
+#define GET_FREQ(tag) (FREQ_T) pmt::to_double(tag.value)
 
 class base_impl {
 public:

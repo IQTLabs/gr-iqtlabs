@@ -219,8 +219,8 @@ namespace iqtlabs {
   }
 
 typedef struct {
-  uint64_t freq_start;
-  uint64_t freq_end;
+  FREQ_T freq_start;
+  FREQ_T freq_end;
   size_t steps;
 } tuning_range_t;
 

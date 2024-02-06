@@ -217,13 +217,11 @@ tuneable_test_source_impl::tuneable_test_source_impl(float freq_divisor)
     : gr::sync_block("tuneable_test_source", gr::io_signature::make(0, 0, 0),
                      gr::io_signature::make(1 /* min outputs */,
                                             1 /*max outputs */,
-                                            sizeof(output_type))) {
+                                            sizeof(output_type))),
+      d_freq_divisor(freq_divisor), last_freq(0), last_sample(gr_complex(0, 0)),
+      tag_now(false) {
   message_port_register_in(CMD_KEY);
   set_msg_handler(CMD_KEY, [this](const pmt::pmt_t &msg) { recv_cmd(msg); });
-  d_freq_divisor = freq_divisor;
-  last_freq = 0;
-  last_sample = gr_complex(0, 0);
-  tag_now = false;
 }
 
 tuneable_test_source_impl::~tuneable_test_source_impl() {}
@@ -245,7 +243,7 @@ void tuneable_test_source_impl::recv_cmd(pmt::pmt_t msg) {
     auto val = pmt::cdr(item);
     if (key == FREQ_KEY) {
       if (pmt::is_number(val)) {
-        last_freq = pmt::to_double(val);
+        last_freq = (TIME_T)pmt::to_double(val);
         tag_now = true;
       }
     }
