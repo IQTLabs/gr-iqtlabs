@@ -16,6 +16,7 @@ documentation: |-
 
   parameters:
     nfft: number of FFT points.
+    samp_rate: sample rate.
     fft_batch_size: number of vectors to batch.
     tag: expected PMT tag containing center frequency
          (generally "rx_freq" for Soapy or UHD sources).
@@ -39,8 +40,8 @@ templates:
   imports: from gnuradio import iqtlabs
   make: >
     iqtlabs.retune_pre_fft(
-    ${nfft}, ${fft_batch_size}, ${tag}, ${freq_start}, ${freq_end},
-    ${tune_step_hz}, ${tune_step_fft}, ${skip_tune_step_fft},
+    ${nfft}, ${samp_rate}, ${fft_batch_size}, ${tag}, ${freq_start},
+    ${freq_end}, ${tune_step_hz}, ${tune_step_fft}, ${skip_tune_step_fft},
     ${tuning_ranges}, ${tag_now}, ${low_power_hold_down},
     ${slew_rx_time})
 
@@ -49,14 +50,16 @@ cpp_templates:
   declarations: 'gr::iqtlabs::retune_pre_fft::sptr ${id};'
   make: >
     this->${id} = gr::iqtlabs::retune_pre_fft::make(
-    ${nfft}, ${fft_batch_size}, ${tag}, {freq_start}, ${freq_end},
-    ${tune_step_hz}, ${tune_step_fft}, ${skip_tune_step_fft},
+    ${nfft}, ${samp_rate}, ${fft_batch_size}, ${tag}, {freq_start},
+    ${freq_end}, ${tune_step_hz}, ${tune_step_fft}, ${skip_tune_step_fft},
     ${tuning_ranges}, ${tag_now}, ${low_power_hold_down},
     ${slew_rx_time});
   link: ['libgnuradio-iqtlabs.so']
 
 parameters:
   - id: nfft
+    dtype: int
+  - id: samp_rate
     dtype: int
   - id: fft_batch_size
     dtype: int

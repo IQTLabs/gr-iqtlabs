@@ -226,14 +226,16 @@ typedef struct {
 
 class retuner_impl {
 public:
-  retuner_impl(uint64_t freq_start, uint64_t freq_end, uint64_t tune_step_hz,
-               uint64_t tune_step_fft, uint64_t skip_tune_step_fft,
-               const std::string &tuning_ranges, bool tag_now,
-               bool low_power_hold_down, bool slew_rx_time);
+  retuner_impl(uint64_t samp_rate, uint64_t freq_start, uint64_t freq_end,
+               uint64_t tune_step_hz, uint64_t tune_step_fft,
+               uint64_t skip_tune_step_fft, const std::string &tuning_ranges,
+               bool tag_now, bool low_power_hold_down, bool slew_rx_time);
   void add_range_(uint64_t freq_start, uint64_t freq_end);
   bool need_retune_(size_t n);
   void parse_tuning_ranges_(const std::string &tuning_ranges);
   void next_retune_(TIME_T host_now);
+  TIME_T apply_rx_time_slew_(TIME_T rx_time);
+  uint64_t samp_rate_;
   uint64_t freq_start_;
   uint64_t freq_end_;
   uint64_t tune_step_hz_;
@@ -254,6 +256,7 @@ public:
   size_t fft_count_;
   size_t pending_retune_;
   size_t total_tune_count_;
+  size_t slew_samples_;
   std::vector<tuning_range_t> tuning_ranges_;
   bool stare_mode_;
   bool in_hold_down_;
