@@ -14,7 +14,7 @@
 /* BINDTOOL_GEN_AUTOMATIC(0)                                                       */
 /* BINDTOOL_USE_PYGCCXML(0)                                                        */
 /* BINDTOOL_HEADER_FILE(retune_fft.h)                                        */
-/* BINDTOOL_HEADER_FILE_HASH(22a1b0ab61bef769e80521ba9dc68282)                     */
+/* BINDTOOL_HEADER_FILE_HASH(b79ce98f7df88b5148f31e77fe929369)                     */
 /***********************************************************************************/
 
 #include <pybind11/complex.h>
@@ -56,6 +56,7 @@ void bind_retune_fft(py::module& m)
              py::arg("pre_fft"),
              py::arg("tag_now"),
              py::arg("low_power_hold_down"),
+             py::arg("slew_rx_time"),
              py::arg("peak_fft_range"),
              D(retune_fft, make))
 

@@ -229,7 +229,7 @@ const std::string IMAGE_EXT = "." + IMAGE_TYPE;
 const size_t MAX_INFERENCE = 5;
 
 typedef struct output_item {
-  uint64_t rx_freq;
+  FREQ_T rx_freq;
   TIME_T ts;
   cv::Mat *image_buffer;
   cv::Mat *points_buffer;
@@ -243,7 +243,7 @@ private:
   int x_, y_, vlen_, norm_type_, colormap_, interpolation_, flip_, max_rows_,
       rotate_secs_, n_image_, n_inference_, image_count_, inference_count_,
       samp_rate_;
-  uint64_t last_rx_freq_;
+  FREQ_T last_rx_freq_;
   double convert_alpha_, norm_alpha_, norm_beta_, last_rx_time_,
       min_peak_points_, confidence_;
   boost::lockfree::spsc_queue<output_item_type> inference_q_{MAX_INFERENCE};

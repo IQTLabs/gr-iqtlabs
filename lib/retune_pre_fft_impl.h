@@ -217,17 +217,14 @@ using block_type = gr_complex;
 
 class retune_pre_fft_impl : public retune_pre_fft, base_impl, retuner_impl {
 private:
-  void send_retune_(uint64_t tune_freq);
-  void retune_now_();
   bool all_zeros_(const block_type *&in);
   void process_items_(size_t c, const block_type *&in, const block_type *&out,
                       size_t &produced);
-  void add_output_tags_(TIME_T rx_time, double rx_freq, size_t rel);
+  void add_output_tags_(TIME_T rx_time, FREQ_T rx_freq, size_t rel);
 
   size_t nfft_;
   size_t fft_batch_size_;
   pmt::pmt_t tag_;
-  bool tag_now_;
   boost::scoped_ptr<float> total_;
 
 public:
@@ -236,7 +233,7 @@ public:
                       uint64_t freq_end, uint64_t tune_step_hz,
                       uint64_t tune_step_fft, uint64_t skip_tune_step_fft,
                       const std::string &tuning_ranges, bool tag_now,
-                      bool low_power_hold_down);
+                      bool low_power_hold_down, bool slew_rx_time);
   ~retune_pre_fft_impl();
   int general_work(int noutput_items, gr_vector_int &ninput_items,
                    gr_vector_const_void_star &input_items,

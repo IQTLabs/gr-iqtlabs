@@ -297,6 +297,7 @@ class qa_retune_fft_base:
                 tuning_ranges,
                 False,
                 False,
+                False,
             )
 
             iqtlabs_retune_fft_0 = retune_fft(
@@ -317,6 +318,7 @@ class qa_retune_fft_base:
                 "a text description",
                 3600,
                 True,
+                False,
                 False,
                 False,
                 0,

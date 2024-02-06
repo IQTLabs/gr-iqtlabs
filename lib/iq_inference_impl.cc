@@ -446,7 +446,8 @@ void iq_inference_impl::process_items_(size_t power_in_count,
     memcpy(output_item.power, (void *)power_in, vlen_ * sizeof(float));
     if (!inference_q_.push(output_item)) {
       delete_output_item_(output_item);
-      d_logger->error("inference queue full");
+      d_logger->error("inference queue full (increase inference dB threshold "
+                      "to admit fewer signals?)");
     }
   }
 }
@@ -504,7 +505,7 @@ int iq_inference_impl::general_work(int noutput_items,
         process_items_(rel, power_read, power_in);
       }
 
-      const uint64_t rx_freq = (uint64_t)pmt::to_double(tag.value);
+      const FREQ_T rx_freq = pmt::to_uint64(tag.value);
       d_logger->debug("new rx_freq tag: {}", rx_freq);
       last_rx_freq_ = rx_freq;
       last_rx_time_ = rx_time;

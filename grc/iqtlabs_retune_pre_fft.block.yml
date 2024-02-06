@@ -32,6 +32,8 @@ documentation: |-
     low_power_hold_down: if True, suppress samples between sending a retune
                          message and observing low power (Ettus retune delay
                          workaround).
+    slew_rx_time: if True and low_power_hold down, slew rx_time based on
+                  sample count.
 
 templates:
   imports: from gnuradio import iqtlabs
@@ -39,7 +41,8 @@ templates:
     iqtlabs.retune_pre_fft(
     ${nfft}, ${fft_batch_size}, ${tag}, ${freq_start}, ${freq_end},
     ${tune_step_hz}, ${tune_step_fft}, ${skip_tune_step_fft},
-    ${tuning_ranges}, ${tag_now}, ${low_power_hold_down})
+    ${tuning_ranges}, ${tag_now}, ${low_power_hold_down},
+    ${slew_rx_time})
 
 cpp_templates:
   includes: ['#include <gnuradio/iqtlabs/retune_pre_fft.h>']
@@ -48,7 +51,8 @@ cpp_templates:
     this->${id} = gr::iqtlabs::retune_pre_fft::make(
     ${nfft}, ${fft_batch_size}, ${tag}, {freq_start}, ${freq_end},
     ${tune_step_hz}, ${tune_step_fft}, ${skip_tune_step_fft},
-    ${tuning_ranges}, ${tag_now}, ${low_power_hold_down});
+    ${tuning_ranges}, ${tag_now}, ${low_power_hold_down},
+    ${slew_rx_time});
   link: ['libgnuradio-iqtlabs.so']
 
 parameters:
@@ -74,6 +78,10 @@ parameters:
   - id: tag_now
     dtype: bool
   - id: low_power_hold_down
+    dtype: bool
+  - id: slew_rx_time
+    dtype: bool
+
 
 inputs:
   - label: input

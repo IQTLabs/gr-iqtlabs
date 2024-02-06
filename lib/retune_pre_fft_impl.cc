@@ -210,22 +210,25 @@
 namespace gr {
 namespace iqtlabs {
 
-retune_pre_fft::sptr retune_pre_fft::make(
-    size_t nfft, size_t fft_batch_size, const std::string &tag,
-    uint64_t freq_start, uint64_t freq_end, uint64_t tune_step_hz,
-    uint64_t tune_step_fft, uint64_t skip_tune_step_fft,
-    const std::string &tuning_ranges, bool tag_now, bool low_power_hold_down) {
+retune_pre_fft::sptr
+retune_pre_fft::make(size_t nfft, size_t fft_batch_size, const std::string &tag,
+                     uint64_t freq_start, uint64_t freq_end,
+                     uint64_t tune_step_hz, uint64_t tune_step_fft,
+                     uint64_t skip_tune_step_fft,
+                     const std::string &tuning_ranges, bool tag_now,
+                     bool low_power_hold_down, bool slew_rx_time) {
   return gnuradio::make_block_sptr<retune_pre_fft_impl>(
       nfft, fft_batch_size, tag, freq_start, freq_end, tune_step_hz,
       tune_step_fft, skip_tune_step_fft, tuning_ranges, tag_now,
-      low_power_hold_down);
+      low_power_hold_down, slew_rx_time);
 }
 
 retune_pre_fft_impl::retune_pre_fft_impl(
     size_t nfft, size_t fft_batch_size, const std::string &tag,
     uint64_t freq_start, uint64_t freq_end, uint64_t tune_step_hz,
     uint64_t tune_step_fft, uint64_t skip_tune_step_fft,
-    const std::string &tuning_ranges, bool tag_now, bool low_power_hold_down)
+    const std::string &tuning_ranges, bool tag_now, bool low_power_hold_down,
+    bool slew_rx_time)
     : gr::block(
           "retune_pre_fft",
           gr::io_signature::make(1 /* min inputs */, 1 /* max inputs */,
@@ -233,9 +236,9 @@ retune_pre_fft_impl::retune_pre_fft_impl(
           gr::io_signature::make(1 /* min outputs */, 1 /* max outputs */,
                                  sizeof(block_type) * nfft * fft_batch_size)),
       retuner_impl(freq_start, freq_end, tune_step_hz, tune_step_fft,
-                   skip_tune_step_fft, tuning_ranges, low_power_hold_down),
-      nfft_(nfft), fft_batch_size_(fft_batch_size), tag_(pmt::intern(tag)),
-      tag_now_(tag_now) {
+                   skip_tune_step_fft, tuning_ranges, tag_now,
+                   low_power_hold_down, slew_rx_time),
+      nfft_(nfft), fft_batch_size_(fft_batch_size), tag_(pmt::intern(tag)) {
   message_port_register_out(TUNE_KEY);
   unsigned int alignment = volk_get_alignment();
   total_.reset((float *)volk_malloc(sizeof(float), alignment));
@@ -244,18 +247,7 @@ retune_pre_fft_impl::retune_pre_fft_impl(
 
 retune_pre_fft_impl::~retune_pre_fft_impl() {}
 
-void retune_pre_fft_impl::send_retune_(uint64_t tune_freq) {
-  d_logger->debug("retuning to {}", tune_freq);
-  message_port_pub(TUNE_KEY, tune_rx_msg(tune_freq, tag_now_));
-}
-
-void retune_pre_fft_impl::retune_now_() {
-  const TIME_T host_now = host_now_();
-  send_retune_(tune_freq_);
-  next_retune_(host_now);
-}
-
-void retune_pre_fft_impl::add_output_tags_(TIME_T rx_time, double rx_freq,
+void retune_pre_fft_impl::add_output_tags_(TIME_T rx_time, FREQ_T rx_freq,
                                            size_t rel) {
   OUTPUT_TAGS(rx_time, rx_freq, 0, (rel / fft_batch_size_));
 }
@@ -294,7 +286,7 @@ void retune_pre_fft_impl::process_items_(size_t c, const block_type *&in,
       ++produced;
       if (!all_zeros || !total_tune_count_) {
         if (need_retune_(1)) {
-          retune_now_();
+          RETUNE_NOW();
         }
       }
     }
@@ -308,7 +300,7 @@ void retune_pre_fft_impl::process_items_(size_t c, const block_type *&in,
       out += nfft_;
       ++produced;
       if (need_retune_(1)) {
-        retune_now_();
+        RETUNE_NOW();
       }
     }
   }
@@ -343,7 +335,7 @@ int retune_pre_fft_impl::general_work(int noutput_items,
     // abstraction like VkFFT
     const auto &tag = rx_freq_tags[0];
     const TIME_T rx_time = rx_times[0];
-    const uint64_t rx_freq = (uint64_t)pmt::to_double(tag.value);
+    const FREQ_T rx_freq = pmt::to_uint64(tag.value);
     // Discard trailing samples up to new tag (i.e. between retune
     // request/response).
     d_logger->debug("new rx_freq tag: {}, last {}", rx_freq, last_rx_freq_);

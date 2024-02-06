@@ -211,10 +211,11 @@ namespace iqtlabs {
 retuner_impl::retuner_impl(uint64_t freq_start, uint64_t freq_end,
                            uint64_t tune_step_hz, uint64_t tune_step_fft,
                            uint64_t skip_tune_step_fft,
-                           const std::string &tuning_ranges,
-                           bool low_power_hold_down)
+                           const std::string &tuning_ranges, bool tag_now,
+                           bool low_power_hold_down, bool slew_rx_time)
     : freq_start_(freq_start), freq_end_(freq_end), tune_step_hz_(tune_step_hz),
       tune_step_fft_(tune_step_fft), skip_tune_step_fft_(skip_tune_step_fft),
+      tag_now_(tag_now), slew_rx_time_(slew_rx_time),
       low_power_hold_down_(low_power_hold_down), tuning_range_(0),
       last_tuning_range_(0), tuning_range_step_(0), last_rx_freq_(0),
       last_rx_time_(0), last_sweep_start_(0), fft_count_(0), pending_retune_(0),
