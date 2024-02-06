@@ -339,7 +339,7 @@ int retune_pre_fft_impl::general_work(int noutput_items,
     // abstraction like VkFFT
     const auto &tag = rx_freq_tags[0];
     const TIME_T rx_time = rx_times[0];
-    const FREQ_T rx_freq = pmt::to_uint64(tag.value);
+    const FREQ_T rx_freq = GET_FREQ(tag);
     // Discard trailing samples up to new tag (i.e. between retune
     // request/response).
     d_logger->debug("new rx_freq tag: {}, last {}", rx_freq, last_rx_freq_);

@@ -506,7 +506,7 @@ void retune_fft_impl::process_tags_(const input_type *in, size_t in_count,
         process_items_(rel, in, fft_output, produced);
       }
 
-      const uint64_t rx_freq = pmt::to_uint64(tag.value);
+      const FREQ_T rx_freq = GET_FREQ(tag);
       if (!reset_tags_) {
         add_output_tags_(rx_time, rx_freq, produced);
       }
