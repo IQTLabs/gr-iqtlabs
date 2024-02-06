@@ -275,6 +275,13 @@ void retune_pre_fft_impl::process_items_(size_t c, const block_type *&in,
         continue;
       }
       bool all_zeros = all_zeros_(in);
+      // Implement the low power hold down workaround (typically for Ettus).
+      // When retuning the radio, typically the radio responds relatively
+      // quickly with new rx_time and rx_freq tags acknowledging the request.
+      // However, we continue to observe samples for the previous frequency for
+      // some time. Then, we receive all complex 0's for a time, and then we
+      // receive samples for actual frequency requested. We detect the all-zeros
+      // condition and move the rx_time and rx_freq tags to this position.
       if (in_hold_down_) {
         if (all_zeros) {
           in_hold_down_ = false;

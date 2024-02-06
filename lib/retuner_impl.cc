@@ -325,6 +325,12 @@ void retuner_impl::next_retune_(TIME_T host_now) {
   slew_samples_ = 0;
 }
 
+// Attempt to account for elapsed time since tuning tag was received,
+// but before samples are passed on to subsequent blocks. The accuracy
+// of the timestamp itself is not known, since it is the host's gnuradio
+// driver that adds the tag and some number of samples may have been in
+// flight from the radio
+// (https://github.com/gnuradio/gnuradio/blob/fe048a9874d2604d48d396d2b39925a0cf2c3c70/gr-uhd/lib/usrp_source_impl.cc#L636).
 TIME_T retuner_impl::apply_rx_time_slew_(TIME_T rx_time) {
   if (slew_rx_time_) {
     TIME_T slew_time = slew_samples_ / TIME_T(samp_rate_);

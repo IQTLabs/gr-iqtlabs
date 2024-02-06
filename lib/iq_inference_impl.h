@@ -247,6 +247,7 @@ private:
   size_t n_inference_;
   int samp_rate_;
   size_t inference_count_;
+  size_t samples_since_tag_;
   boost::lockfree::spsc_queue<output_item_type> inference_q_{MAX_INFERENCE};
   boost::lockfree::spsc_queue<std::string> json_q_{MAX_INFERENCE};
   bool running_;
