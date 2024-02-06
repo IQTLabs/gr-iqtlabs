@@ -210,22 +210,25 @@
 namespace gr {
 namespace iqtlabs {
 
-retune_pre_fft::sptr retune_pre_fft::make(
-    size_t nfft, size_t fft_batch_size, const std::string &tag,
-    uint64_t freq_start, uint64_t freq_end, uint64_t tune_step_hz,
-    uint64_t tune_step_fft, uint64_t skip_tune_step_fft,
-    const std::string &tuning_ranges, bool tag_now, bool low_power_hold_down) {
+retune_pre_fft::sptr
+retune_pre_fft::make(size_t nfft, size_t fft_batch_size, const std::string &tag,
+                     uint64_t freq_start, uint64_t freq_end,
+                     uint64_t tune_step_hz, uint64_t tune_step_fft,
+                     uint64_t skip_tune_step_fft,
+                     const std::string &tuning_ranges, bool tag_now,
+                     bool low_power_hold_down, bool slew_rx_time) {
   return gnuradio::make_block_sptr<retune_pre_fft_impl>(
       nfft, fft_batch_size, tag, freq_start, freq_end, tune_step_hz,
       tune_step_fft, skip_tune_step_fft, tuning_ranges, tag_now,
-      low_power_hold_down);
+      low_power_hold_down, slew_rx_time);
 }
 
 retune_pre_fft_impl::retune_pre_fft_impl(
     size_t nfft, size_t fft_batch_size, const std::string &tag,
     uint64_t freq_start, uint64_t freq_end, uint64_t tune_step_hz,
     uint64_t tune_step_fft, uint64_t skip_tune_step_fft,
-    const std::string &tuning_ranges, bool tag_now, bool low_power_hold_down)
+    const std::string &tuning_ranges, bool tag_now, bool low_power_hold_down,
+    bool slew_rx_time)
     : gr::block(
           "retune_pre_fft",
           gr::io_signature::make(1 /* min inputs */, 1 /* max inputs */,
@@ -234,7 +237,7 @@ retune_pre_fft_impl::retune_pre_fft_impl(
                                  sizeof(block_type) * nfft * fft_batch_size)),
       retuner_impl(freq_start, freq_end, tune_step_hz, tune_step_fft,
                    skip_tune_step_fft, tuning_ranges, tag_now,
-                   low_power_hold_down, false),
+                   low_power_hold_down, slew_rx_time),
       nfft_(nfft), fft_batch_size_(fft_batch_size), tag_(pmt::intern(tag)) {
   message_port_register_out(TUNE_KEY);
   unsigned int alignment = volk_get_alignment();

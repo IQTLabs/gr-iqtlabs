@@ -53,6 +53,8 @@ documentation: |-
     low_power_hold_down: if True, suppress samples between sending a retune
                          message and observing low power (Ettus retune delay
                          workaround).
+    slew_rx_time: if True and low_power_hold down, slew rx_time based on
+                  sample count.
     peak_fft_range: if > 0, calculate FFT peak of averages over this many
                     windows, if 0 calculate average over whole bucket.
 
@@ -72,7 +74,7 @@ templates:
     ${freq_end}, ${tune_step_hz}, ${tune_step_fft}, ${skip_tune_step_fft},
     ${fft_min}, ${fft_max}, ${sdir}, ${write_step_fft}, ${bucket_range},
     ${tuning_ranges}, ${description}, ${rotate_secs}, ${pre_fft}, ${tag_now},
-    ${low_power_hold_down), ${peak_fft_range})
+    ${low_power_hold_down), ${slew_rx_time}, ${peak_fft_range})
 
 cpp_templates:
   includes: ['#include <gnuradio/iqtlabs/retune_fft.h>']
@@ -82,7 +84,8 @@ cpp_templates:
     ${samp_rate}, ${freq_start}, ${freq_end}, ${tune_step_hz}, ${tune_step_fft},
     ${skip_tune_step_fft}, ${fft_min}, ${fft_max}, ${sdir}, ${write_step_fft},
     ${bucket_range}, ${tuning_ranges}, ${description}, ${rotate_secs},
-    ${pre_fft}, ${tag_now}, ${low_power_hold_down), ${peak_fft_range});
+    ${pre_fft}, ${tag_now}, ${low_power_hold_down), ${slew_rx_time},
+    ${peak_fft_range});
   link: ['libgnuradio-iqtlabs.so']
 
 asserts:
@@ -129,6 +132,8 @@ parameters:
   - id: tag_now
     dtype: bool
   - id: low_power_hold_down
+    dtype: bool
+  - id: slew_rx_time
     dtype: bool
   - id: peak_fft_range
     dtype: int

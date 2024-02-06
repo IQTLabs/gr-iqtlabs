@@ -219,19 +219,21 @@ const pmt::pmt_t JSON_KEY = pmt::mp("json");
 const boost::iostreams::zstd_params zstd_params =
     boost::iostreams::zstd_params(boost::iostreams::zstd::default_compression);
 
-retune_fft::sptr retune_fft::make(
-    const std::string &tag, size_t nfft, uint64_t samp_rate,
-    uint64_t freq_start, uint64_t freq_end, uint64_t tune_step_hz,
-    uint64_t tune_step_fft, uint64_t skip_tune_step_fft, double fft_min,
-    double fft_max, const std::string &sdir, uint64_t write_step_fft,
-    double bucket_range, const std::string &tuning_ranges,
-    const std::string &description, uint64_t rotate_secs, bool pre_fft,
-    bool tag_now, bool low_power_hold_down, size_t peak_fft_range) {
+retune_fft::sptr
+retune_fft::make(const std::string &tag, size_t nfft, uint64_t samp_rate,
+                 uint64_t freq_start, uint64_t freq_end, uint64_t tune_step_hz,
+                 uint64_t tune_step_fft, uint64_t skip_tune_step_fft,
+                 double fft_min, double fft_max, const std::string &sdir,
+                 uint64_t write_step_fft, double bucket_range,
+                 const std::string &tuning_ranges,
+                 const std::string &description, uint64_t rotate_secs,
+                 bool pre_fft, bool tag_now, bool low_power_hold_down,
+                 bool slew_rx_time, size_t peak_fft_range) {
   return gnuradio::make_block_sptr<retune_fft_impl>(
       tag, nfft, samp_rate, freq_start, freq_end, tune_step_hz, tune_step_fft,
       skip_tune_step_fft, fft_min, fft_max, sdir, write_step_fft, bucket_range,
       tuning_ranges, description, rotate_secs, pre_fft, tag_now,
-      low_power_hold_down, peak_fft_range);
+      low_power_hold_down, slew_rx_time, peak_fft_range);
 }
 
 retune_fft_impl::retune_fft_impl(
@@ -241,7 +243,8 @@ retune_fft_impl::retune_fft_impl(
     double fft_max, const std::string &sdir, uint64_t write_step_fft,
     double bucket_range, const std::string &tuning_ranges,
     const std::string &description, uint64_t rotate_secs, bool pre_fft,
-    bool tag_now, bool low_power_hold_down, size_t peak_fft_range)
+    bool tag_now, bool low_power_hold_down, bool slew_rx_time,
+    size_t peak_fft_range)
     : gr::block("retune_fft",
                 gr::io_signature::make(1 /* min inputs */, 1 /* max inputs */,
                                        nfft * sizeof(input_type)),
@@ -251,7 +254,7 @@ retune_fft_impl::retune_fft_impl(
                                      (int)(nfft * sizeof(input_type))})),
       retuner_impl(freq_start, freq_end, tune_step_hz, tune_step_fft,
                    skip_tune_step_fft, tuning_ranges, tag_now,
-                   low_power_hold_down, false),
+                   low_power_hold_down, slew_rx_time),
       tag_(pmt::intern(tag)), nfft_(nfft), samp_rate_(samp_rate),
       fft_min_(fft_min), fft_max_(fft_max), sample_count_(0), sdir_(sdir),
       write_step_fft_(write_step_fft), write_step_fft_count_(write_step_fft),

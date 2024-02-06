@@ -233,7 +233,7 @@ public:
                       uint64_t freq_end, uint64_t tune_step_hz,
                       uint64_t tune_step_fft, uint64_t skip_tune_step_fft,
                       const std::string &tuning_ranges, bool tag_now,
-                      bool low_power_hold_down);
+                      bool low_power_hold_down, bool slew_rx_time);
   ~retune_pre_fft_impl();
   int general_work(int noutput_items, gr_vector_int &ninput_items,
                    gr_vector_const_void_star &input_items,

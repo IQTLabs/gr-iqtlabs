@@ -276,7 +276,7 @@ public:
                   const std::string &tuning_ranges,
                   const std::string &description, uint64_t rotate_secs,
                   bool pre_fft, bool tag_now, bool low_power_hold_down,
-                  size_t peak_fft_range);
+                  bool slew_rx_time, size_t peak_fft_range);
   ~retune_fft_impl();
   void forecast(int noutput_items, gr_vector_int &ninput_items_required);
   int general_work(int noutput_items, gr_vector_int &ninput_items,

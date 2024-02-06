@@ -446,7 +446,8 @@ void iq_inference_impl::process_items_(size_t power_in_count,
     memcpy(output_item.power, (void *)power_in, vlen_ * sizeof(float));
     if (!inference_q_.push(output_item)) {
       delete_output_item_(output_item);
-      d_logger->error("inference queue full");
+      d_logger->error("inference queue full (increase inference dB threshold "
+                      "to admit fewer signals?)");
     }
   }
 }
