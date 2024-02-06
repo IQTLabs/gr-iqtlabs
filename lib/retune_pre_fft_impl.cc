@@ -233,8 +233,8 @@ retune_pre_fft_impl::retune_pre_fft_impl(
           gr::io_signature::make(1 /* min outputs */, 1 /* max outputs */,
                                  sizeof(block_type) * nfft * fft_batch_size)),
       retuner_impl(freq_start, freq_end, tune_step_hz, tune_step_fft,
-                   skip_tune_step_fft, tuning_ranges, low_power_hold_down,
-                   tag_now),
+                   skip_tune_step_fft, tuning_ranges, tag_now,
+                   low_power_hold_down, false),
       nfft_(nfft), fft_batch_size_(fft_batch_size), tag_(pmt::intern(tag)) {
   message_port_register_out(TUNE_KEY);
   unsigned int alignment = volk_get_alignment();

@@ -228,8 +228,8 @@ class retuner_impl {
 public:
   retuner_impl(uint64_t freq_start, uint64_t freq_end, uint64_t tune_step_hz,
                uint64_t tune_step_fft, uint64_t skip_tune_step_fft,
-               const std::string &tuning_ranges, bool low_power_hold_down,
-               bool tag_now);
+               const std::string &tuning_ranges, bool tag_now,
+               bool low_power_hold_down, bool slew_rx_time);
   void add_range_(uint64_t freq_start, uint64_t freq_end);
   bool need_retune_(size_t n);
   void parse_tuning_ranges_(const std::string &tuning_ranges);
@@ -239,8 +239,9 @@ public:
   uint64_t tune_step_hz_;
   uint64_t tune_step_fft_;
   uint64_t skip_tune_step_fft_;
-  bool low_power_hold_down_;
   bool tag_now_;
+  bool low_power_hold_down_;
+  bool slew_rx_time_;
 
   uint64_t skip_fft_count_;
   FREQ_T tune_freq_;
