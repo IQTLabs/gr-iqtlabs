@@ -205,6 +205,7 @@
 #include "iqtlabs_types.h"
 #include <cstddef>
 #include <cstdint>
+#include <random>
 #include <string>
 #include <vector>
 
@@ -226,8 +227,8 @@ typedef struct {
 
 class retuner_impl {
 public:
-  retuner_impl(uint64_t samp_rate, uint64_t freq_start, uint64_t freq_end,
-               uint64_t tune_step_hz, uint64_t tune_step_fft,
+  retuner_impl(uint64_t samp_rate, uint64_t tune_jitter_hz, uint64_t freq_start,
+               uint64_t freq_end, uint64_t tune_step_hz, uint64_t tune_step_fft,
                uint64_t skip_tune_step_fft, const std::string &tuning_ranges,
                bool tag_now, bool low_power_hold_down, bool slew_rx_time);
   void add_range_(uint64_t freq_start, uint64_t freq_end);
@@ -236,6 +237,7 @@ public:
   void next_retune_(TIME_T host_now);
   TIME_T apply_rx_time_slew_(TIME_T rx_time);
   uint64_t samp_rate_;
+  uint64_t tune_jitter_hz_;
   uint64_t freq_start_;
   uint64_t freq_end_;
   uint64_t tune_step_hz_;
@@ -261,6 +263,8 @@ public:
   bool stare_mode_;
   bool in_hold_down_;
   bool reset_tags_;
+  std::mt19937 rand_gen_;
+  std::uniform_int_distribution<int> rand_dist_;
 };
 } /* namespace iqtlabs */
 } /* namespace gr */

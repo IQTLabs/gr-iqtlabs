@@ -219,32 +219,31 @@ const pmt::pmt_t JSON_KEY = pmt::mp("json");
 const boost::iostreams::zstd_params zstd_params =
     boost::iostreams::zstd_params(boost::iostreams::zstd::default_compression);
 
-retune_fft::sptr
-retune_fft::make(const std::string &tag, size_t nfft, uint64_t samp_rate,
-                 uint64_t freq_start, uint64_t freq_end, uint64_t tune_step_hz,
-                 uint64_t tune_step_fft, uint64_t skip_tune_step_fft,
-                 double fft_min, double fft_max, const std::string &sdir,
-                 uint64_t write_step_fft, double bucket_range,
-                 const std::string &tuning_ranges,
-                 const std::string &description, uint64_t rotate_secs,
-                 bool pre_fft, bool tag_now, bool low_power_hold_down,
-                 bool slew_rx_time, size_t peak_fft_range) {
+retune_fft::sptr retune_fft::make(
+    const std::string &tag, size_t nfft, uint64_t samp_rate,
+    uint64_t tune_jitter_hz, uint64_t freq_start, uint64_t freq_end,
+    uint64_t tune_step_hz, uint64_t tune_step_fft, uint64_t skip_tune_step_fft,
+    double fft_min, double fft_max, const std::string &sdir,
+    uint64_t write_step_fft, double bucket_range,
+    const std::string &tuning_ranges, const std::string &description,
+    uint64_t rotate_secs, bool pre_fft, bool tag_now, bool low_power_hold_down,
+    bool slew_rx_time, size_t peak_fft_range) {
   return gnuradio::make_block_sptr<retune_fft_impl>(
-      tag, nfft, samp_rate, freq_start, freq_end, tune_step_hz, tune_step_fft,
-      skip_tune_step_fft, fft_min, fft_max, sdir, write_step_fft, bucket_range,
-      tuning_ranges, description, rotate_secs, pre_fft, tag_now,
+      tag, nfft, samp_rate, tune_jitter_hz, freq_start, freq_end, tune_step_hz,
+      tune_step_fft, skip_tune_step_fft, fft_min, fft_max, sdir, write_step_fft,
+      bucket_range, tuning_ranges, description, rotate_secs, pre_fft, tag_now,
       low_power_hold_down, slew_rx_time, peak_fft_range);
 }
 
 retune_fft_impl::retune_fft_impl(
     const std::string &tag, size_t nfft, uint64_t samp_rate,
-    uint64_t freq_start, uint64_t freq_end, uint64_t tune_step_hz,
-    uint64_t tune_step_fft, uint64_t skip_tune_step_fft, double fft_min,
-    double fft_max, const std::string &sdir, uint64_t write_step_fft,
-    double bucket_range, const std::string &tuning_ranges,
-    const std::string &description, uint64_t rotate_secs, bool pre_fft,
-    bool tag_now, bool low_power_hold_down, bool slew_rx_time,
-    size_t peak_fft_range)
+    uint64_t tune_jitter_hz, uint64_t freq_start, uint64_t freq_end,
+    uint64_t tune_step_hz, uint64_t tune_step_fft, uint64_t skip_tune_step_fft,
+    double fft_min, double fft_max, const std::string &sdir,
+    uint64_t write_step_fft, double bucket_range,
+    const std::string &tuning_ranges, const std::string &description,
+    uint64_t rotate_secs, bool pre_fft, bool tag_now, bool low_power_hold_down,
+    bool slew_rx_time, size_t peak_fft_range)
     : gr::block("retune_fft",
                 gr::io_signature::make(1 /* min inputs */, 1 /* max inputs */,
                                        nfft * sizeof(input_type)),
@@ -252,9 +251,9 @@ retune_fft_impl::retune_fft_impl(
                     2 /* min outputs */, 2 /* max outputs */,
                     std::vector<int>{(int)sizeof(output_type),
                                      (int)(nfft * sizeof(input_type))})),
-      retuner_impl(samp_rate, freq_start, freq_end, tune_step_hz, tune_step_fft,
-                   skip_tune_step_fft, tuning_ranges, tag_now,
-                   low_power_hold_down, slew_rx_time),
+      retuner_impl(samp_rate, tune_jitter_hz, freq_start, freq_end,
+                   tune_step_hz, tune_step_fft, skip_tune_step_fft,
+                   tuning_ranges, tag_now, low_power_hold_down, slew_rx_time),
       tag_(pmt::intern(tag)), nfft_(nfft), fft_min_(fft_min), fft_max_(fft_max),
       sample_count_(0), sdir_(sdir), write_step_fft_(write_step_fft),
       write_step_fft_count_(write_step_fft), bucket_range_(bucket_range),
@@ -274,6 +273,13 @@ retune_fft_impl::retune_fft_impl(
                   [this](const pmt::pmt_t &msg) { next_retune_(host_now_()); });
   set_tag_propagation_policy(TPP_DONT);
   reset_items_();
+  // If the pre-FFT block is handling tuning, then it will have already sent
+  // a tuning message, start at tuning step 1.
+  // We still need the retuner class to keep state, so we know which tuning
+  // range we are in and if we have started a new sweep.
+  if (pre_fft) {
+    need_retune_(1);
+  }
 }
 
 void retune_fft_impl::reset_items_() {
