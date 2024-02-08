@@ -22,7 +22,7 @@ make -j $(nproc)
 sudo make install
 cd ../..
 if [ "$(which vulkaninfo)" != "" ] ; then
-  git clone https://github.com/DTolm/VkFFT -b v1.3.3
+  git clone https://github.com/DTolm/VkFFT -b v1.3.4
   mkdir -p VkFFT/build
   cd VkFFT/build
   CMAKE_BUILD_TYPE=Release cmake -DGLSLANG_GIT_TAG=13.0.0 ..
