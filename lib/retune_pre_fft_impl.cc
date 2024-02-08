@@ -210,34 +210,33 @@
 namespace gr {
 namespace iqtlabs {
 
-retune_pre_fft::sptr
-retune_pre_fft::make(size_t nfft, uint64_t samp_rate, size_t fft_batch_size,
-                     const std::string &tag, uint64_t freq_start,
-                     uint64_t freq_end, uint64_t tune_step_hz,
-                     uint64_t tune_step_fft, uint64_t skip_tune_step_fft,
-                     const std::string &tuning_ranges, bool tag_now,
-                     bool low_power_hold_down, bool slew_rx_time) {
+retune_pre_fft::sptr retune_pre_fft::make(
+    size_t nfft, uint64_t samp_rate, uint64_t tune_jitter_hz,
+    size_t fft_batch_size, const std::string &tag, uint64_t freq_start,
+    uint64_t freq_end, uint64_t tune_step_hz, uint64_t tune_step_fft,
+    uint64_t skip_tune_step_fft, const std::string &tuning_ranges, bool tag_now,
+    bool low_power_hold_down, bool slew_rx_time) {
   return gnuradio::make_block_sptr<retune_pre_fft_impl>(
-      nfft, samp_rate, fft_batch_size, tag, freq_start, freq_end, tune_step_hz,
-      tune_step_fft, skip_tune_step_fft, tuning_ranges, tag_now,
-      low_power_hold_down, slew_rx_time);
+      nfft, samp_rate, tune_jitter_hz, fft_batch_size, tag, freq_start,
+      freq_end, tune_step_hz, tune_step_fft, skip_tune_step_fft, tuning_ranges,
+      tag_now, low_power_hold_down, slew_rx_time);
 }
 
 retune_pre_fft_impl::retune_pre_fft_impl(
-    size_t nfft, uint64_t samp_rate, size_t fft_batch_size,
-    const std::string &tag, uint64_t freq_start, uint64_t freq_end,
-    uint64_t tune_step_hz, uint64_t tune_step_fft, uint64_t skip_tune_step_fft,
-    const std::string &tuning_ranges, bool tag_now, bool low_power_hold_down,
-    bool slew_rx_time)
+    size_t nfft, uint64_t samp_rate, uint64_t tune_jitter_hz,
+    size_t fft_batch_size, const std::string &tag, uint64_t freq_start,
+    uint64_t freq_end, uint64_t tune_step_hz, uint64_t tune_step_fft,
+    uint64_t skip_tune_step_fft, const std::string &tuning_ranges, bool tag_now,
+    bool low_power_hold_down, bool slew_rx_time)
     : gr::block(
           "retune_pre_fft",
           gr::io_signature::make(1 /* min inputs */, 1 /* max inputs */,
                                  sizeof(block_type)),
           gr::io_signature::make(1 /* min outputs */, 1 /* max outputs */,
                                  sizeof(block_type) * nfft * fft_batch_size)),
-      retuner_impl(samp_rate, freq_start, freq_end, tune_step_hz, tune_step_fft,
-                   skip_tune_step_fft, tuning_ranges, tag_now,
-                   low_power_hold_down, slew_rx_time),
+      retuner_impl(samp_rate, tune_jitter_hz, freq_start, freq_end,
+                   tune_step_hz, tune_step_fft, skip_tune_step_fft,
+                   tuning_ranges, tag_now, low_power_hold_down, slew_rx_time),
       nfft_(nfft), fft_batch_size_(fft_batch_size), tag_(pmt::intern(tag)) {
   message_port_register_out(TUNE_KEY);
   unsigned int alignment = volk_get_alignment();

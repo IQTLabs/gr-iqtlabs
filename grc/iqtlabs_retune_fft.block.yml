@@ -32,6 +32,7 @@ documentation: |-
          (generally "rx_freq" for Soapy or UHD sources).
     nfft: number of FFT points.
     samp_rate: sample rate.
+    tune_jitter_hz: if > 0, jitter tune interval.
     freq_start: frequency to start scan at in Hz (overridden by tuning_ranges).
     freq_end: frequency to end scan at in Hz (overridden by tuning_ranges).
     tune_step_hz: increment frequency by this value each retuning step.
@@ -70,18 +71,21 @@ documentation: |-
 templates:
   imports: from gnuradio import iqtlabs
   make: >
-    iqtlabs.retune_fft(${tag}, ${nfft}, ${samp_rate}, ${freq_start},
-    ${freq_end}, ${tune_step_hz}, ${tune_step_fft}, ${skip_tune_step_fft},
-    ${fft_min}, ${fft_max}, ${sdir}, ${write_step_fft}, ${bucket_range},
-    ${tuning_ranges}, ${description}, ${rotate_secs}, ${pre_fft}, ${tag_now},
-    ${low_power_hold_down), ${slew_rx_time}, ${peak_fft_range})
+    iqtlabs.retune_fft(
+    ${tag}, ${nfft}, ${samp_rate}, ${tune_jitter_hz},
+    ${freq_start}, ${freq_end}, ${tune_step_hz}, ${tune_step_fft},
+    ${skip_tune_step_fft}, ${fft_min}, ${fft_max}, ${sdir}, ${write_step_fft},
+    ${bucket_range}, ${tuning_ranges}, ${description}, ${rotate_secs},
+    ${pre_fft}, ${tag_now}, ${low_power_hold_down), ${slew_rx_time},
+    ${peak_fft_range})
 
 cpp_templates:
   includes: ['#include <gnuradio/iqtlabs/retune_fft.h>']
   declarations: 'gr::iqtlabs::retune_fft::sptr ${id};'
   make: >
-    this->${id} = gr::iqtlabs::retune_fft::make(${tag}, ${nfft},
-    ${samp_rate}, ${freq_start}, ${freq_end}, ${tune_step_hz}, ${tune_step_fft},
+    this->${id} = gr::iqtlabs::retune_fft::make(
+    ${tag}, ${nfft}, ${samp_rate}, ${tune_jitter_hz},
+    ${freq_start}, ${freq_end}, ${tune_step_hz}, ${tune_step_fft},
     ${skip_tune_step_fft}, ${fft_min}, ${fft_max}, ${sdir}, ${write_step_fft},
     ${bucket_range}, ${tuning_ranges}, ${description}, ${rotate_secs},
     ${pre_fft}, ${tag_now}, ${low_power_hold_down), ${slew_rx_time},
@@ -102,6 +106,8 @@ parameters:
   - id: nfft
     dtype: int
   - id: samp_rate
+    dtype: int
+  - id: tune_jitter_hz
     dtype: int
   - id: freq_start
     dtype: raw

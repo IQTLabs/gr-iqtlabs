@@ -268,7 +268,8 @@ private:
 
 public:
   retune_fft_impl(const std::string &tag, size_t nfft, uint64_t samp_rate,
-                  uint64_t freq_start, uint64_t freq_end, uint64_t tune_step_hz,
+                  uint64_t tune_jitter_hz, uint64_t freq_start,
+                  uint64_t freq_end, uint64_t tune_step_hz,
                   uint64_t tune_step_fft, uint64_t skip_tune_step_fft,
                   double fft_min, double fft_max, const std::string &sdir,
                   uint64_t write_step_fft, double bucket_range,
