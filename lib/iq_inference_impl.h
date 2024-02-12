@@ -246,6 +246,7 @@ private:
   double confidence_;
   size_t n_inference_;
   int samp_rate_;
+  bool power_inference_;
   size_t inference_count_;
   size_t samples_since_tag_;
   boost::lockfree::spsc_queue<output_item_type> inference_q_{MAX_INFERENCE};
@@ -271,7 +272,7 @@ public:
   iq_inference_impl(const std::string &tag, size_t vlen, size_t sample_buffer,
                     double min_peak_points, const std::string &model_server,
                     const std::string &model_names, double confidence,
-                    size_t n_inference, int samp_rate);
+                    size_t n_inference, int samp_rate, bool power_inference);
   void forecast(int noutput_items, gr_vector_int &ninput_items_required);
   int general_work(int noutput_items, gr_vector_int &ninput_items,
                    gr_vector_const_void_star &input_items,

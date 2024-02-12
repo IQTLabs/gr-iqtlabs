@@ -215,10 +215,10 @@ iq_inference::sptr
 iq_inference::make(const std::string &tag, size_t vlen, size_t sample_buffer,
                    double min_peak_points, const std::string &model_server,
                    const std::string &model_names, double confidence,
-                   size_t n_inference, int samp_rate) {
+                   size_t n_inference, int samp_rate, bool power_inference) {
   return gnuradio::make_block_sptr<iq_inference_impl>(
       tag, vlen, sample_buffer, min_peak_points, model_server, model_names,
-      confidence, n_inference, samp_rate);
+      confidence, n_inference, samp_rate, power_inference);
 }
 
 /*
@@ -230,19 +230,20 @@ iq_inference_impl::iq_inference_impl(const std::string &tag, size_t vlen,
                                      const std::string &model_server,
                                      const std::string &model_names,
                                      double confidence, size_t n_inference,
-                                     int samp_rate)
+                                     int samp_rate, bool power_inference)
     : gr::block("iq_inference",
                 gr::io_signature::makev(
                     2 /* min inputs */, 2 /* min inputs */,
                     std::vector<int>{(int)(vlen * sizeof(gr_complex)),
                                      (int)(vlen * sizeof(float))}),
-                gr::io_signature::make(1 /* min outputs */, 1 /*max outputs */,
+                gr::io_signature::make(1 /* min outputs */, 1 /* max outputs */,
                                        sizeof(char))),
       tag_(pmt::intern(tag)), vlen_(vlen), sample_buffer_(sample_buffer),
       min_peak_points_(min_peak_points), model_server_(model_server),
       confidence_(confidence), n_inference_(n_inference), samp_rate_(samp_rate),
-      inference_count_(0), running_(true), last_rx_freq_(0), last_rx_time_(0),
-      inference_connected_(false), samples_since_tag_(0) {
+      power_inference_(power_inference), inference_count_(0), running_(true),
+      last_rx_freq_(0), last_rx_time_(0), inference_connected_(false),
+      samples_since_tag_(0) {
   samples_lookback_.reset(new gr_complex[vlen * sample_buffer]);
   unsigned int alignment = volk_get_alignment();
   total_.reset((float *)volk_malloc(sizeof(float), alignment));
@@ -324,6 +325,12 @@ void iq_inference_impl::run_inference_() {
         req.set(boost::beast::http::field::content_type,
                 "application/octet-stream");
         req.body() = body;
+        if (power_inference_) {
+          const std::string_view power_body(
+              reinterpret_cast<char const *>(output_item.power),
+              output_item.sample_count * sizeof(float));
+          req.body() += power_body;
+        }
         req.prepare_payload();
         std::string results;
         // TODO: troubleshoot test flask server hang after one request.
@@ -436,6 +443,9 @@ void iq_inference_impl::process_items_(size_t power_in_count,
     if (!last_rx_freq_) {
       continue;
     }
+    // TODO: we select one slice in time (samples and power),
+    // where at least one sample exceeded the minimum. We could
+    // potentially select more samples either side for example.
     output_item_type output_item;
     output_item.rx_time =
         last_rx_time_ + (samples_since_tag_ / TIME_T(samp_rate_));
