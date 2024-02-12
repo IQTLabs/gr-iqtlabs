@@ -212,6 +212,7 @@ import tempfile
 from flask import Flask, request
 from gnuradio import gr, gr_unittest
 from gnuradio import analog, blocks
+import numpy as np
 
 try:
     from gnuradio.iqtlabs import iq_inference, retune_pre_fft, tuneable_test_source
@@ -234,13 +235,33 @@ class qa_iq_inference(gr_unittest.TestCase):
         if self.pid:
             os.kill(self.pid, 15)
 
-    def simulate_torchserve(self, port, model_name, result):
+    def simulate_torchserve(self, port, model_name, result, fft_size):
         app = Flask(__name__)
 
         # nosemgrep:github.workflows.config.useless-inner-function
         @app.route(f"/predictions/{model_name}", methods=["POST"])
         def predictions_test():
             print("got %s, count %u" % (type(request.data), len(request.data)))
+            samples = np.frombuffer(request.data, dtype=np.complex64, count=fft_size)
+            power_offset = samples.size * samples.itemsize
+            power = np.frombuffer(
+                request.data[power_offset:], dtype=np.float32, count=fft_size
+            )
+            unique_samples = np.unique(samples)
+            unique_power = np.unique(power)
+            print(unique_samples, unique_power)
+            if unique_samples.size != 1:
+                print("not unique samples: ", unique_samples)
+                raise ValueError
+            if unique_power.size != 1:
+                print("not unique samples: ", unique_power)
+                raise ValueError
+            if unique_samples[0].real != unique_samples[0].imag:
+                print("not equal sample: ", unique_samples)
+                raise ValueError
+            if unique_samples[0].real != unique_power[0]:
+                print("not equal power to sample", unique_power, unique_samples)
+                raise ValueError
             return json.dumps(result, indent=2), 200
 
         try:
@@ -252,7 +273,7 @@ class qa_iq_inference(gr_unittest.TestCase):
         test_file = os.path.join(tmpdir, "samples")
         freq_divisor = 1e9
         new_freq = 1e9 / 2
-        delay = 500
+        delay = 300
 
         source = tuneable_test_source(freq_divisor)
         strobe = blocks.message_strobe(pmt.to_pmt({"freq": new_freq}), delay)
@@ -263,7 +284,16 @@ class qa_iq_inference(gr_unittest.TestCase):
         stream2vector_samples = blocks.stream_to_vector(gr.sizeof_gr_complex, fft_size)
 
         iq_inf = iq_inference(
-            "rx_freq", fft_size, 512, -1e9, f"localhost:{port}", model_name, 0.8, 10001, int(samp_rate)
+            tag="rx_freq",
+            vlen=fft_size,
+            sample_buffer=512,
+            min_peak_points=-1e9,
+            model_server=f"localhost:{port}",
+            model_names=model_name,
+            confidence=0.8,
+            n_inference=5001,
+            samp_rate=int(samp_rate),
+            power_inference=True,
         )
 
         self.tb.msg_connect((strobe, "strobe"), (source, "cmd"))
@@ -276,8 +306,10 @@ class qa_iq_inference(gr_unittest.TestCase):
         self.tb.connect((iq_inf, 0), (fs, 0))
 
         self.tb.start()
-        test_time = 10
-        time.sleep(test_time)
+        for i in range(10):
+            new_freq *= 1.1
+            strobe.set_msg(pmt.to_pmt({"freq": int(new_freq)}))
+            time.sleep(1)
         self.tb.stop()
         self.tb.wait()
         return test_file
@@ -286,10 +318,10 @@ class qa_iq_inference(gr_unittest.TestCase):
         port = 11002
         model_name = "testmodel"
         predictions_result = ["cant", "parse", {"this": 0}]
-        if self.pid == 0:
-            self.simulate_torchserve(port, model_name, predictions_result)
-            return
         fft_size = 1024
+        if self.pid == 0:
+            self.simulate_torchserve(port, model_name, predictions_result, fft_size)
+            return
         samp_rate = 4e6
         with tempfile.TemporaryDirectory() as tmpdir:
             self.run_flowgraph(tmpdir, fft_size, samp_rate, port, model_name)
@@ -299,10 +331,10 @@ class qa_iq_inference(gr_unittest.TestCase):
         model_name = "testmodel"
         px = 100
         predictions_result = {"modulation": [{"conf": 0.9}]}
-        if self.pid == 0:
-            self.simulate_torchserve(port, model_name, predictions_result)
-            return
         fft_size = 1024
+        if self.pid == 0:
+            self.simulate_torchserve(port, model_name, predictions_result, fft_size)
+            return
         samp_rate = 4e6
         with tempfile.TemporaryDirectory() as tmpdir:
             test_file = self.run_flowgraph(
@@ -313,11 +345,21 @@ class qa_iq_inference(gr_unittest.TestCase):
                 content = f.read()
             json_raw_all = content.split("\n\n")
             self.assertTrue(json_raw_all)
+            last_ts = 0
+            last_rx_freq = 0
             for json_raw in json_raw_all:
                 if not json_raw:
                     continue
                 result = json.loads(json_raw)
                 print(result)
+                self.assertEqual(result.get("error", None), None)
+                rx_freq = float(result["metadata"]["rx_freq"])
+                ts = float(result["metadata"]["rx_freq"])
+                self.assertGreater(rx_freq, last_rx_freq)
+                self.assertGreater(ts, last_ts)
+                last_ts = ts
+                last_rx_freq = rx_freq
+
 
 
 if __name__ == "__main__":
