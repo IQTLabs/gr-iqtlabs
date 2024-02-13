@@ -254,7 +254,8 @@ image_inference_impl::image_inference_impl(
       min_peak_points_(min_peak_points), confidence_(confidence),
       max_rows_(max_rows), rotate_secs_(rotate_secs), n_image_(n_image),
       n_inference_(n_inference), samp_rate_(samp_rate), running_(true),
-      inference_connected_(false), image_count_(0), inference_count_(0) {
+      inference_connected_(false), image_count_(0), inference_count_(0),
+      last_image_start_item_(0) {
   points_buffer_ = NULL;
   normalized_buffer_.reset(
       new cv::Mat(cv::Size(vlen_, 0), CV_32F, cv::Scalar::all(0)));
@@ -343,7 +344,8 @@ bool image_inference_impl::stop() {
   return true;
 }
 
-void image_inference_impl::process_items_(size_t c, const input_type *&in) {
+void image_inference_impl::process_items_(size_t c, size_t &consumed,
+                                          const input_type *&in) {
   while (c) {
     size_t existing_rows = 0;
     if (points_buffer_) {
@@ -355,11 +357,13 @@ void image_inference_impl::process_items_(size_t c, const input_type *&in) {
       cv::Size new_size(vlen_, new_rows);
       if (!points_buffer_) {
         points_buffer_ = new cv::Mat(new_size, CV_32F, (void *)in);
+        last_image_start_item_ = nitems_read(0) + consumed;
       } else {
         cv::Mat new_rows(new_size, CV_32F, (void *)in);
         points_buffer_->push_back(new_rows);
       }
       c -= new_rows;
+      consumed += new_rows;
       in += (vlen_ * new_rows);
     }
     if (points_buffer_ && points_buffer_->rows == max_rows_) {
@@ -377,6 +381,7 @@ void image_inference_impl::create_image_(bool discard) {
         output_item_type output_item;
         output_item.rx_freq = last_rx_freq_;
         output_item.ts = last_rx_time_;
+        output_item.start_item = last_image_start_item_;
         output_item.points_min = points_min;
         output_item.points_max = points_max;
         output_item.points_buffer = points_buffer_;
@@ -403,6 +408,7 @@ std::string image_inference_impl::write_image_(
   cv::imencode(IMAGE_EXT, *output_item.image_buffer, *encoded_buffer);
   std::string image_file_base =
       prefix + "_" + std::to_string(image_count_) + "_" +
+      std::to_string(output_item.start_item) + "_" +
       host_now_str_(output_item.ts) + "_" + std::to_string(uint64_t(x_)) + "x" +
       std::to_string(uint64_t(y_)) + "_" +
       std::to_string(uint64_t(output_item.rx_freq)) + "Hz";
@@ -534,6 +540,7 @@ void image_inference_impl::run_inference_() {
     metadata_json["rssi_min"] = std::to_string(output_item.points_min);
     metadata_json["ts"] = host_now_str_(output_item.ts);
     metadata_json["rx_freq"] = std::to_string(output_item.rx_freq);
+    metadata_json["start_item"] = std::to_string(output_item.start_item);
     metadata_json["orig_rows"] = output_item.points_buffer->rows;
 
     const std::string secs_image_dir = secs_dir(image_dir_, rotate_secs_);
@@ -656,6 +663,7 @@ int image_inference_impl::general_work(int noutput_items,
   size_t in_count = ninput_items[0];
   size_t in_first = nitems_read(0);
   size_t leftover = 0;
+  size_t consumed = 0;
 
   while (!json_q_.empty()) {
     std::string json;
@@ -678,7 +686,7 @@ int image_inference_impl::general_work(int noutput_items,
   get_tags(tag_, all_tags, rx_freq_tags, rx_times, in_count);
 
   if (rx_freq_tags.empty()) {
-    process_items_(in_count, in);
+    process_items_(in_count, consumed, in);
   } else {
     for (size_t t = 0; t < rx_freq_tags.size(); ++t) {
       const auto &tag = rx_freq_tags[t];
@@ -688,7 +696,7 @@ int image_inference_impl::general_work(int noutput_items,
 
       // TODO: process leftover untagged items.
       if (rel > 0) {
-        process_items_(rel, in);
+        process_items_(rel, consumed, in);
       }
 
       FREQ_T rx_freq = GET_FREQ(tag);
