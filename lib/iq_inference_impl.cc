@@ -428,9 +428,11 @@ void iq_inference_impl::forecast(int noutput_items,
 
 void iq_inference_impl::process_items_(size_t power_in_count,
                                        uint64_t &power_read,
-                                       const float *&power_in) {
+                                       const float *&power_in,
+                                       size_t &consumed) {
   for (size_t i = 0; i < power_in_count;
        ++i, power_in += vlen_, samples_since_tag_ += vlen_) {
+    ++consumed;
     size_t j = (power_read + i) % sample_buffer_;
     volk_32f_index_max_16u(max_.get(), power_in, vlen_);
     float power_max = power_in[*max_];
@@ -476,6 +478,7 @@ int iq_inference_impl::general_work(int noutput_items,
   const float *power_in = static_cast<const float *>(input_items[1]);
   std::vector<tag_t> all_tags, rx_freq_tags;
   std::vector<TIME_T> rx_times;
+  size_t consumed = 0;
   size_t leftover = 0;
 
   while (!json_q_.empty()) {
@@ -504,7 +507,7 @@ int iq_inference_impl::general_work(int noutput_items,
 
   uint64_t power_read = nitems_read(1);
   if (rx_freq_tags.empty()) {
-    process_items_(power_in_count, power_read, power_in);
+    process_items_(power_in_count, power_read, power_in, consumed);
   } else {
     for (size_t t = 0; t < rx_freq_tags.size(); ++t) {
       const auto &tag = rx_freq_tags[t];
@@ -512,9 +515,8 @@ int iq_inference_impl::general_work(int noutput_items,
       const auto rel = tag.offset - in_first;
       in_first += rel;
 
-      // TODO: process leftover untagged items.
       if (rel > 0) {
-        process_items_(rel, power_read, power_in);
+        process_items_(rel, power_read, power_in, consumed);
       }
 
       const FREQ_T rx_freq = GET_FREQ(tag);
@@ -522,6 +524,9 @@ int iq_inference_impl::general_work(int noutput_items,
       last_rx_freq_ = rx_freq;
       last_rx_time_ = rx_time;
       samples_since_tag_ = 0;
+    }
+    if (consumed < power_in_count) {
+      process_items_(power_in_count - consumed, power_read, power_in, consumed);
     }
   }
 

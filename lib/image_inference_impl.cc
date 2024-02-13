@@ -330,7 +330,6 @@ void image_inference_impl::delete_inference_() {
 }
 
 bool image_inference_impl::stop() {
-  d_logger->info("stopping");
   running_ = false;
   inference_thread_->join();
   run_inference_();
@@ -341,6 +340,7 @@ bool image_inference_impl::stop() {
   if (points_buffer_) {
     delete points_buffer_;
   }
+  d_logger->info("stopped");
   return true;
 }
 
@@ -407,8 +407,7 @@ std::string image_inference_impl::write_image_(
   encoded_buffer.reset(new std::vector<unsigned char>());
   cv::imencode(IMAGE_EXT, *output_item.image_buffer, *encoded_buffer);
   std::string image_file_base =
-      prefix + "_" + std::to_string(image_count_) + "_" +
-      std::to_string(output_item.start_item) + "_" +
+      prefix + "_" + std::to_string(output_item.start_item) + "_" +
       host_now_str_(output_item.ts) + "_" + std::to_string(uint64_t(x_)) + "x" +
       std::to_string(uint64_t(y_)) + "_" +
       std::to_string(uint64_t(output_item.rx_freq)) + "Hz";
@@ -694,7 +693,6 @@ int image_inference_impl::general_work(int noutput_items,
       const auto rel = tag.offset - in_first;
       in_first += rel;
 
-      // TODO: process leftover untagged items.
       if (rel > 0) {
         process_items_(rel, consumed, in);
       }
@@ -705,6 +703,9 @@ int image_inference_impl::general_work(int noutput_items,
       }
       last_rx_freq_ = rx_freq;
       last_rx_time_ = rx_time;
+    }
+    if (consumed < in_count) {
+      process_items_(in_count - consumed, consumed, in);
     }
   }
 

@@ -262,7 +262,7 @@ private:
   boost::scoped_ptr<boost::beast::tcp_stream> stream_;
 
   void process_items_(size_t power_in_count, uint64_t &power_read,
-                      const float *&power_in);
+                      const float *&power_in, size_t &consumed);
   void delete_output_item_(output_item_type &output_item);
   void delete_inference_();
   void background_run_inference_();
