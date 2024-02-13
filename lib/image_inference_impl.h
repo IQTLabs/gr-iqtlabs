@@ -236,6 +236,7 @@ typedef struct output_item {
   double points_min;
   double points_mean;
   double points_max;
+  uint64_t start_item;
 } output_item_type;
 
 class image_inference_impl : public image_inference, base_impl {
@@ -244,6 +245,7 @@ private:
       rotate_secs_, n_image_, n_inference_, image_count_, inference_count_,
       samp_rate_;
   FREQ_T last_rx_freq_;
+  uint64 last_image_start_item_;
   double convert_alpha_, norm_alpha_, norm_beta_, last_rx_time_,
       min_peak_points_, confidence_;
   boost::lockfree::spsc_queue<output_item_type> inference_q_{MAX_INFERENCE};
@@ -263,7 +265,7 @@ private:
   boost::scoped_ptr<boost::beast::tcp_stream> stream_;
   cv::Scalar text_color_;
 
-  void process_items_(size_t c, const input_type *&in);
+  void process_items_(size_t c, size_t &consumed, const input_type *&in);
   void create_image_(bool discard);
   void run_inference_();
   void background_run_inference_();
