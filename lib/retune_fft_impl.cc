@@ -352,8 +352,9 @@ void retune_fft_impl::add_output_tags_(TIME_T rx_time, FREQ_T rx_freq,
 
 void retune_fft_impl::process_items_(size_t c, const input_type *&in,
                                      const input_type *&fft_output,
-                                     size_t &produced) {
+                                     size_t &consumed, size_t &produced) {
   for (size_t i = 0; i < c; ++i, in += nfft_) {
+    ++consumed;
     if (skip_fft_count_) {
       --skip_fft_count_;
       slew_samples_ += nfft_;
@@ -499,12 +500,13 @@ void retune_fft_impl::process_tags_(const input_type *in, size_t in_count,
                                     const input_type *fft_output) {
   std::vector<tag_t> all_tags, rx_freq_tags;
   std::vector<TIME_T> rx_times;
+  size_t consumed = 0;
   size_t produced = 0;
   get_tags_in_window(all_tags, 0, 0, in_count);
   get_tags(tag_, all_tags, rx_freq_tags, rx_times, in_count);
 
   if (rx_freq_tags.empty()) {
-    process_items_(in_count, in, fft_output, produced);
+    process_items_(in_count, in, fft_output, consumed, produced);
   } else {
     for (size_t t = 0; t < rx_freq_tags.size(); ++t) {
       const auto &tag = rx_freq_tags[t];
@@ -512,9 +514,8 @@ void retune_fft_impl::process_tags_(const input_type *in, size_t in_count,
       const auto rel = tag.offset - in_first;
       in_first += rel;
 
-      // TODO: process leftover untagged items.
       if (rel > 0) {
-        process_items_(rel, in, fft_output, produced);
+        process_items_(rel, in, fft_output, consumed, produced);
       }
 
       const FREQ_T rx_freq = GET_FREQ(tag);
@@ -527,6 +528,9 @@ void retune_fft_impl::process_tags_(const input_type *in, size_t in_count,
         --pending_retune_;
       }
       process_buckets_(rx_freq, rx_time);
+    }
+    if (consumed < in_count) {
+      process_items_(in_count - consumed, in, fft_output, consumed, produced);
     }
   }
   produce(1, produced);

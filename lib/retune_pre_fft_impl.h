@@ -219,7 +219,7 @@ class retune_pre_fft_impl : public retune_pre_fft, base_impl, retuner_impl {
 private:
   bool all_zeros_(const block_type *&in);
   void process_items_(size_t c, const block_type *&in, const block_type *&out,
-                      size_t &produced);
+                      size_t &consumed, size_t &produced);
   void add_output_tags_(TIME_T rx_time, FREQ_T rx_freq, size_t rel);
 
   size_t nfft_;
