@@ -269,10 +269,9 @@ class qa_vkfft(gr_unittest.TestCase):
                     )
                 )
 
-            if os.getenv("TEST_VKFFT", 0):
-                self.assertEqual(
-                    self.round_complex(vkfft_data), self.round_complex(sw_data)
-                )
+            self.assertEqual(
+                self.round_complex(vkfft_data), self.round_complex(sw_data)
+            )
 
     def test_vkfft(self):
         self.run_comparison(iqtlabs.vkfft, False)
@@ -282,4 +281,5 @@ class qa_vkfft(gr_unittest.TestCase):
 
 
 if __name__ == "__main__":
-    gr_unittest.run(qa_vkfft)
+    if os.getenv("TEST_VKFFT", 0):
+        gr_unittest.run(qa_vkfft)
