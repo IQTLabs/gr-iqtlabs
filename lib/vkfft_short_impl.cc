@@ -230,12 +230,11 @@ vkfft_short_impl::vkfft_short_impl(std::size_t fft_batch_size, std::size_t nfft,
 }
 
 void vkfft_short_impl::init_converter_() {
-  uhd::convert::id_type id;
-  id.input_format = "sc16_chdr";
-  id.num_inputs = 1;
-  id.output_format = "fc32";
-  id.num_outputs = 1;
-  _converter = uhd::convert::get_converter(id, 0)();
+  _id.input_format = "sc16_chdr";
+  _id.num_inputs = 1;
+  _id.output_format = "fc32";
+  _id.num_outputs = 1;
+  _converter = uhd::convert::get_converter(_id, 0)();
   _converter->set_scalar(1 / 32767.);
 }
 
@@ -254,7 +253,7 @@ int vkfft_short_impl::work(int noutput_items,
 
   for (int i = 0; i < noutput_items / fft_batch_size_;
        ++i, in_buffer_index += vlen * 2, out_buffer_index += vlen) {
-    _converter->conv(&in[in_buffer_index], &buffer[0], vlen * 2);
+    _converter->conv(&in[in_buffer_index], &buffer[0], vlen);
     vkfft_offload((char *)&buffer[0], (char *)&out[out_buffer_index]);
   }
 
