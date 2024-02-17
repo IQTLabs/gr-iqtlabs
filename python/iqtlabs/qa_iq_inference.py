@@ -361,6 +361,5 @@ class qa_iq_inference(gr_unittest.TestCase):
                 last_rx_freq = rx_freq
 
 
-
 if __name__ == "__main__":
     gr_unittest.run(qa_iq_inference)

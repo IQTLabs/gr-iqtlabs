@@ -220,6 +220,7 @@ private:
   boost::scoped_array<gr_complex> input_buffer_;
   uhd::convert::converter::sptr _converter;
   void init_converter_();
+  uhd::convert::id_type _id;
 
 public:
   vkfft_short_impl(std::size_t fft_batch_size, std::size_t nfft, bool shift);

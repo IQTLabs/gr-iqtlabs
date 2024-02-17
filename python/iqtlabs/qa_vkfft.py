@@ -208,22 +208,33 @@ import numpy as np
 from gnuradio import blocks, fft, iqtlabs, gr, gr_unittest
 
 
-def run_fft(fft_block, points, fft_roll, input_items):
+def run_fft(fft_block, short, points, fft_roll, input_items):
+    tb = gr.top_block()
     src1 = blocks.vector_source_c(input_items, vlen=points)
     dst1 = blocks.vector_sink_c(vlen=points)
-    tb = gr.top_block()
-    tb.connect(src1, fft_block)
-    tb.connect(fft_block, dst1)
+    if short:
+        v2s = blocks.vector_to_stream(gr.sizeof_gr_complex, points)
+        cis = blocks.complex_to_interleaved_short(False, 32767)
+        s2v = blocks.stream_to_vector(gr.sizeof_short, points * 2)
+        test_blocks = [src1, v2s, cis, s2v, fft_block, dst1]
+    else:
+        test_blocks = [src1, fft_block, dst1]
+    for i, b in enumerate(test_blocks, start=0):
+        if i:
+            tb.connect(test_blocks[i - 1], b)
     tb.run()
-    data = dst1.data()
     tb.stop()
     tb.wait()
+    data = dst1.data()
     del tb
     return data
 
 
 class qa_vkfft(gr_unittest.TestCase):
-    def test_instance(self):
+    def round_complex(self, l, n=3):
+        return [complex(round(x.real, n), round(x.imag, n)) for x in l]
+
+    def run_comparison(self, vkfft_block, short):
         for fft_roll in (True, False):
             fft_batch_size = 1
             points = 8
@@ -231,7 +242,7 @@ class qa_vkfft(gr_unittest.TestCase):
             batch_input_items = []
             for i in range(1, fft_batch_size + 1):
                 batch_input_items.append(
-                    1j * np.arange(points)
+                    1j * np.arange(start=0, stop=(points * 0.1), step=0.1)
                 )  # pytype: disable=wrong-arg-types
 
             sw_data = []
@@ -239,6 +250,7 @@ class qa_vkfft(gr_unittest.TestCase):
                 sw_data.extend(
                     run_fft(
                         fft.fft_vcc(points, True, [], fft_roll, 1),
+                        0,
                         points,
                         fft_roll,
                         batch_input_items[i - 1],
@@ -249,16 +261,25 @@ class qa_vkfft(gr_unittest.TestCase):
             for i in range(1, fft_batch_size + 1):
                 vkfft_data.extend(
                     run_fft(
-                        iqtlabs.vkfft(fft_batch_size, points, fft_roll),
+                        vkfft_block(fft_batch_size, points, fft_roll),
+                        short,
                         points,
                         fft_roll,
                         batch_input_items[i - 1],
                     )
                 )
 
-            if os.getenv("TEST_VKFFT", 0):
-                self.assertEqual(vkfft_data, sw_data)
+            self.assertEqual(
+                self.round_complex(vkfft_data), self.round_complex(sw_data)
+            )
+
+    def test_vkfft(self):
+        self.run_comparison(iqtlabs.vkfft, False)
+
+    def test_short_vkfft(self):
+        self.run_comparison(iqtlabs.vkfft_short, True)
 
 
 if __name__ == "__main__":
-    gr_unittest.run(qa_vkfft)
+    if os.getenv("TEST_VKFFT", 0):
+        gr_unittest.run(qa_vkfft)

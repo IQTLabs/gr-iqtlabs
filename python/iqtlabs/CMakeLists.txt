@@ -37,7 +37,6 @@ add_custom_target(
 )
 if(VKFFT)
 GR_ADD_TEST(qa_vkfft ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/qa_vkfft.py)
-GR_ADD_TEST(qa_vkfft_short ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/qa_vkfft_short.py)
 endif()
 GR_ADD_TEST(qa_tuneable_test_source ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/qa_tuneable_test_source.py)
 GR_ADD_TEST(qa_retune_fft ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/qa_retune_fft.py)
