@@ -466,6 +466,8 @@ class qa_retune_fft_base:
             all_df = pd.DataFrame(records)[["t", "f", "v"]]
             all_df["v"] = all_df["v"].round(1)
             all_df = all_df.sort_values(["t", "f", "v"])
+            self.assertEqual(all_df["f"].max(), freq_end)
+            self.assertEqual(all_df["f"].min(), freq_start)
 
             for _, df in all_df.groupby("t"):
                 # must have plausible unscaled dB value
