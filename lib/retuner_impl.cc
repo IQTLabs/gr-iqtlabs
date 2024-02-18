@@ -236,7 +236,10 @@ retuner_impl::retuner_impl(uint64_t samp_rate, uint64_t tune_jitter_hz,
 void retuner_impl::add_range_(uint64_t freq_start, uint64_t freq_end) {
   // TODO: this could be a vector of steps that could be retuned to
   // in random order each time, to implement a frequency hopping scanner.
-  uint64_t steps = (freq_end - freq_start) / tune_step_hz_ + 2;
+  uint64_t steps = (freq_end - freq_start) / tune_step_hz_ + 1;
+  if (steps > 1) {
+    ++steps;
+  }
   tuning_ranges_.push_back({freq_start, freq_end, steps});
 }
 
