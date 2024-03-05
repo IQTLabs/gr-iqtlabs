@@ -245,8 +245,10 @@ void retuner_impl::add_range_(uint64_t freq_start, uint64_t freq_end) {
 
 bool retuner_impl::need_retune_(size_t n) {
   fft_count_ += n;
-  if ((pending_retune_ == 0 || total_tune_count_ == 0) &&
-      fft_count_ >= tune_step_fft_) {
+  if (fft_count_ < tune_step_fft_) {
+    return false;
+  }
+  if (pending_retune_ == 0) {
     return true;
   }
   return false;
@@ -298,11 +300,10 @@ void retuner_impl::parse_tuning_ranges_(const std::string &tuning_ranges) {
     }
   }
   stare_mode_ = tuning_ranges_[0].steps == 1;
+  tune_freq_ = tuning_ranges_[0].freq_start;
   if (stare_mode_) {
     tune_freq_ +=
         (tuning_ranges_[0].freq_end - tuning_ranges_[0].freq_start) / 2;
-  } else {
-    tune_freq_ = tuning_ranges_[0].freq_start;
   }
 }
 
@@ -315,8 +316,8 @@ void retuner_impl::next_retune_(TIME_T host_now) {
     return;
   }
   size_t range_steps = tuning_ranges_[tuning_range_].steps;
-  tune_freq_ = tune_freq_ + tune_step_hz_;
-  if (!stare_mode_ && tune_jitter_hz_ > 0) {
+  tune_freq_ += tune_step_hz_;
+  if (tune_jitter_hz_ > 0) {
     tune_freq_ -= tune_jitter_hz_;
     FREQ_T offset = rand_dist_(rand_gen_);
     tune_freq_ += offset;

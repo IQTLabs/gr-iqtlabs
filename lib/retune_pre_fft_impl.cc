@@ -242,6 +242,7 @@ retune_pre_fft_impl::retune_pre_fft_impl(
   unsigned int alignment = volk_get_alignment();
   total_.reset((float *)volk_malloc(sizeof(float), alignment));
   set_tag_propagation_policy(TPP_DONT);
+  set_output_multiple(nfft_);
 }
 
 retune_pre_fft_impl::~retune_pre_fft_impl() {}
@@ -250,11 +251,6 @@ void retune_pre_fft_impl::add_output_tags_(TIME_T rx_time, FREQ_T rx_freq,
                                            size_t rel) {
   OUTPUT_TAGS(apply_rx_time_slew_(rx_time), rx_freq, 0,
               (rel / fft_batch_size_));
-}
-
-void retune_pre_fft_impl::forecast(int noutput_items,
-                                   gr_vector_int &ninput_items_required) {
-  ninput_items_required[0] = noutput_items * nfft_ * fft_batch_size_;
 }
 
 bool retune_pre_fft_impl::all_zeros_(const block_type *&in) {

@@ -214,7 +214,7 @@ namespace iqtlabs {
 
 #define RETUNE_NOW()                                                           \
   {                                                                            \
-    d_logger->debug("retuning to {}", tune_freq_);                             \
+    d_logger->debug("retuning to {} (stare {})", tune_freq_, stare_mode_);     \
     message_port_pub(TUNE_KEY, tune_rx_msg(tune_freq_, tag_now_));             \
     next_retune_(host_now_());                                                 \
   }
