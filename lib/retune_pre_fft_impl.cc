@@ -253,11 +253,6 @@ void retune_pre_fft_impl::add_output_tags_(TIME_T rx_time, FREQ_T rx_freq,
               (rel / fft_batch_size_));
 }
 
-void retune_pre_fft_impl::forecast(int noutput_items,
-                                   gr_vector_int &ninput_items_required) {
-  ninput_items_required[0] = noutput_items * nfft_ * fft_batch_size_;
-}
-
 bool retune_pre_fft_impl::all_zeros_(const block_type *&in) {
   const float *in_floats = (const float *)in;
   volk_32f_accumulator_s32f(total_.get(), in_floats, nfft_ * 2);
