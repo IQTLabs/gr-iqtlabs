@@ -240,7 +240,12 @@ write_freq_samples_impl::write_freq_samples_impl(
   outbuf_p.reset(new boost::iostreams::filtering_ostream());
 }
 
-write_freq_samples_impl::~write_freq_samples_impl() { close_(); }
+write_freq_samples_impl::~write_freq_samples_impl() {}
+
+bool write_freq_samples_impl::stop() {
+  close_();
+  return true;
+}
 
 void write_freq_samples_impl::write_(const char *data, size_t len) {
   if (!outbuf_p->empty()) {

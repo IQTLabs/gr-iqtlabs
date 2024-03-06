@@ -307,6 +307,11 @@ void retune_fft_impl::calc_peaks_() {
 
 retune_fft_impl::~retune_fft_impl() { close_(); }
 
+bool retune_fft_impl::stop() {
+  close_();
+  return true;
+}
+
 void retune_fft_impl::write_(const char *data, size_t len) {
   if (!outbuf_p->empty()) {
     outbuf_p->write(data, len);
