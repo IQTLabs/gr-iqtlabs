@@ -48,4 +48,4 @@ jobs:
         fetch-depth: 0
     - name: build_test
       run: |
-        sudo apt-get -y update && sudo add-apt-repository ppa:gnuradio/gnuradio-releases && bin/apt_get.sh && bin/install-volk.sh v3.1.0 && TEST_VKFFT=0 bin/build_test.sh && bin/test_grc310.sh
+        sudo apt-get -y update && sudo add-apt-repository ppa:gnuradio/gnuradio-releases && bin/apt_get.sh && bin/install-volk.sh v3.1.2 && TEST_VKFFT=0 bin/build_test.sh && bin/test_grc310.sh
