@@ -205,8 +205,8 @@
 
 import json
 import glob
-import subprocess
 import os
+import subprocess
 import tempfile
 import time
 import pmt
@@ -236,7 +236,7 @@ class qa_write_freq_samples(gr_unittest.TestCase):
         write_freq_samples_0 = write_freq_samples(
             "rx_freq",
             gr.sizeof_gr_complex * 1,
-            "cf32",
+            "cf32_le",
             points,
             tmpdir,
             "samples",
@@ -284,6 +284,8 @@ class qa_write_freq_samples(gr_unittest.TestCase):
                     sigmf_global = sigmf["global"]
                     sigmf_capture = sigmf["captures"][0]
                     self.assertEqual(samp_rate, sigmf_global["core:sample_rate"], sigmf)
+                    self.assertEqual("1.0.0", sigmf_global["core:version"], sigmf)
+                    self.assertTrue(sigmf_global["core:datatype"])
                     self.assertEqual(tune_freq, sigmf_capture["core:frequency"], sigmf)
                     source_file = sigmf_capture["capture_details:source_file"]
                     self.assertEqual(
