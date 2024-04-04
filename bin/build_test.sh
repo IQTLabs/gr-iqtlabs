@@ -5,5 +5,7 @@ bin/check_blocks.py && \
   pip3 install --user -r codecheck-requirements.txt && \
   black python/iqtlabs/qa_* && \
   ./bin/clonedeps.sh && \
-  rm -rf build && mkdir build && cd build && cmake .. && make -j $(nproc) && sudo make install && sudo ldconfig && sudo make test ARGS="--verbose --timeout 180" && cd .. && \
-  pytype -d attribute-error python/iqtlabs/qa_*
+  rm -rf build && mkdir build && cd build && cmake .. && make -j $(nproc) && sudo make install && sudo ldconfig && \
+  sudo make test ARGS="--verbose --timeout 180 --test-regex qa_retune_fft" && \
+  make test ARGS="--verbose --timeout 180 --exclude-regex qa_retune_fft" && \
+  cd .. && pytype -d attribute-error python/iqtlabs/qa_*

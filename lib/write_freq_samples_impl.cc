@@ -232,8 +232,9 @@ write_freq_samples_impl::write_freq_samples_impl(
                 gr::io_signature::make(1 /* min inputs */, 1 /* max inputs */,
                                        vlen * itemsize),
                 gr::io_signature::make(0, 0, 0)),
-      tag_(pmt::intern(tag)), itemsize_(itemsize), vlen_(vlen), sdir_(sdir),
-      prefix_(prefix), write_step_samples_(write_step_samples),
+      tag_(pmt::intern(tag)), itemsize_(itemsize), datatype_(datatype),
+      vlen_(vlen), sdir_(sdir), prefix_(prefix),
+      write_step_samples_(write_step_samples),
       skip_tune_step_samples_(skip_tune_step_samples), samp_rate_(samp_rate),
       write_step_samples_count_(0), skip_tune_step_samples_count_(0),
       last_rx_freq_(0), rotate_secs_(rotate_secs), gain_(gain), sigmf_(sigmf) {

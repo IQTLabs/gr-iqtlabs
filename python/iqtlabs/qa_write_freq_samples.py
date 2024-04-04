@@ -205,8 +205,9 @@
 
 import json
 import glob
-import subprocess
 import os
+import shutil
+import subprocess
 import tempfile
 import time
 import pmt
@@ -236,7 +237,7 @@ class qa_write_freq_samples(gr_unittest.TestCase):
         write_freq_samples_0 = write_freq_samples(
             "rx_freq",
             gr.sizeof_gr_complex * 1,
-            "cf32",
+            "cf32_le",
             points,
             tmpdir,
             "samples",
@@ -292,6 +293,7 @@ class qa_write_freq_samples(gr_unittest.TestCase):
                         sigmf,
                     )
                     self.assertEqual(25, sigmf_capture["capture_details:gain"], sigmf)
+                subprocess.check_call([shutil.which("sigmf_validate"), "--skip-checksum", sigmf_file])
                 subprocess.check_call(["zstd", "-d", zst_file])
                 samples = len(np.fromfile(bin_file, dtype=np.complex64))
                 total_samples += samples
