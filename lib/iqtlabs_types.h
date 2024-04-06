@@ -212,6 +212,7 @@ namespace iqtlabs {
 
 typedef double TIME_T;
 typedef uint64_t FREQ_T;
+typedef uint64_t COUNT_T;
 
 } /* namespace iqtlabs */
 } /* namespace gr */

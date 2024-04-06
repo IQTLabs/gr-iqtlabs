@@ -209,12 +209,11 @@
 namespace gr {
 namespace iqtlabs {
 
-vkfft::sptr vkfft::make(std::size_t fft_batch_size, std::size_t nfft,
-                        bool shift) {
+vkfft::sptr vkfft::make(COUNT_T fft_batch_size, COUNT_T nfft, bool shift) {
   return gnuradio::make_block_sptr<vkfft_impl>(fft_batch_size, nfft, shift);
 }
 
-vkfft_impl::vkfft_impl(std::size_t fft_batch_size, std::size_t nfft, bool shift)
+vkfft_impl::vkfft_impl(COUNT_T fft_batch_size, COUNT_T nfft, bool shift)
     : fft_batch_size_(fft_batch_size),
       nfft_(nfft), gr::sync_block(
                        "vkfft",
@@ -232,7 +231,7 @@ int vkfft_impl::work(int noutput_items, gr_vector_const_void_star &input_items,
   const gr_complex *const in =
       reinterpret_cast<const gr_complex *const>(input_items[0]);
   gr_complex *const out = reinterpret_cast<gr_complex *const>(output_items[0]);
-  size_t buffer_index = 0;
+  COUNT_T buffer_index = 0;
 
   for (int i = 0; i < noutput_items / fft_batch_size_;
        ++i, buffer_index += (fft_batch_size_ * nfft_)) {

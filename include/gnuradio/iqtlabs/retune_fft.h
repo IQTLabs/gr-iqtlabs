@@ -228,7 +228,7 @@ public:
    * class. iqtlabs::retune_fft::make is the public interface for
    * creating new instances.
    */
-  static sptr make(const std::string &tag, size_t nfft, uint64_t samp_rate,
+  static sptr make(const std::string &tag, uint64_t nfft, uint64_t samp_rate,
                    uint64_t tune_jitter_hz, uint64_t freq_start,
                    uint64_t freq_end, uint64_t tune_step_hz,
                    uint64_t tune_step_fft, uint64_t skip_tune_step_fft,
@@ -237,7 +237,7 @@ public:
                    const std::string &tuning_ranges,
                    const std::string &description, uint64_t rotate_secs,
                    bool pre_fft, bool tag_now, bool low_power_hold_down,
-                   bool slew_rx_time, size_t peak_fft_range);
+                   bool slew_rx_time, uint64_t peak_fft_range);
 };
 
 } // namespace iqtlabs

@@ -226,7 +226,7 @@ using input_type = float;
 using output_type = unsigned char;
 const std::string IMAGE_TYPE = "png";
 const std::string IMAGE_EXT = "." + IMAGE_TYPE;
-const size_t MAX_INFERENCE = 5;
+const COUNT_T MAX_INFERENCE = 5;
 
 typedef struct output_item {
   FREQ_T rx_freq;
@@ -236,7 +236,7 @@ typedef struct output_item {
   double points_min;
   double points_mean;
   double points_max;
-  uint64_t start_item;
+  COUNT_T start_item;
 } output_item_type;
 
 class image_inference_impl : public image_inference, base_impl {
@@ -265,7 +265,7 @@ private:
   boost::scoped_ptr<boost::beast::tcp_stream> stream_;
   cv::Scalar text_color_;
 
-  void process_items_(size_t c, size_t &consumed, const input_type *&in);
+  void process_items_(COUNT_T c, COUNT_T &consumed, const input_type *&in);
   void create_image_(bool discard);
   void run_inference_();
   void background_run_inference_();
@@ -276,11 +276,11 @@ private:
   write_image_(const std::string &secs_image_dir, const std::string &prefix,
                output_item_type &output_item,
                boost::scoped_ptr<std::vector<unsigned char>> &encoded_buffer);
-  size_t parse_inference_(const output_item_type &output_item,
-                          const std::string &results,
-                          const std::string &model_names,
-                          nlohmann::json &results_json, std::string &error,
-                          bool &valid_json);
+  COUNT_T parse_inference_(const output_item_type &output_item,
+                           const std::string &results,
+                           const std::string &model_names,
+                           nlohmann::json &results_json, std::string &error,
+                           bool &valid_json);
   void bbox_text(const output_item_type &output_item, const std::string &text,
                  int pos, int cx, int cy);
   void volk_min_max_mean(const cv::Mat &mat, float &min, float &max,

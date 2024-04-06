@@ -210,12 +210,13 @@
 namespace gr {
 namespace iqtlabs {
 
-retune_pre_fft::sptr retune_pre_fft::make(
-    size_t nfft, uint64_t samp_rate, uint64_t tune_jitter_hz,
-    size_t fft_batch_size, const std::string &tag, uint64_t freq_start,
-    uint64_t freq_end, uint64_t tune_step_hz, uint64_t tune_step_fft,
-    uint64_t skip_tune_step_fft, const std::string &tuning_ranges, bool tag_now,
-    bool low_power_hold_down, bool slew_rx_time) {
+retune_pre_fft::sptr
+retune_pre_fft::make(COUNT_T nfft, COUNT_T samp_rate, COUNT_T tune_jitter_hz,
+                     COUNT_T fft_batch_size, const std::string &tag,
+                     COUNT_T freq_start, COUNT_T freq_end, COUNT_T tune_step_hz,
+                     COUNT_T tune_step_fft, COUNT_T skip_tune_step_fft,
+                     const std::string &tuning_ranges, bool tag_now,
+                     bool low_power_hold_down, bool slew_rx_time) {
   return gnuradio::make_block_sptr<retune_pre_fft_impl>(
       nfft, samp_rate, tune_jitter_hz, fft_batch_size, tag, freq_start,
       freq_end, tune_step_hz, tune_step_fft, skip_tune_step_fft, tuning_ranges,
@@ -223,10 +224,10 @@ retune_pre_fft::sptr retune_pre_fft::make(
 }
 
 retune_pre_fft_impl::retune_pre_fft_impl(
-    size_t nfft, uint64_t samp_rate, uint64_t tune_jitter_hz,
-    size_t fft_batch_size, const std::string &tag, uint64_t freq_start,
-    uint64_t freq_end, uint64_t tune_step_hz, uint64_t tune_step_fft,
-    uint64_t skip_tune_step_fft, const std::string &tuning_ranges, bool tag_now,
+    COUNT_T nfft, COUNT_T samp_rate, COUNT_T tune_jitter_hz,
+    COUNT_T fft_batch_size, const std::string &tag, COUNT_T freq_start,
+    COUNT_T freq_end, COUNT_T tune_step_hz, COUNT_T tune_step_fft,
+    COUNT_T skip_tune_step_fft, const std::string &tuning_ranges, bool tag_now,
     bool low_power_hold_down, bool slew_rx_time)
     : gr::block(
           "retune_pre_fft",
@@ -248,7 +249,7 @@ retune_pre_fft_impl::retune_pre_fft_impl(
 retune_pre_fft_impl::~retune_pre_fft_impl() {}
 
 void retune_pre_fft_impl::add_output_tags_(TIME_T rx_time, FREQ_T rx_freq,
-                                           size_t rel) {
+                                           COUNT_T rel) {
   OUTPUT_TAGS(apply_rx_time_slew_(rx_time), rx_freq, 0,
               (rel / fft_batch_size_));
 }
@@ -259,11 +260,11 @@ bool retune_pre_fft_impl::all_zeros_(const block_type *&in) {
   return *total_ == 0;
 }
 
-void retune_pre_fft_impl::process_items_(size_t c, const block_type *&in,
+void retune_pre_fft_impl::process_items_(COUNT_T c, const block_type *&in,
                                          const block_type *&out,
-                                         size_t &consumed, size_t &produced) {
+                                         COUNT_T &consumed, COUNT_T &produced) {
   if (reset_tags_) {
-    for (size_t i = 0; i < c; ++i, in += nfft_) {
+    for (COUNT_T i = 0; i < c; ++i, in += nfft_) {
       ++consumed;
       if (skip_fft_count_) {
         --skip_fft_count_;
@@ -297,7 +298,7 @@ void retune_pre_fft_impl::process_items_(size_t c, const block_type *&in,
       }
     }
   } else {
-    for (size_t i = 0; i < c; ++i, in += nfft_) {
+    for (COUNT_T i = 0; i < c; ++i, in += nfft_) {
       ++consumed;
       if (skip_fft_count_) {
         --skip_fft_count_;
@@ -318,10 +319,10 @@ int retune_pre_fft_impl::general_work(int noutput_items,
                                       gr_vector_int &ninput_items,
                                       gr_vector_const_void_star &input_items,
                                       gr_vector_void_star &output_items) {
-  size_t in_count = ninput_items[0];
-  size_t in_first = nitems_read(0);
-  size_t in_nffts = in_count / nfft_;
-  size_t in_batches = in_nffts / fft_batch_size_;
+  COUNT_T in_count = ninput_items[0];
+  COUNT_T in_first = nitems_read(0);
+  COUNT_T in_nffts = in_count / nfft_;
+  COUNT_T in_batches = in_nffts / fft_batch_size_;
   in_batches = std::min((int)in_batches, noutput_items);
   if (!in_batches) {
     return 0;
@@ -335,8 +336,8 @@ int retune_pre_fft_impl::general_work(int noutput_items,
   std::vector<TIME_T> rx_times;
   get_tags_in_window(all_tags, 0, 0, in_count);
   get_tags(tag_, all_tags, rx_freq_tags, rx_times, in_count);
-  size_t consumed = 0;
-  size_t produced = 0;
+  COUNT_T consumed = 0;
+  COUNT_T produced = 0;
 
   if (rx_freq_tags.empty()) {
     process_items_(in_nffts, in, out, consumed, produced);
@@ -344,7 +345,7 @@ int retune_pre_fft_impl::general_work(int noutput_items,
     // TODO: deprecate fft_batch_size, gr-wavelearner could use set_multiple
     // abstraction like VkFFT
 
-    for (size_t t = 0; t < rx_freq_tags.size(); ++t) {
+    for (COUNT_T t = 0; t < rx_freq_tags.size(); ++t) {
       const auto &tag = rx_freq_tags[t];
       const TIME_T rx_time = rx_times[t];
       auto rel = tag.offset - in_first;

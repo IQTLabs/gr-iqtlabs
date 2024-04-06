@@ -247,7 +247,7 @@ int vector_to_json_impl<T>::general_work(int noutput_items,
                                          gr_vector_void_star &output_items) {
   if (!out_buf_.empty()) {
     auto out = static_cast<char *>(output_items[0]);
-    const size_t leftover = std::min(out_buf_.size(), (size_t)noutput_items);
+    const COUNT_T leftover = std::min(out_buf_.size(), (COUNT_T)noutput_items);
     auto from = out_buf_.begin();
     auto to = from + leftover;
     std::copy(from, to, out);
@@ -257,15 +257,15 @@ int vector_to_json_impl<T>::general_work(int noutput_items,
 
   auto out = static_cast<u_char *>(output_items[0]);
   const T *in = static_cast<const T *>(input_items[0]);
-  size_t in_count = ninput_items[0];
-  size_t in_first = this->nitems_read(0);
+  COUNT_T in_count = ninput_items[0];
+  COUNT_T in_first = this->nitems_read(0);
   std::vector<tag_t> all_tags;
   gr::block::get_tags_in_window(all_tags, 0, 0, in_count);
   std::reverse(all_tags.begin(), all_tags.end());
 
   std::stringstream ss("", std::ios_base::app | std::ios_base::out);
 
-  for (size_t i = 0; i < in_count; ++i, in += vlen_) {
+  for (COUNT_T i = 0; i < in_count; ++i, in += vlen_) {
     std::vector<tag_t> current_tags;
 
     while (!all_tags.empty() && (all_tags.back().offset - in_first == i)) {
@@ -296,7 +296,7 @@ int vector_to_json_impl<T>::general_work(int noutput_items,
     }
     ss << "}, \"values\": [";
     const T *current_in = in;
-    for (size_t j = 0; j < vlen_; ++j, ++current_in) {
+    for (COUNT_T j = 0; j < vlen_; ++j, ++current_in) {
       if (j) {
         ss << ", ";
       }

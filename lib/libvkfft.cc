@@ -1,12 +1,13 @@
 #include <iostream>
 
 #include "ShaderLang.h"
+#include "libvkfft.h"
 #include "utils_VkFFT.h"
 #include "vkFFT.h"
 
-const uint64_t kVkNumBuf = 1;
+const COUNT_T kVkNumBuf = 1;
 // sample_id must always be 0 for Pi4 compatibility.
-const uint64_t sample_id = 0;
+const COUNT_T sample_id = 0;
 static VkGPU vkGPU = {};
 static VkFFTConfiguration vkConfiguration = {};
 static VkDeviceMemory *vkBufferDeviceMemory = NULL;
@@ -14,8 +15,8 @@ static VkFFTApplication vkApp = {};
 static VkFFTLaunchParams vkLaunchParams = {};
 static VkBuffer stagingBuffer = {0};
 static VkDeviceMemory stagingBufferMemory = {0};
-static uint64_t fftBufferSize = 0;
-static uint64_t stagingBufferSize = 0;
+static COUNT_T fftBufferSize = 0;
+static COUNT_T stagingBufferSize = 0;
 static bool _shift = false;
 
 VkFFTResult _setupCopy(VkCommandBuffer &commandBuffer,
@@ -104,7 +105,7 @@ VkFFTResult _transferDataToCPU(char *cpu_arr) {
   if (res != VK_SUCCESS)
     return VKFFT_ERROR_MALLOC_FAILED;
   if (_shift) {
-    const size_t halfFftBufferSize = fftBufferSize / 2;
+    const COUNT_T halfFftBufferSize = fftBufferSize / 2;
     for (int i = 0; i < vkConfiguration.numberBatches;
          ++i, cpu_arr += fftBufferSize, data += fftBufferSize) {
       memcpy(cpu_arr + halfFftBufferSize, data, halfFftBufferSize);
@@ -117,8 +118,8 @@ VkFFTResult _transferDataToCPU(char *cpu_arr) {
   return VKFFT_SUCCESS;
 }
 
-int64_t init_vkfft(std::size_t batches, std::size_t nfft,
-                   std::size_t sample_size, bool shift) {
+int64_t init_vkfft(COUNT_T batches, COUNT_T nfft, COUNT_T sample_size,
+                   bool shift) {
   vkGPU.enableValidationLayers = 0;
 
   VkResult res = VK_SUCCESS;
@@ -181,15 +182,15 @@ int64_t init_vkfft(std::size_t batches, std::size_t nfft,
             << " with shift: " << _shift << std::endl;
 
   vkConfiguration.bufferSize =
-      (uint64_t *)aligned_alloc(sizeof(uint64_t), sizeof(uint64_t) * kVkNumBuf);
+      (COUNT_T *)aligned_alloc(sizeof(COUNT_T), sizeof(COUNT_T) * kVkNumBuf);
   if (!vkConfiguration.bufferSize)
     return VKFFT_ERROR_MALLOC_FAILED;
 
-  const std::size_t buffer_size_f =
+  const COUNT_T buffer_size_f =
       vkConfiguration.size[0] * vkConfiguration.size[1] *
       vkConfiguration.size[2] * vkConfiguration.numberBatches / kVkNumBuf;
-  for (uint64_t i = 0; i < kVkNumBuf; ++i) {
-    vkConfiguration.bufferSize[i] = (uint64_t)sample_size * buffer_size_f;
+  for (COUNT_T i = 0; i < kVkNumBuf; ++i) {
+    vkConfiguration.bufferSize[i] = (COUNT_T)sample_size * buffer_size_f;
   }
 
   vkConfiguration.bufferNum = kVkNumBuf;
@@ -203,7 +204,7 @@ int64_t init_vkfft(std::size_t batches, std::size_t nfft,
   if (!vkBufferDeviceMemory)
     return VKFFT_ERROR_MALLOC_FAILED;
 
-  for (uint64_t i = 0; i < kVkNumBuf; ++i) {
+  for (COUNT_T i = 0; i < kVkNumBuf; ++i) {
     vkConfiguration.buffer[i] = {};
     vkBufferDeviceMemory[i] = {};
     VkFFTResult resFFT = allocateBuffer(
@@ -237,7 +238,7 @@ int64_t init_vkfft(std::size_t batches, std::size_t nfft,
 void free_vkfft() {
   vkDestroyBuffer(vkGPU.device, stagingBuffer, NULL);
   vkFreeMemory(vkGPU.device, stagingBufferMemory, NULL);
-  for (uint64_t i = 0; i < kVkNumBuf; i++) {
+  for (COUNT_T i = 0; i < kVkNumBuf; i++) {
     vkDestroyBuffer(vkGPU.device, vkConfiguration.buffer[i], NULL);
     vkFreeMemory(vkGPU.device, vkBufferDeviceMemory[i], NULL);
   }
