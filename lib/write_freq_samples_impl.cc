@@ -214,20 +214,20 @@ namespace gr {
 namespace iqtlabs {
 
 write_freq_samples::sptr write_freq_samples::make(
-    const std::string &tag, uint64_t itemsize, const std::string &datatype,
-    uint64_t vlen, const std::string &sdir, const std::string &prefix,
-    uint64_t write_step_samples, uint64_t skip_tune_step_samples,
-    uint64_t samp_rate, uint64_t rotate_secs, double gain, bool sigmf) {
+    const std::string &tag, COUNT_T itemsize, const std::string &datatype,
+    COUNT_T vlen, const std::string &sdir, const std::string &prefix,
+    COUNT_T write_step_samples, COUNT_T skip_tune_step_samples,
+    COUNT_T samp_rate, COUNT_T rotate_secs, double gain, bool sigmf) {
   return gnuradio::make_block_sptr<write_freq_samples_impl>(
       tag, itemsize, datatype, vlen, sdir, prefix, write_step_samples,
       skip_tune_step_samples, samp_rate, rotate_secs, gain, sigmf);
 }
 
 write_freq_samples_impl::write_freq_samples_impl(
-    const std::string &tag, uint64_t itemsize, const std::string &datatype,
-    uint64_t vlen, const std::string &sdir, const std::string &prefix,
-    uint64_t write_step_samples, uint64_t skip_tune_step_samples,
-    uint64_t samp_rate, uint64_t rotate_secs, double gain, bool sigmf)
+    const std::string &tag, COUNT_T itemsize, const std::string &datatype,
+    COUNT_T vlen, const std::string &sdir, const std::string &prefix,
+    COUNT_T write_step_samples, COUNT_T skip_tune_step_samples,
+    COUNT_T samp_rate, COUNT_T rotate_secs, double gain, bool sigmf)
     : gr::block("write_freq_samples",
                 gr::io_signature::make(1 /* min inputs */, 1 /* max inputs */,
                                        vlen * itemsize),
@@ -248,19 +248,19 @@ bool write_freq_samples_impl::stop() {
   return true;
 }
 
-void write_freq_samples_impl::write_(const char *data, size_t len) {
+void write_freq_samples_impl::write_(const char *data, COUNT_T len) {
   if (!outbuf_p->empty()) {
     outbuf_p->write(data, len);
   }
 }
 
-void write_freq_samples_impl::open_(size_t zlevel) {
+void write_freq_samples_impl::open_(COUNT_T zlevel) {
   close_();
   double now = host_now_();
   std::string samples_path = secs_dir(sdir_, rotate_secs_) + prefix_ + "_" +
                              std::to_string(now) + "_" +
                              std::to_string(FREQ_T(last_rx_freq_)) + "Hz_" +
-                             std::to_string(uint64_t(samp_rate_)) + "sps.raw";
+                             std::to_string(COUNT_T(samp_rate_)) + "sps.raw";
   zstfile_ = samples_path + ".zst";
   sigmffile_ = samples_path + ".sigmf-meta";
   open_time_ = now;
@@ -281,8 +281,8 @@ void write_freq_samples_impl::close_() {
   }
 }
 
-void write_freq_samples_impl::write_samples_(size_t c, const char *&in) {
-  for (size_t i = 0; i < c; ++i) {
+void write_freq_samples_impl::write_samples_(COUNT_T c, const char *&in) {
+  for (COUNT_T i = 0; i < c; ++i) {
     if (skip_tune_step_samples_count_) {
       in += itemsize_ * vlen_;
       --skip_tune_step_samples_count_;
@@ -302,8 +302,8 @@ int write_freq_samples_impl::general_work(
     int noutput_items, gr_vector_int &ninput_items,
     gr_vector_const_void_star &input_items, gr_vector_void_star &output_items) {
   auto in = static_cast<const char *>(input_items[0]);
-  const size_t in_count = ninput_items[0];
-  size_t in_first = nitems_read(0);
+  const COUNT_T in_count = ninput_items[0];
+  COUNT_T in_first = nitems_read(0);
 
   std::vector<tag_t> tags;
   get_tags_in_window(tags, 0, 0, in_count, tag_);
@@ -311,7 +311,7 @@ int write_freq_samples_impl::general_work(
   if (tags.empty()) {
     write_samples_(in_count, in);
   } else {
-    for (size_t t = 0; t < tags.size(); ++t) {
+    for (COUNT_T t = 0; t < tags.size(); ++t) {
       const auto &tag = tags[t];
       const auto rel = tag.offset - in_first;
       in_first += rel;

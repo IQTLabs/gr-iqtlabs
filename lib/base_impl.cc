@@ -240,7 +240,7 @@ std::string base_impl::host_now_str_(TIME_T host_now) {
 }
 
 pmt::pmt_t base_impl::make_rx_time_key_(TIME_T now) {
-  uint64_t now_sec = uint64_t(now);
+  COUNT_T now_sec = COUNT_T(now);
   return pmt::make_tuple(pmt::from_uint64(now_sec),
                          pmt::from_double(now - now_sec));
 }
@@ -250,11 +250,11 @@ TIME_T base_impl::rx_time_from_tag_(const gr::tag_t tag) {
          pmt::to_double(pmt::tuple_ref(tag.value, 1));
 }
 
-std::string base_impl::secs_dir(const std::string &dir, uint64_t rotate_secs) {
+std::string base_impl::secs_dir(const std::string &dir, COUNT_T rotate_secs) {
   if (rotate_secs) {
     const auto now = std::chrono::duration_cast<std::chrono::seconds>(
         std::chrono::high_resolution_clock::now().time_since_epoch());
-    uint64_t ts = now.count() / rotate_secs * rotate_secs;
+    COUNT_T ts = now.count() / rotate_secs * rotate_secs;
     const std::string ts_dir = dir + "/" + std::to_string(ts);
     boost::filesystem::create_directories(ts_dir);
     return ts_dir + "/";
@@ -297,8 +297,8 @@ void base_impl::write_sigmf(const std::string &filename,
 void base_impl::get_tags(const pmt::pmt_t want_tag,
                          const std::vector<tag_t> &all_tags,
                          std::vector<tag_t> &rx_freq_tags,
-                         std::vector<TIME_T> &rx_times, size_t in_count) {
-  for (size_t t = 0; t < all_tags.size(); ++t) {
+                         std::vector<TIME_T> &rx_times, COUNT_T in_count) {
+  for (COUNT_T t = 0; t < all_tags.size(); ++t) {
     const auto &tag = all_tags[t];
     if (tag.key == want_tag) {
       rx_freq_tags.push_back(tag);
@@ -312,7 +312,7 @@ void base_impl::get_tags(const pmt::pmt_t want_tag,
 
   if (rx_freq_tags.size() != rx_times.size()) {
     rx_times.clear();
-    for (size_t t = 0; t < rx_freq_tags.size(); ++t) {
+    for (COUNT_T t = 0; t < rx_freq_tags.size(); ++t) {
       rx_times.push_back(host_now_());
     }
   }

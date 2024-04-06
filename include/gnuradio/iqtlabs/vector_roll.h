@@ -228,7 +228,7 @@ public:
    * class. iqtlabs::vector_roll::make is the public interface for
    * creating new instances.
    */
-  static sptr make(std::size_t vlen);
+  static sptr make(uint64_t vlen);
 };
 
 } // namespace iqtlabs

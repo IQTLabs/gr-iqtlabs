@@ -222,43 +222,43 @@ namespace iqtlabs {
 typedef struct {
   FREQ_T freq_start;
   FREQ_T freq_end;
-  size_t steps;
+  COUNT_T steps;
 } tuning_range_t;
 
 class retuner_impl {
 public:
-  retuner_impl(uint64_t samp_rate, uint64_t tune_jitter_hz, uint64_t freq_start,
-               uint64_t freq_end, uint64_t tune_step_hz, uint64_t tune_step_fft,
-               uint64_t skip_tune_step_fft, const std::string &tuning_ranges,
+  retuner_impl(COUNT_T samp_rate, COUNT_T tune_jitter_hz, COUNT_T freq_start,
+               COUNT_T freq_end, COUNT_T tune_step_hz, COUNT_T tune_step_fft,
+               COUNT_T skip_tune_step_fft, const std::string &tuning_ranges,
                bool tag_now, bool low_power_hold_down, bool slew_rx_time);
-  void add_range_(uint64_t freq_start, uint64_t freq_end);
-  bool need_retune_(size_t n);
+  void add_range_(COUNT_T freq_start, COUNT_T freq_end);
+  bool need_retune_(COUNT_T n);
   void parse_tuning_ranges_(const std::string &tuning_ranges);
   void next_retune_(TIME_T host_now);
   TIME_T apply_rx_time_slew_(TIME_T rx_time);
-  uint64_t samp_rate_;
-  uint64_t tune_jitter_hz_;
-  uint64_t freq_start_;
-  uint64_t freq_end_;
-  uint64_t tune_step_hz_;
-  uint64_t tune_step_fft_;
-  uint64_t skip_tune_step_fft_;
+  COUNT_T samp_rate_;
+  COUNT_T tune_jitter_hz_;
+  COUNT_T freq_start_;
+  COUNT_T freq_end_;
+  COUNT_T tune_step_hz_;
+  COUNT_T tune_step_fft_;
+  COUNT_T skip_tune_step_fft_;
   bool tag_now_;
   bool low_power_hold_down_;
   bool slew_rx_time_;
 
-  uint64_t skip_fft_count_;
+  COUNT_T skip_fft_count_;
   FREQ_T tune_freq_;
   FREQ_T last_rx_freq_;
   TIME_T last_rx_time_;
   TIME_T last_sweep_start_;
-  size_t tuning_range_;
-  size_t last_tuning_range_;
-  size_t tuning_range_step_;
-  size_t fft_count_;
-  size_t pending_retune_;
-  size_t total_tune_count_;
-  size_t slew_samples_;
+  COUNT_T tuning_range_;
+  COUNT_T last_tuning_range_;
+  COUNT_T tuning_range_step_;
+  COUNT_T fft_count_;
+  COUNT_T pending_retune_;
+  COUNT_T total_tune_count_;
+  COUNT_T slew_samples_;
   std::vector<tuning_range_t> tuning_ranges_;
   bool stare_mode_;
   bool in_hold_down_;

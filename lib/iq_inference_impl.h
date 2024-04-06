@@ -221,13 +221,13 @@
 namespace gr {
 namespace iqtlabs {
 
-const size_t MAX_INFERENCE = 5;
+const COUNT_T MAX_INFERENCE = 5;
 
 typedef struct output_item {
   FREQ_T rx_freq;
   TIME_T rx_time;
   double points_max;
-  size_t sample_count;
+  COUNT_T sample_count;
   gr_complex *samples;
   float *power;
 } output_item_type;
@@ -238,17 +238,17 @@ private:
   boost::scoped_ptr<float> total_;
   boost::scoped_ptr<uint16_t> max_;
   pmt::pmt_t tag_;
-  size_t vlen_;
-  size_t sample_buffer_;
+  COUNT_T vlen_;
+  COUNT_T sample_buffer_;
   double min_peak_points_;
   std::string model_server_;
   std::vector<std::string> model_names_;
   double confidence_;
-  size_t n_inference_;
+  COUNT_T n_inference_;
   int samp_rate_;
   bool power_inference_;
-  size_t inference_count_;
-  size_t samples_since_tag_;
+  COUNT_T inference_count_;
+  COUNT_T samples_since_tag_;
   boost::lockfree::spsc_queue<output_item_type> inference_q_{MAX_INFERENCE};
   boost::lockfree::spsc_queue<std::string> json_q_{MAX_INFERENCE};
   bool running_;
@@ -261,18 +261,18 @@ private:
   boost::asio::io_context ioc_;
   boost::scoped_ptr<boost::beast::tcp_stream> stream_;
 
-  void process_items_(size_t power_in_count, uint64_t &power_read,
-                      const float *&power_in, size_t &consumed);
+  void process_items_(COUNT_T power_in_count, COUNT_T &power_read,
+                      const float *&power_in, COUNT_T &consumed);
   void delete_output_item_(output_item_type &output_item);
   void delete_inference_();
   void background_run_inference_();
   void run_inference_();
 
 public:
-  iq_inference_impl(const std::string &tag, size_t vlen, size_t sample_buffer,
+  iq_inference_impl(const std::string &tag, COUNT_T vlen, COUNT_T sample_buffer,
                     double min_peak_points, const std::string &model_server,
                     const std::string &model_names, double confidence,
-                    size_t n_inference, int samp_rate, bool power_inference);
+                    COUNT_T n_inference, int samp_rate, bool power_inference);
   void forecast(int noutput_items, gr_vector_int &ninput_items_required);
   int general_work(int noutput_items, gr_vector_int &ninput_items,
                    gr_vector_const_void_star &input_items,

@@ -212,10 +212,10 @@ namespace gr {
 namespace iqtlabs {
 
 iq_inference::sptr
-iq_inference::make(const std::string &tag, size_t vlen, size_t sample_buffer,
+iq_inference::make(const std::string &tag, COUNT_T vlen, COUNT_T sample_buffer,
                    double min_peak_points, const std::string &model_server,
                    const std::string &model_names, double confidence,
-                   size_t n_inference, int samp_rate, bool power_inference) {
+                   COUNT_T n_inference, int samp_rate, bool power_inference) {
   return gnuradio::make_block_sptr<iq_inference_impl>(
       tag, vlen, sample_buffer, min_peak_points, model_server, model_names,
       confidence, n_inference, samp_rate, power_inference);
@@ -224,12 +224,12 @@ iq_inference::make(const std::string &tag, size_t vlen, size_t sample_buffer,
 /*
  * The private constructor
  */
-iq_inference_impl::iq_inference_impl(const std::string &tag, size_t vlen,
-                                     size_t sample_buffer,
+iq_inference_impl::iq_inference_impl(const std::string &tag, COUNT_T vlen,
+                                     COUNT_T sample_buffer,
                                      double min_peak_points,
                                      const std::string &model_server,
                                      const std::string &model_names,
-                                     double confidence, size_t n_inference,
+                                     double confidence, COUNT_T n_inference,
                                      int samp_rate, bool power_inference)
     : gr::block("iq_inference",
                 gr::io_signature::makev(
@@ -309,7 +309,7 @@ void iq_inference_impl::run_inference_() {
     if ((host_.size() && port_.size()) && (model_names_.size() > 0)) {
       std::string error;
       nlohmann::json results_json;
-      size_t rendered_predictions = 0;
+      COUNT_T rendered_predictions = 0;
 
       for (auto model_name : model_names_) {
         const std::string_view body(
@@ -426,14 +426,14 @@ void iq_inference_impl::forecast(int noutput_items,
   ninput_items_required[0] = 1;
 }
 
-void iq_inference_impl::process_items_(size_t power_in_count,
-                                       uint64_t &power_read,
+void iq_inference_impl::process_items_(COUNT_T power_in_count,
+                                       COUNT_T &power_read,
                                        const float *&power_in,
-                                       size_t &consumed) {
-  for (size_t i = 0; i < power_in_count;
+                                       COUNT_T &consumed) {
+  for (COUNT_T i = 0; i < power_in_count;
        ++i, power_in += vlen_, samples_since_tag_ += vlen_) {
     ++consumed;
-    size_t j = (power_read + i) % sample_buffer_;
+    COUNT_T j = (power_read + i) % sample_buffer_;
     volk_32f_index_max_16u(max_.get(), power_in, vlen_);
     float power_max = power_in[*max_];
     if (power_max < min_peak_points_) {
@@ -470,16 +470,16 @@ int iq_inference_impl::general_work(int noutput_items,
                                     gr_vector_int &ninput_items,
                                     gr_vector_const_void_star &input_items,
                                     gr_vector_void_star &output_items) {
-  size_t samples_in_count = ninput_items[0];
-  size_t power_in_count = ninput_items[1];
-  size_t in_first = nitems_read(1);
+  COUNT_T samples_in_count = ninput_items[0];
+  COUNT_T power_in_count = ninput_items[1];
+  COUNT_T in_first = nitems_read(1);
   const gr_complex *samples_in =
       static_cast<const gr_complex *>(input_items[0]);
   const float *power_in = static_cast<const float *>(input_items[1]);
   std::vector<tag_t> all_tags, rx_freq_tags;
   std::vector<TIME_T> rx_times;
-  size_t consumed = 0;
-  size_t leftover = 0;
+  COUNT_T consumed = 0;
+  COUNT_T leftover = 0;
 
   while (!json_q_.empty()) {
     std::string json;
@@ -489,7 +489,7 @@ int iq_inference_impl::general_work(int noutput_items,
 
   if (!out_buf_.empty()) {
     auto out = static_cast<char *>(output_items[0]);
-    leftover = std::min(out_buf_.size(), (size_t)noutput_items);
+    leftover = std::min(out_buf_.size(), (COUNT_T)noutput_items);
     auto from = out_buf_.begin();
     auto to = from + leftover;
     std::copy(from, to, out);
@@ -499,17 +499,17 @@ int iq_inference_impl::general_work(int noutput_items,
   get_tags_in_window(all_tags, 1, 0, power_in_count);
   get_tags(tag_, all_tags, rx_freq_tags, rx_times, power_in_count);
 
-  for (size_t i = 0; i < samples_in_count; ++i, samples_in += vlen_) {
-    size_t j = (nitems_read(0) + i) % sample_buffer_;
+  for (COUNT_T i = 0; i < samples_in_count; ++i, samples_in += vlen_) {
+    COUNT_T j = (nitems_read(0) + i) % sample_buffer_;
     memcpy((void *)&samples_lookback_[j * vlen_], samples_in,
            sizeof(gr_complex) * vlen_);
   }
 
-  uint64_t power_read = nitems_read(1);
+  COUNT_T power_read = nitems_read(1);
   if (rx_freq_tags.empty()) {
     process_items_(power_in_count, power_read, power_in, consumed);
   } else {
-    for (size_t t = 0; t < rx_freq_tags.size(); ++t) {
+    for (COUNT_T t = 0; t < rx_freq_tags.size(); ++t) {
       const auto &tag = rx_freq_tags[t];
       const TIME_T rx_time = rx_times[t];
       const auto rel = tag.offset - in_first;

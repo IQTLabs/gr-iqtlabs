@@ -203,20 +203,21 @@
  */
 
 #include "vector_roll_impl.h"
+#include "iqtlabs_types.h"
 #include <gnuradio/io_signature.h>
 
 namespace gr {
 namespace iqtlabs {
 
 using vector_type = gr_complex;
-vector_roll::sptr vector_roll::make(std::size_t vlen) {
+vector_roll::sptr vector_roll::make(COUNT_T vlen) {
   return gnuradio::make_block_sptr<vector_roll_impl>(vlen);
 }
 
 /*
  * The private constructor
  */
-vector_roll_impl::vector_roll_impl(std::size_t vlen)
+vector_roll_impl::vector_roll_impl(COUNT_T vlen)
     : gr::sync_block(
           "vector_roll",
           gr::io_signature::make(1 /* min inputs */, 1 /* max inputs */,
@@ -235,8 +236,8 @@ int vector_roll_impl::work(int noutput_items,
                            gr_vector_void_star &output_items) {
   auto *in = static_cast<const vector_type *>(input_items[0]);
   auto *out = static_cast<vector_type *>(output_items[0]);
-  const size_t hvlen = vlen_ / 2;
-  const size_t hvlen_size = hvlen * sizeof(vector_type);
+  const COUNT_T hvlen = vlen_ / 2;
+  const COUNT_T hvlen_size = hvlen * sizeof(vector_type);
 
   for (int i = 0; i < noutput_items; ++i) {
     std::memcpy((void *)(out + hvlen), (const void *)in, hvlen_size);

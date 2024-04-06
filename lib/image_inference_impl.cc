@@ -300,7 +300,7 @@ image_inference_impl::image_inference_impl(
 
 void image_inference_impl::volk_min_max_mean(const cv::Mat &mat, float &min,
                                              float &max, float &mean) {
-  size_t mat_size = mat.rows * mat.cols;
+  COUNT_T mat_size = mat.rows * mat.cols;
   const float *mat_data = (const float *)mat.data;
   unsigned int alignment = volk_get_alignment();
   boost::scoped_ptr<uint32_t> min_pos, max_pos;
@@ -344,15 +344,15 @@ bool image_inference_impl::stop() {
   return true;
 }
 
-void image_inference_impl::process_items_(size_t c, size_t &consumed,
+void image_inference_impl::process_items_(COUNT_T c, COUNT_T &consumed,
                                           const input_type *&in) {
   while (c) {
-    size_t existing_rows = 0;
+    COUNT_T existing_rows = 0;
     if (points_buffer_) {
       existing_rows = points_buffer_->rows;
     }
-    size_t new_rows = std::min(std::min(size_t(max_rows_ - existing_rows), c),
-                               size_t(max_rows_));
+    COUNT_T new_rows = std::min(std::min(COUNT_T(max_rows_ - existing_rows), c),
+                                COUNT_T(max_rows_));
     if (new_rows) {
       cv::Size new_size(vlen_, new_rows);
       if (!points_buffer_) {
@@ -408,9 +408,9 @@ std::string image_inference_impl::write_image_(
   cv::imencode(IMAGE_EXT, *output_item.image_buffer, *encoded_buffer);
   std::string image_file_base =
       prefix + "_" + std::to_string(output_item.start_item) + "_" +
-      host_now_str_(output_item.ts) + "_" + std::to_string(uint64_t(x_)) + "x" +
-      std::to_string(uint64_t(y_)) + "_" +
-      std::to_string(uint64_t(output_item.rx_freq)) + "Hz";
+      host_now_str_(output_item.ts) + "_" + std::to_string(COUNT_T(x_)) + "x" +
+      std::to_string(COUNT_T(y_)) + "_" +
+      std::to_string(COUNT_T(output_item.rx_freq)) + "Hz";
   std::string image_file_png = image_file_base + IMAGE_EXT;
   std::string dot_image_file_png = secs_image_dir + "." + image_file_png;
   std::string full_image_file_png = secs_image_dir + image_file_png;
@@ -458,11 +458,11 @@ void image_inference_impl::bbox_text(const output_item_type &output_item,
               text_color_, thickness, lineStyle, false);
 }
 
-size_t image_inference_impl::parse_inference_(
+COUNT_T image_inference_impl::parse_inference_(
     const output_item_type &output_item, const std::string &results,
     const std::string &model_name, nlohmann::json &results_json,
     std::string &error, bool &valid_json) {
-  size_t rendered_predictions = 0;
+  COUNT_T rendered_predictions = 0;
   const float xf = float(output_item.points_buffer->cols) /
                    float(output_item.image_buffer->cols);
   const float yf = float(output_item.points_buffer->rows) /
@@ -564,7 +564,7 @@ void image_inference_impl::run_inference_() {
       }
       std::string error;
       nlohmann::json results_json;
-      size_t rendered_predictions = 0;
+      COUNT_T rendered_predictions = 0;
 
       for (auto model_name : model_names_) {
         const std::string_view body(
@@ -659,10 +659,10 @@ int image_inference_impl::general_work(int noutput_items,
                                        gr_vector_const_void_star &input_items,
                                        gr_vector_void_star &output_items) {
   const input_type *in = static_cast<const input_type *>(input_items[0]);
-  size_t in_count = ninput_items[0];
-  size_t in_first = nitems_read(0);
-  size_t leftover = 0;
-  size_t consumed = 0;
+  COUNT_T in_count = ninput_items[0];
+  COUNT_T in_first = nitems_read(0);
+  COUNT_T leftover = 0;
+  COUNT_T consumed = 0;
 
   while (!json_q_.empty()) {
     std::string json;
@@ -672,7 +672,7 @@ int image_inference_impl::general_work(int noutput_items,
 
   if (!out_buf_.empty()) {
     auto out = static_cast<output_type *>(output_items[0]);
-    leftover = std::min(out_buf_.size(), (size_t)noutput_items);
+    leftover = std::min(out_buf_.size(), (COUNT_T)noutput_items);
     auto from = out_buf_.begin();
     auto to = from + leftover;
     std::copy(from, to, out);
@@ -687,7 +687,7 @@ int image_inference_impl::general_work(int noutput_items,
   if (rx_freq_tags.empty()) {
     process_items_(in_count, consumed, in);
   } else {
-    for (size_t t = 0; t < rx_freq_tags.size(); ++t) {
+    for (COUNT_T t = 0; t < rx_freq_tags.size(); ++t) {
       const auto &tag = rx_freq_tags[t];
       const TIME_T rx_time = rx_times[t];
       const auto rel = tag.offset - in_first;

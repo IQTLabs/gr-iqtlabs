@@ -205,6 +205,7 @@
 #ifndef INCLUDED_IQTLABS_VECTOR_ROLL_IMPL_H
 #define INCLUDED_IQTLABS_VECTOR_ROLL_IMPL_H
 
+#include "iqtlabs_types.h"
 #include <gnuradio/iqtlabs/vector_roll.h>
 
 namespace gr {
@@ -212,10 +213,10 @@ namespace iqtlabs {
 
 class vector_roll_impl : public vector_roll {
 private:
-  std::size_t vlen_;
+  COUNT_T vlen_;
 
 public:
-  vector_roll_impl(std::size_t vlen);
+  vector_roll_impl(COUNT_T vlen);
   ~vector_roll_impl();
 
   int work(int noutput_items, gr_vector_const_void_star &input_items,

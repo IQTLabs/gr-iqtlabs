@@ -208,10 +208,10 @@
 namespace gr {
 namespace iqtlabs {
 
-retuner_impl::retuner_impl(uint64_t samp_rate, uint64_t tune_jitter_hz,
-                           uint64_t freq_start, uint64_t freq_end,
-                           uint64_t tune_step_hz, uint64_t tune_step_fft,
-                           uint64_t skip_tune_step_fft,
+retuner_impl::retuner_impl(COUNT_T samp_rate, COUNT_T tune_jitter_hz,
+                           COUNT_T freq_start, COUNT_T freq_end,
+                           COUNT_T tune_step_hz, COUNT_T tune_step_fft,
+                           COUNT_T skip_tune_step_fft,
                            const std::string &tuning_ranges, bool tag_now,
                            bool low_power_hold_down, bool slew_rx_time)
     : samp_rate_(samp_rate), tune_jitter_hz_(tune_jitter_hz),
@@ -233,17 +233,17 @@ retuner_impl::retuner_impl(uint64_t samp_rate, uint64_t tune_jitter_hz,
   }
 }
 
-void retuner_impl::add_range_(uint64_t freq_start, uint64_t freq_end) {
+void retuner_impl::add_range_(COUNT_T freq_start, COUNT_T freq_end) {
   // TODO: this could be a vector of steps that could be retuned to
   // in random order each time, to implement a frequency hopping scanner.
-  uint64_t steps = (freq_end - freq_start) / tune_step_hz_ + 1;
+  COUNT_T steps = (freq_end - freq_start) / tune_step_hz_ + 1;
   if (steps > 1) {
     ++steps;
   }
   tuning_ranges_.push_back({freq_start, freq_end, steps});
 }
 
-bool retuner_impl::need_retune_(size_t n) {
+bool retuner_impl::need_retune_(COUNT_T n) {
   fft_count_ += n;
   if (fft_count_ < tune_step_fft_) {
     return false;
@@ -267,20 +267,20 @@ void retuner_impl::parse_tuning_ranges_(const std::string &tuning_ranges) {
                  boost::token_compress_on);
     freq_start_ = UINT64_MAX;
     freq_end_ = 0;
-    for (size_t i = 0; i < tuning_ranges_raw.size(); ++i) {
+    for (COUNT_T i = 0; i < tuning_ranges_raw.size(); ++i) {
       std::vector<std::string> tuning_range_raw;
       boost::split(tuning_range_raw, tuning_ranges_raw[i],
                    boost::is_any_of("-"), boost::token_compress_on);
       if (tuning_range_raw.size() != 2) {
         throw std::invalid_argument("invalid tuning_range (must be min-max)");
       }
-      uint64_t tuning_range_freq_start =
-          (uint64_t)strtold(tuning_range_raw[0].c_str(), NULL);
+      COUNT_T tuning_range_freq_start =
+          (COUNT_T)strtold(tuning_range_raw[0].c_str(), NULL);
       if (!tuning_range_freq_start) {
         throw std::invalid_argument("tuning range min cannot be 0");
       }
-      uint64_t tuning_range_freq_end =
-          (uint64_t)strtold(tuning_range_raw[1].c_str(), NULL);
+      COUNT_T tuning_range_freq_end =
+          (COUNT_T)strtold(tuning_range_raw[1].c_str(), NULL);
       if (!tuning_range_freq_end) {
         throw std::invalid_argument("tuning range max cannot be 0");
       }
@@ -315,7 +315,7 @@ void retuner_impl::next_retune_(TIME_T host_now) {
     last_sweep_start_ = host_now;
     return;
   }
-  size_t range_steps = tuning_ranges_[tuning_range_].steps;
+  COUNT_T range_steps = tuning_ranges_[tuning_range_].steps;
   tune_freq_ += tune_step_hz_;
   if (tune_jitter_hz_ > 0) {
     tune_freq_ -= tune_jitter_hz_;

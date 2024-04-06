@@ -237,14 +237,14 @@ public:
   std::string host_now_str_(TIME_T host_now);
   pmt::pmt_t make_rx_time_key_(TIME_T host_now);
   TIME_T rx_time_from_tag_(const gr::tag_t tag);
-  std::string secs_dir(const std::string &dir, uint64_t rotate_secs);
+  std::string secs_dir(const std::string &dir, COUNT_T rotate_secs);
   void write_sigmf(const std::string &filename, const std::string &source_file,
                    double timestamp, const std::string &datatype,
                    double sample_rate, double frequency, double gain);
   void get_tags(const pmt::pmt_t want_tag, const std::vector<tag_t> &all_tags,
                 std::vector<tag_t> &rx_freq_tags, std::vector<TIME_T> &rx_times,
-                size_t in_count);
-  pmt::pmt_t tune_rx_msg(uint64_t tune_freq, bool tag_now);
+                COUNT_T in_count);
+  pmt::pmt_t tune_rx_msg(COUNT_T tune_freq, bool tag_now);
 };
 } /* namespace iqtlabs */
 } /* namespace gr */

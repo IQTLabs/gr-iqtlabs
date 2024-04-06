@@ -218,27 +218,27 @@ namespace iqtlabs {
 
 class write_freq_samples_impl : public write_freq_samples, base_impl {
 private:
-  void write_(const char *data, size_t len);
-  void open_(size_t zlevel);
+  void write_(const char *data, COUNT_T len);
+  void open_(COUNT_T zlevel);
   void close_();
-  void write_samples_(size_t c, const char *&in);
+  void write_samples_(COUNT_T c, const char *&in);
 
   pmt::pmt_t tag_;
-  uint64_t itemsize_;
-  uint64_t vlen_;
+  COUNT_T itemsize_;
+  COUNT_T vlen_;
   std::string sdir_;
   std::string prefix_;
   std::string datatype_;
-  uint64_t write_step_samples_;
-  uint64_t skip_tune_step_samples_;
-  uint64_t samp_rate_;
+  COUNT_T write_step_samples_;
+  COUNT_T skip_tune_step_samples_;
+  COUNT_T samp_rate_;
   double gain_;
   bool sigmf_;
 
-  uint64_t write_step_samples_count_;
-  uint64_t skip_tune_step_samples_count_;
+  COUNT_T write_step_samples_count_;
+  COUNT_T skip_tune_step_samples_count_;
   FREQ_T last_rx_freq_;
-  uint64_t rotate_secs_;
+  COUNT_T rotate_secs_;
   TIME_T open_time_;
 
   boost::scoped_ptr<boost::iostreams::filtering_ostream> outbuf_p;
@@ -246,12 +246,12 @@ private:
   std::string sigmffile_;
 
 public:
-  write_freq_samples_impl(const std::string &tag, uint64_t itemsize,
-                          const std::string &datatype, uint64_t vlen,
+  write_freq_samples_impl(const std::string &tag, COUNT_T itemsize,
+                          const std::string &datatype, COUNT_T vlen,
                           const std::string &sdir, const std::string &prefix,
-                          uint64_t write_step_samples,
-                          uint64_t skip_tune_step_samples, uint64_t samp_rate,
-                          uint64_t rotate_secs, double gain, bool sigmf);
+                          COUNT_T write_step_samples,
+                          COUNT_T skip_tune_step_samples, COUNT_T samp_rate,
+                          COUNT_T rotate_secs, double gain, bool sigmf);
   ~write_freq_samples_impl();
   int general_work(int noutput_items, gr_vector_int &ninput_items,
                    gr_vector_const_void_star &input_items,

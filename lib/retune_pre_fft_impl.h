@@ -218,21 +218,21 @@ using block_type = gr_complex;
 class retune_pre_fft_impl : public retune_pre_fft, base_impl, retuner_impl {
 private:
   bool all_zeros_(const block_type *&in);
-  void process_items_(size_t c, const block_type *&in, const block_type *&out,
-                      size_t &consumed, size_t &produced);
-  void add_output_tags_(TIME_T rx_time, FREQ_T rx_freq, size_t rel);
+  void process_items_(COUNT_T c, const block_type *&in, const block_type *&out,
+                      COUNT_T &consumed, COUNT_T &produced);
+  void add_output_tags_(TIME_T rx_time, FREQ_T rx_freq, COUNT_T rel);
 
-  size_t nfft_;
-  size_t fft_batch_size_;
+  COUNT_T nfft_;
+  COUNT_T fft_batch_size_;
   pmt::pmt_t tag_;
   boost::scoped_ptr<float> total_;
 
 public:
-  retune_pre_fft_impl(size_t nfft, uint64_t samp_rate, uint64_t tune_jitter_hz,
-                      size_t fft_batch_size, const std::string &tag,
-                      uint64_t freq_start, uint64_t freq_end,
-                      uint64_t tune_step_hz, uint64_t tune_step_fft,
-                      uint64_t skip_tune_step_fft,
+  retune_pre_fft_impl(COUNT_T nfft, COUNT_T samp_rate, COUNT_T tune_jitter_hz,
+                      COUNT_T fft_batch_size, const std::string &tag,
+                      COUNT_T freq_start, COUNT_T freq_end,
+                      COUNT_T tune_step_hz, COUNT_T tune_step_fft,
+                      COUNT_T skip_tune_step_fft,
                       const std::string &tuning_ranges, bool tag_now,
                       bool low_power_hold_down, bool slew_rx_time);
   ~retune_pre_fft_impl();

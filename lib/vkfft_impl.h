@@ -213,11 +213,11 @@ namespace iqtlabs {
 
 class vkfft_impl : public vkfft, base_impl {
 private:
-  std::size_t nfft_;
-  std::size_t fft_batch_size_;
+  COUNT_T nfft_;
+  COUNT_T fft_batch_size_;
 
 public:
-  vkfft_impl(std::size_t fft_batch_size, std::size_t nfft, bool shift);
+  vkfft_impl(COUNT_T fft_batch_size, COUNT_T nfft, bool shift);
   ~vkfft_impl();
 
   int work(int noutput_items, gr_vector_const_void_star &input_items,

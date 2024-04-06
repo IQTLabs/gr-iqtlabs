@@ -1,6 +1,10 @@
 #include <cstdint>
 
-int64_t init_vkfft(std::size_t batches, std::size_t nfft,
-                   std::size_t sample_size, bool shift);
+#include "iqtlabs_types.h"
+
+using COUNT_T = gr::iqtlabs::COUNT_T;
+
+int64_t init_vkfft(COUNT_T batches, COUNT_T nfft, COUNT_T sample_size,
+                   bool shift);
 void free_vkfft();
 void vkfft_offload(char *in, char *out);
