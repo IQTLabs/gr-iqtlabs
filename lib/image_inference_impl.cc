@@ -540,6 +540,8 @@ void image_inference_impl::run_inference_() {
     metadata_json["ts"] = host_now_str_(output_item.ts);
     metadata_json["rx_freq"] = std::to_string(output_item.rx_freq);
     metadata_json["start_item"] = std::to_string(output_item.start_item);
+    metadata_json["sample_clock"] =
+        std::to_string(output_item.start_item * vlen_);
     metadata_json["orig_rows"] = output_item.points_buffer->rows;
 
     const std::string secs_image_dir = secs_dir(image_dir_, rotate_secs_);

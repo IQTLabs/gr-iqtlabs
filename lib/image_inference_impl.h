@@ -245,7 +245,7 @@ private:
       rotate_secs_, n_image_, n_inference_, image_count_, inference_count_,
       samp_rate_;
   FREQ_T last_rx_freq_;
-  uint64 last_image_start_item_;
+  COUNT_T last_image_start_item_;
   double convert_alpha_, norm_alpha_, norm_beta_, last_rx_time_,
       min_peak_points_, confidence_;
   boost::lockfree::spsc_queue<output_item_type> inference_q_{MAX_INFERENCE};
