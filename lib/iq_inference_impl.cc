@@ -243,7 +243,7 @@ iq_inference_impl::iq_inference_impl(const std::string &tag, COUNT_T vlen,
       confidence_(confidence), n_inference_(n_inference), samp_rate_(samp_rate),
       power_inference_(power_inference), inference_count_(0), running_(true),
       last_rx_freq_(0), last_rx_time_(0), inference_connected_(false),
-      samples_since_tag_(0) {
+      samples_since_tag_(0), sample_clock_(0) {
   samples_lookback_.reset(new gr_complex[vlen * sample_buffer]);
   unsigned int alignment = volk_get_alignment();
   total_.reset((float *)volk_malloc(sizeof(float), alignment));
@@ -303,6 +303,7 @@ void iq_inference_impl::run_inference_() {
     inference_q_.pop(output_item);
     nlohmann::json metadata_json;
     metadata_json["ts"] = host_now_str_(output_item.rx_time);
+    metadata_json["sample_clock"] = std::to_string(output_item.sample_clock);
     metadata_json["rx_freq"] = std::to_string(output_item.rx_freq);
     nlohmann::json output_json;
 
@@ -430,8 +431,8 @@ void iq_inference_impl::process_items_(COUNT_T power_in_count,
                                        COUNT_T &power_read,
                                        const float *&power_in,
                                        COUNT_T &consumed) {
-  for (COUNT_T i = 0; i < power_in_count;
-       ++i, power_in += vlen_, samples_since_tag_ += vlen_) {
+  for (COUNT_T i = 0; i < power_in_count; ++i, power_in += vlen_,
+               samples_since_tag_ += vlen_, sample_clock_ += vlen_) {
     ++consumed;
     COUNT_T j = (power_read + i) % sample_buffer_;
     volk_32f_index_max_16u(max_.get(), power_in, vlen_);
@@ -451,6 +452,7 @@ void iq_inference_impl::process_items_(COUNT_T power_in_count,
     output_item_type output_item;
     output_item.rx_time =
         last_rx_time_ + (samples_since_tag_ / TIME_T(samp_rate_));
+    output_item.sample_clock = sample_clock_;
     output_item.rx_freq = last_rx_freq_;
     output_item.sample_count = vlen_;
     output_item.samples = new gr_complex[output_item.sample_count];

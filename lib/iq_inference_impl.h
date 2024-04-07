@@ -228,6 +228,7 @@ typedef struct output_item {
   TIME_T rx_time;
   double points_max;
   COUNT_T sample_count;
+  COUNT_T sample_clock;
   gr_complex *samples;
   float *power;
 } output_item_type;
@@ -240,6 +241,7 @@ private:
   pmt::pmt_t tag_;
   COUNT_T vlen_;
   COUNT_T sample_buffer_;
+  COUNT_T sample_clock_;
   double min_peak_points_;
   std::string model_server_;
   std::vector<std::string> model_names_;
