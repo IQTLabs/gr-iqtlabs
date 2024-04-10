@@ -240,6 +240,8 @@ private:
   boost::scoped_ptr<uint16_t> max_;
   pmt::pmt_t tag_;
   COUNT_T vlen_;
+  COUNT_T n_vlen_;
+  COUNT_T batch_;
   COUNT_T sample_buffer_;
   COUNT_T sample_clock_;
   double min_peak_points_;
@@ -271,8 +273,9 @@ private:
   void run_inference_();
 
 public:
-  iq_inference_impl(const std::string &tag, COUNT_T vlen, COUNT_T sample_buffer,
-                    double min_peak_points, const std::string &model_server,
+  iq_inference_impl(const std::string &tag, COUNT_T vlen, COUNT_T vlen_,
+                    COUNT_T sample_buffer, double min_peak_points,
+                    const std::string &model_server,
                     const std::string &model_names, double confidence,
                     COUNT_T n_inference, int samp_rate, bool power_inference);
   void forecast(int noutput_items, gr_vector_int &ninput_items_required);

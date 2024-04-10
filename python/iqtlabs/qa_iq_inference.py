@@ -286,6 +286,7 @@ class qa_iq_inference(gr_unittest.TestCase):
         iq_inf = iq_inference(
             tag="rx_freq",
             vlen=fft_size,
+            n_vlen=1,
             sample_buffer=512,
             min_peak_points=-1e9,
             model_server=f"localhost:{port}",
