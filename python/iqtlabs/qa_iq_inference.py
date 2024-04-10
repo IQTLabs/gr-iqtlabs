@@ -336,6 +336,8 @@ class qa_iq_inference(gr_unittest.TestCase):
             self.simulate_torchserve(port, model_name, predictions_result, fft_size)
             return
         samp_rate = 4e6
+        # added by inference client.
+        predictions_result["modulation"][0]["model"] = model_name
         with tempfile.TemporaryDirectory() as tmpdir:
             test_file = self.run_flowgraph(
                 tmpdir, fft_size, samp_rate, port, model_name
@@ -345,6 +347,7 @@ class qa_iq_inference(gr_unittest.TestCase):
                 content = f.read()
             json_raw_all = content.split("\n\n")
             self.assertTrue(json_raw_all)
+            last_sc = 0
             last_ts = 0
             last_rx_freq = 0
             for json_raw in json_raw_all:
@@ -352,12 +355,16 @@ class qa_iq_inference(gr_unittest.TestCase):
                     continue
                 result = json.loads(json_raw)
                 print(result)
+                self.assertEqual(result["predictions"], predictions_result)
                 self.assertEqual(result.get("error", None), None)
                 rx_freq = float(result["metadata"]["rx_freq"])
-                ts = float(result["metadata"]["rx_freq"])
+                ts = float(result["metadata"]["ts"])
+                sc = float(result["metadata"]["sample_clock"])
                 self.assertGreater(rx_freq, last_rx_freq)
                 self.assertGreater(ts, last_ts)
+                self.assertGreater(sc, last_sc)
                 last_ts = ts
+                last_sc = sc
                 last_rx_freq = rx_freq
 
 

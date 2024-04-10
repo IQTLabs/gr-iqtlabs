@@ -372,7 +372,7 @@ void retune_fft_impl::process_items_(COUNT_T c, const input_type *&in,
     // we continue to observe samples for the previous frequency for some time.
     // Then, we receive all complex 0's for a time, and then we receive samples
     // for actual frequency requested. We detect the all-zeros condition (by
-    // observing implausibly low power) condition and move the rx_time and
+    // observing implausibly low power) and move the rx_time and
     // rx_freq tags to this position.
     volk_32f_index_max_16u(in_max_pos_.get(), in, nfft_);
     float in_max = in[*in_max_pos_];
