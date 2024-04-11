@@ -14,7 +14,7 @@
 /* BINDTOOL_GEN_AUTOMATIC(0)                                                       */
 /* BINDTOOL_USE_PYGCCXML(0)                                                        */
 /* BINDTOOL_HEADER_FILE(iq_inference.h)                                        */
-/* BINDTOOL_HEADER_FILE_HASH(6a9ef5381c3f6257c6c08dc3560e8abe)                     */
+/* BINDTOOL_HEADER_FILE_HASH(bda97b811b8010b3e26c61b90e9144ce)                     */
 /***********************************************************************************/
 
 #include <pybind11/complex.h>
@@ -39,6 +39,7 @@ void bind_iq_inference(py::module& m)
         .def(py::init(&iq_inference::make),
              py::arg("tag"),
              py::arg("vlen"),
+             py::arg("n_vlen"),
              py::arg("sample_buffer"),
              py::arg("min_peak_points"),
              py::arg("model_server"),

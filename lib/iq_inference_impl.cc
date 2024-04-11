@@ -211,21 +211,23 @@
 namespace gr {
 namespace iqtlabs {
 
-iq_inference::sptr
-iq_inference::make(const std::string &tag, COUNT_T vlen, COUNT_T sample_buffer,
-                   double min_peak_points, const std::string &model_server,
-                   const std::string &model_names, double confidence,
-                   COUNT_T n_inference, int samp_rate, bool power_inference) {
+iq_inference::sptr iq_inference::make(const std::string &tag, COUNT_T vlen,
+                                      COUNT_T n_vlen, COUNT_T sample_buffer,
+                                      double min_peak_points,
+                                      const std::string &model_server,
+                                      const std::string &model_names,
+                                      double confidence, COUNT_T n_inference,
+                                      int samp_rate, bool power_inference) {
   return gnuradio::make_block_sptr<iq_inference_impl>(
-      tag, vlen, sample_buffer, min_peak_points, model_server, model_names,
-      confidence, n_inference, samp_rate, power_inference);
+      tag, vlen, n_vlen, sample_buffer, min_peak_points, model_server,
+      model_names, confidence, n_inference, samp_rate, power_inference);
 }
 
 /*
  * The private constructor
  */
 iq_inference_impl::iq_inference_impl(const std::string &tag, COUNT_T vlen,
-                                     COUNT_T sample_buffer,
+                                     COUNT_T n_vlen, COUNT_T sample_buffer,
                                      double min_peak_points,
                                      const std::string &model_server,
                                      const std::string &model_names,
@@ -238,15 +240,16 @@ iq_inference_impl::iq_inference_impl(const std::string &tag, COUNT_T vlen,
                                      (int)(vlen * sizeof(float))}),
                 gr::io_signature::make(1 /* min outputs */, 1 /* max outputs */,
                                        sizeof(char))),
-      tag_(pmt::intern(tag)), vlen_(vlen), sample_buffer_(sample_buffer),
-      min_peak_points_(min_peak_points), model_server_(model_server),
-      confidence_(confidence), n_inference_(n_inference), samp_rate_(samp_rate),
+      tag_(pmt::intern(tag)), vlen_(vlen), n_vlen_(n_vlen),
+      sample_buffer_(sample_buffer), min_peak_points_(min_peak_points),
+      model_server_(model_server), confidence_(confidence),
+      n_inference_(n_inference), samp_rate_(samp_rate),
       power_inference_(power_inference), inference_count_(0), running_(true),
       last_rx_freq_(0), last_rx_time_(0), inference_connected_(false),
       samples_since_tag_(0), sample_clock_(0) {
-  samples_lookback_.reset(new gr_complex[vlen * sample_buffer]);
+  batch_ = vlen_ * n_vlen_;
+  samples_lookback_.reset(new gr_complex[batch_ * sample_buffer]);
   unsigned int alignment = volk_get_alignment();
-  total_.reset((float *)volk_malloc(sizeof(float), alignment));
   max_.reset((uint16_t *)volk_malloc(sizeof(uint16_t), alignment));
   std::vector<std::string> model_server_parts_;
   std::vector<std::string> text_color_parts_;
@@ -264,6 +267,7 @@ iq_inference_impl::iq_inference_impl(const std::string &tag, COUNT_T vlen,
   stream_.reset(new boost::beast::tcp_stream(ioc_));
   inference_thread_.reset(
       new std::thread(&iq_inference_impl::background_run_inference_, this));
+  set_output_multiple(n_vlen_);
 }
 
 void iq_inference_impl::delete_output_item_(output_item_type &output_item) {
@@ -431,11 +435,11 @@ void iq_inference_impl::process_items_(COUNT_T power_in_count,
                                        COUNT_T &power_read,
                                        const float *&power_in,
                                        COUNT_T &consumed) {
-  for (COUNT_T i = 0; i < power_in_count; ++i, power_in += vlen_,
-               samples_since_tag_ += vlen_, sample_clock_ += vlen_) {
+  for (COUNT_T i = 0; i < power_in_count; i += n_vlen_, power_in += batch_,
+               samples_since_tag_ += batch_, sample_clock_ += batch_) {
     ++consumed;
     COUNT_T j = (power_read + i) % sample_buffer_;
-    volk_32f_index_max_16u(max_.get(), power_in, vlen_);
+    volk_32f_index_max_16u(max_.get(), power_in, batch_);
     float power_max = power_in[*max_];
     if (power_max < min_peak_points_) {
       continue;
@@ -454,12 +458,12 @@ void iq_inference_impl::process_items_(COUNT_T power_in_count,
         last_rx_time_ + (samples_since_tag_ / TIME_T(samp_rate_));
     output_item.sample_clock = sample_clock_;
     output_item.rx_freq = last_rx_freq_;
-    output_item.sample_count = vlen_;
+    output_item.sample_count = batch_;
     output_item.samples = new gr_complex[output_item.sample_count];
     output_item.power = new float[output_item.sample_count];
-    memcpy(output_item.samples, (void *)&samples_lookback_[j * vlen_],
-           vlen_ * sizeof(gr_complex));
-    memcpy(output_item.power, (void *)power_in, vlen_ * sizeof(float));
+    memcpy(output_item.samples, (void *)&samples_lookback_[j * batch_],
+           batch_ * sizeof(gr_complex));
+    memcpy(output_item.power, (void *)power_in, batch_ * sizeof(float));
     if (!inference_q_.push(output_item)) {
       delete_output_item_(output_item);
       d_logger->error("inference queue full (increase inference dB threshold "
@@ -501,10 +505,11 @@ int iq_inference_impl::general_work(int noutput_items,
   get_tags_in_window(all_tags, 1, 0, power_in_count);
   get_tags(tag_, all_tags, rx_freq_tags, rx_times, power_in_count);
 
-  for (COUNT_T i = 0; i < samples_in_count; ++i, samples_in += vlen_) {
+  for (COUNT_T i = 0; i < samples_in_count;
+       i += n_vlen_, samples_in += batch_) {
     COUNT_T j = (nitems_read(0) + i) % sample_buffer_;
-    memcpy((void *)&samples_lookback_[j * vlen_], samples_in,
-           sizeof(gr_complex) * vlen_);
+    memcpy((void *)&samples_lookback_[j * batch_], samples_in,
+           sizeof(gr_complex) * batch_);
   }
 
   COUNT_T power_read = nitems_read(1);

@@ -23,6 +23,7 @@ documentation: |-
   parameters:
     tag: received frequency tag name.
     vlen: length of complex/FFT dB vector.
+    n_vlen: number of vectors aggregate.
     sample_buffer: size of sample lookback buffer.
     min_peak_points: Only run inference on buckets with this minimum dB power.
     model_names: if not empty, comma separated list of model names.
@@ -36,18 +37,18 @@ templates:
   imports: from gnuradio import iqtlabs
   make: >
     iqtlabs.iq_inference(
-    ${tag}, ${vlen}, ${sample_buffer}, ${min_peak_points}, ${model_server},
-    ${model_names}, ${confidence}, ${n_inference}, ${samp_rate},
-    ${power_inference})
+    ${tag}, ${vlen}, ${n_vlen}, ${sample_buffer}, ${min_peak_points},
+    ${model_server}, ${model_names}, ${confidence}, ${n_inference},
+    ${samp_rate}, ${power_inference})
 
 cpp_templates:
   includes: ['#include <gnuradio/iqtlabs/iq_inference.h>']
   declarations: 'gr::iqtlabs::image_inference::sptr ${id};'
   make: >
     this->${id} = gr::iqtlabs::iq_inference::make(
-    ${tag}, ${vlen}, ${sample_buffer, ${min_peak_points}, ${model_server},
-    ${model_names}, ${confidence}, ${n_inference}, ${samp_rate},
-    $power_inference);
+    ${tag}, ${vlen}, ${n_vlen}, ${sample_buffer, ${min_peak_points},
+    ${model_server}, ${model_names}, ${confidence}, ${n_inference},
+    ${samp_rate}, ${power_inference});
   link: ['libgnuradio-iqtlabs.so']
 
 parameters:
@@ -55,6 +56,8 @@ parameters:
     dtype: string
     default: 'rx_freq'
   - id: vlen
+    dtype: int
+  - id: n_vlen
     dtype: int
   - id: sample_buffer
     dtype: int

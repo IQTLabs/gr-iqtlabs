@@ -235,17 +235,17 @@ class qa_iq_inference(gr_unittest.TestCase):
         if self.pid:
             os.kill(self.pid, 15)
 
-    def simulate_torchserve(self, port, model_name, result, fft_size):
+    def simulate_torchserve(self, port, model_name, result, vlen):
         app = Flask(__name__)
 
         # nosemgrep:github.workflows.config.useless-inner-function
         @app.route(f"/predictions/{model_name}", methods=["POST"])
         def predictions_test():
             print("got %s, count %u" % (type(request.data), len(request.data)))
-            samples = np.frombuffer(request.data, dtype=np.complex64, count=fft_size)
+            samples = np.frombuffer(request.data, dtype=np.complex64, count=vlen)
             power_offset = samples.size * samples.itemsize
             power = np.frombuffer(
-                request.data[power_offset:], dtype=np.float32, count=fft_size
+                request.data[power_offset:], dtype=np.float32, count=vlen
             )
             unique_samples = np.unique(samples)
             unique_power = np.unique(power)
@@ -286,6 +286,7 @@ class qa_iq_inference(gr_unittest.TestCase):
         iq_inf = iq_inference(
             tag="rx_freq",
             vlen=fft_size,
+            n_vlen=2,
             sample_buffer=512,
             min_peak_points=-1e9,
             model_server=f"localhost:{port}",
@@ -320,7 +321,7 @@ class qa_iq_inference(gr_unittest.TestCase):
         predictions_result = ["cant", "parse", {"this": 0}]
         fft_size = 1024
         if self.pid == 0:
-            self.simulate_torchserve(port, model_name, predictions_result, fft_size)
+            self.simulate_torchserve(port, model_name, predictions_result, fft_size * 2)
             return
         samp_rate = 4e6
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -333,7 +334,7 @@ class qa_iq_inference(gr_unittest.TestCase):
         predictions_result = {"modulation": [{"conf": 0.9}]}
         fft_size = 1024
         if self.pid == 0:
-            self.simulate_torchserve(port, model_name, predictions_result, fft_size)
+            self.simulate_torchserve(port, model_name, predictions_result, fft_size * 2)
             return
         samp_rate = 4e6
         # added by inference client.
