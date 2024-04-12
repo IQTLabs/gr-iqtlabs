@@ -1,3 +1,3 @@
 black==24.3.0
-pytype==2024.3.19
+pytype==2024.4.11
 zstandard==0.22.0
