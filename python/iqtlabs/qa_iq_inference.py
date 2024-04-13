@@ -262,6 +262,9 @@ class qa_iq_inference(gr_unittest.TestCase):
             if unique_samples[0].real != unique_power[0]:
                 print("not equal power to sample", unique_power, unique_samples)
                 raise ValueError
+            if isinstance(result, dict):
+                result["modulation"][0]["sample_value"] = str(unique_samples[0].real)
+                print(result)
             return json.dumps(result, indent=2), 200
 
         try:
@@ -315,7 +318,7 @@ class qa_iq_inference(gr_unittest.TestCase):
         self.tb.wait()
         return test_file
 
-    def test_bad_instance(self):
+    def test_error_predict(self):
         port = 11002
         model_name = "testmodel"
         predictions_result = ["cant", "parse", {"this": 0}]
@@ -327,7 +330,7 @@ class qa_iq_inference(gr_unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmpdir:
             self.run_flowgraph(tmpdir, fft_size, samp_rate, port, model_name)
 
-    def test_instance(self):
+    def test_good_predict(self):
         port = 11001
         model_name = "testmodel"
         px = 100
@@ -356,6 +359,10 @@ class qa_iq_inference(gr_unittest.TestCase):
                     continue
                 result = json.loads(json_raw)
                 print(result)
+                sample_value = float(
+                    result["predictions"]["modulation"][0]["sample_value"]
+                )
+                del result["predictions"]["modulation"][0]["sample_value"]
                 self.assertEqual(result["predictions"], predictions_result)
                 self.assertEqual(result.get("error", None), None)
                 rx_freq = float(result["metadata"]["rx_freq"])
@@ -364,6 +371,7 @@ class qa_iq_inference(gr_unittest.TestCase):
                 self.assertGreater(rx_freq, last_rx_freq)
                 self.assertGreater(ts, last_ts)
                 self.assertGreater(sc, last_sc)
+                self.assertEqual(round(sample_value, 3), round(rx_freq / 1e9, 3))
                 last_ts = ts
                 last_sc = sc
                 last_rx_freq = rx_freq
