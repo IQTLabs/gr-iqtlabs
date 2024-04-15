@@ -436,8 +436,8 @@ void iq_inference_impl::process_items_(COUNT_T power_in_count,
                                        const float *&power_in,
                                        COUNT_T &consumed) {
   for (COUNT_T i = 0; i < power_in_count; i += n_vlen_, power_in += batch_,
-               samples_since_tag_ += batch_, sample_clock_ += batch_) {
-    ++consumed;
+               samples_since_tag_ += batch_, sample_clock_ += batch_,
+               consumed += n_vlen_) {
     COUNT_T j = (power_read + i) % sample_buffer_;
     volk_32f_index_max_16u(max_.get(), power_in, batch_);
     float power_max = power_in[*max_];
@@ -522,6 +522,10 @@ int iq_inference_impl::general_work(int noutput_items,
       const auto rel = tag.offset - in_first;
       in_first += rel;
 
+      // TODO: in theory we might have a vector with more than one frequency's
+      // samples, as the SDR probably isn't vector aligned. In practice this
+      // should not happen in the most common Ettus low power workaround state,
+      // because tags are delayed until after re-tuning has been verified.
       if (rel > 0) {
         process_items_(rel, power_read, power_in, consumed);
       }
