@@ -236,8 +236,8 @@ typedef struct output_item {
 class iq_inference_impl : public iq_inference, base_impl {
 private:
   boost::scoped_array<gr_complex> samples_lookback_;
-  boost::scoped_ptr<float> total_;
-  boost::scoped_ptr<uint16_t> max_;
+  boost::scoped_ptr<float> samples_total_;
+  boost::scoped_ptr<float> power_total_;
   pmt::pmt_t tag_;
   COUNT_T vlen_;
   COUNT_T n_vlen_;

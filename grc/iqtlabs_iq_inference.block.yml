@@ -25,7 +25,7 @@ documentation: |-
     vlen: length of complex/FFT dB vector.
     n_vlen: number of vectors aggregate.
     sample_buffer: size of sample lookback buffer.
-    min_peak_points: Only run inference on buckets with this minimum dB power.
+    min_peak_points: Only run inference with this minimum average dB power.
     model_names: if not empty, comma separated list of model names.
     model_server: if not empty, do torchserve inference to this address.
     confidence: Only output inference results where confidence is greater.
