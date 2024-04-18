@@ -251,6 +251,7 @@ iq_inference_impl::iq_inference_impl(const std::string &tag, COUNT_T vlen,
   samples_lookback_.reset(new gr_complex[batch_ * sample_buffer]);
   unsigned int alignment = volk_get_alignment();
   max_.reset((uint16_t *)volk_malloc(sizeof(uint16_t), alignment));
+  total_.reset((float *)volk_malloc(sizeof(float), alignment));
   std::vector<std::string> model_server_parts_;
   std::vector<std::string> text_color_parts_;
   boost::split(model_server_parts_, model_server, boost::is_any_of(":"),
@@ -442,6 +443,13 @@ void iq_inference_impl::process_items_(COUNT_T power_in_count,
     volk_32f_index_max_16u(max_.get(), power_in, batch_);
     float power_max = power_in[*max_];
     if (power_max < min_peak_points_) {
+      continue;
+    }
+    // We might get all zero samples if squelched externally - though
+    // we will receive non zero power values.
+    const float *in_floats = (const float *)&samples_lookback_[j * batch_];
+    volk_32f_accumulator_s32f(total_.get(), in_floats, batch_ * 2);
+    if (*total_ == 0) {
       continue;
     }
     if (n_inference_ > 0 && ++inference_count_ % n_inference_) {
