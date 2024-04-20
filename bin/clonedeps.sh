@@ -1,7 +1,7 @@
 #!/bin/sh
 set -e
-git clone https://github.com/google/flatbuffers -b v23.5.26
-git clone https://github.com/nlohmann/json -b v3.11.2
+git clone https://github.com/google/flatbuffers -b v24.3.25
+git clone https://github.com/nlohmann/json -b v3.11.3
 git clone https://github.com/deepsig/libsigmf -b v1.0.2
 mkdir -p flatbuffers/build
 cd flatbuffers/build
