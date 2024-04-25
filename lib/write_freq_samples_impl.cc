@@ -210,6 +210,8 @@
 #include "write_freq_samples_impl.h"
 #include <gnuradio/io_signature.h>
 
+using namespace sigmf;
+
 namespace gr {
 namespace iqtlabs {
 
@@ -217,10 +219,10 @@ write_freq_samples::sptr write_freq_samples::make(
     const std::string &tag, COUNT_T itemsize, const std::string &datatype,
     COUNT_T vlen, const std::string &sdir, const std::string &prefix,
     COUNT_T write_step_samples, COUNT_T skip_tune_step_samples,
-    COUNT_T samp_rate, COUNT_T rotate_secs, double gain, bool sigmf) {
+    COUNT_T samp_rate, COUNT_T rotate_secs, double gain, bool sigmf, bool use_zst) {
   return gnuradio::make_block_sptr<write_freq_samples_impl>(
       tag, itemsize, datatype, vlen, sdir, prefix, write_step_samples,
-      skip_tune_step_samples, samp_rate, rotate_secs, gain, sigmf);
+      skip_tune_step_samples, samp_rate, rotate_secs, gain, sigmf, use_zst);
 }
 
 write_freq_samples_impl::write_freq_samples_impl(
@@ -237,7 +239,7 @@ write_freq_samples_impl::write_freq_samples_impl(
       write_step_samples_(write_step_samples),
       skip_tune_step_samples_(skip_tune_step_samples), samp_rate_(samp_rate),
       write_step_samples_count_(0), skip_tune_step_samples_count_(0),
-      last_rx_freq_(0), rotate_secs_(rotate_secs), gain_(gain), sigmf_(sigmf) {
+      last_rx_freq_(0), rotate_secs_(rotate_secs), gain_(gain), sigmf_(sigmf), use_zst_(use_zst) {
   outbuf_p.reset(new boost::iostreams::filtering_ostream());
 }
 
@@ -254,30 +256,108 @@ void write_freq_samples_impl::write_(const char *data, COUNT_T len) {
   }
 }
 
+void write_freq_samples_impl::open_sigmf(const std::string &source_file, double timestamp,
+                            const std::string &datatype, double sample_rate,
+                            double frequency, double gain) {
+  // sigmf_record = sigmf::SigMF<sigmf::Global<core::DescrT, antenna::DescrT>,
+  //           sigmf::Capture<core::DescrT>,
+  //           sigmf::Annotation<core::DescrT, antenna::DescrT, capture_details::DescrT, signal::DescrT> >();
+
+  sigmf_record = sigmf::SigMF<
+      sigmf::Global<sigmf::core::DescrT>,
+      sigmf::Capture<sigmf::core::DescrT, sigmf::capture_details::DescrT>,
+      sigmf::Annotation<sigmf::core::DescrT>>();
+  sigmf_record.global.access<sigmf::core::GlobalT>().datatype = datatype;
+  sigmf_record.global.access<sigmf::core::GlobalT>().sample_rate = sample_rate;
+  auto capture =
+      sigmf::Capture<sigmf::core::DescrT, sigmf::capture_details::DescrT>();
+  capture.get<sigmf::core::DescrT>().sample_start = 0;
+  capture.get<sigmf::core::DescrT>().global_index = 0;
+  capture.get<sigmf::core::DescrT>().frequency = frequency;
+  std::ostringstream ts_ss;
+  time_t timestamp_t = static_cast<time_t>(timestamp);
+  ts_ss << std::put_time(gmtime(&timestamp_t), "%FT%TZ");
+  capture.get<sigmf::core::DescrT>().datetime = ts_ss.str();
+  capture.get<sigmf::capture_details::DescrT>().source_file =
+      basename(source_file.c_str());
+  capture.get<sigmf::capture_details::DescrT>().gain = gain;
+  sigmf_record.captures.emplace_back(capture);
+
+
+}
+
+void write_freq_samples_impl::start_new_sigmf_capture(double frequency) {
+  auto capture =
+    sigmf::Capture<sigmf::core::DescrT, sigmf::capture_details::DescrT>();
+  capture.get<sigmf::core::DescrT>().sample_start = samples_written_;
+  capture.get<sigmf::core::DescrT>().frequency = frequency;
+  std::ostringstream ts_ss;
+  time_t timestamp_t = static_cast<time_t>(host_now_());
+  ts_ss << std::put_time(gmtime(&timestamp_t), "%FT%TZ");
+  capture.get<sigmf::core::DescrT>().datetime = ts_ss.str();
+  sigmf_record.captures.emplace_back(capture);
+  write_sigmf();
+}
+
+void write_freq_samples_impl::add_sigmf_annotation(COUNT_T sample_start, COUNT_T sample_count, double freq_lower_edge, double freq_upper_edge, std::string label) {
+    auto anno = sigmf::Annotation<core::DescrT>();
+    anno.access<core::AnnotationT>().sample_start = sample_start;
+    anno.access<core::AnnotationT>().sample_count = sample_count;
+    anno.access<core::AnnotationT>().description = label;
+    anno.access<core::AnnotationT>().label = label;
+    anno.access<core::AnnotationT>().generator = "GamutRF";
+    sigmf_record.annotations.emplace_back(anno);
+
+} 
+
+void write_freq_samples_impl::write_sigmf() {
+  if (!sigmf_) {
+    return;
+  }
+  std::string dotfilename = get_dotfile_(sigmffile_);
+  std::ofstream jsonfile(dotfilename);
+  jsonfile << sigmf_record.to_json();
+  jsonfile.close();
+  rename(dotfilename.c_str(), sigmffile_.c_str());                        
+}
+
 void write_freq_samples_impl::open_(COUNT_T zlevel) {
   close_();
   double now = host_now_();
+  samples_written_ = 0;
   std::string samples_path = secs_dir(sdir_, rotate_secs_) + prefix_ + "_" +
                              std::to_string(now) + "_" +
                              std::to_string(FREQ_T(last_rx_freq_)) + "Hz_" +
                              std::to_string(COUNT_T(samp_rate_)) + "sps.raw";
-  zstfile_ = samples_path + ".zst";
+  if (use_zst_) {                           
+    datafile_ = samples_path + ".zst";
+    outbuf_p->push(
+    boost::iostreams::zstd_compressor(boost::iostreams::zstd_params(zlevel)));
+  } else if (sigmf_) {
+    datafile_ = samples_path + ".sigmf-data";
+  } else {
+    datafile_ = samples_path;
+  }
+
+  if (sigmf_) {
+    open_sigmf( datafile_, open_time_, datatype_, samp_rate_,
+                  last_rx_freq_, gain_);
+  }
+
   sigmffile_ = samples_path + ".sigmf-meta";
   open_time_ = now;
-  outbuf_p->push(
-      boost::iostreams::zstd_compressor(boost::iostreams::zstd_params(zlevel)));
-  outbuf_p->push(boost::iostreams::file_sink(zstfile_));
+
+  outbuf_p->push(boost::iostreams::file_sink(datafile_));
 }
 
 void write_freq_samples_impl::close_() {
   if (!outbuf_p->empty()) {
     outbuf_p->reset();
     if (sigmf_) {
-      write_sigmf(sigmffile_, zstfile_, open_time_, datatype_, samp_rate_,
-                  last_rx_freq_, gain_);
+      write_sigmf();
     }
-    std::string dotfile = get_dotfile_(zstfile_);
-    rename(dotfile.c_str(), zstfile_.c_str());
+    std::string dotfile = get_dotfile_(datafile_);
+    rename(dotfile.c_str(), datafile_.c_str());
   }
 }
 
@@ -288,12 +368,18 @@ void write_freq_samples_impl::write_samples_(COUNT_T c, const char *&in) {
       --skip_tune_step_samples_count_;
       continue;
     }
-    if (write_step_samples_count_) {
+
+    if (sigmf_) {
       write_(in, itemsize_ * vlen_);
-      if (!--write_step_samples_count_) {
-        close_();
+    } else {
+      if (write_step_samples_count_) {
+        write_(in, itemsize_ * vlen_);
+        if (!--write_step_samples_count_) {
+          close_();
+        }
       }
     }
+    samples_written_ += vlen_;
     in += vlen_;
   }
 }
@@ -325,7 +411,15 @@ int write_freq_samples_impl::general_work(
       last_rx_freq_ = rx_freq;
       skip_tune_step_samples_count_ = skip_tune_step_samples_;
       write_step_samples_count_ = write_step_samples_;
-      open_(1);
+      if (sigmf_) {
+        if (outbuf_p->empty()) {  // Check if the files have been opened by looking at the output filter pipeline
+          open_(1); 
+        } else {
+          start_new_sigmf_capture(rx_freq); // we switched freq so start a new SigMF Capture
+        }
+      } else {}
+        open_(1);
+      }
     }
   }
 

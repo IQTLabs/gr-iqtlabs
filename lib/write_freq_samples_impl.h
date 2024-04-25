@@ -223,6 +223,14 @@ private:
   void close_();
   void write_samples_(COUNT_T c, const char *&in);
 
+  void open_sigmf( const std::string &source_file,
+                   double timestamp, const std::string &datatype,
+                   double sample_rate, double frequency, double gain);
+  
+  void write_sigmf();
+  void start_new_sigmf_capture(double frequency); 
+
+
   pmt::pmt_t tag_;
   COUNT_T itemsize_;
   COUNT_T vlen_;
@@ -235,6 +243,7 @@ private:
   double gain_;
   bool sigmf_;
 
+  COUNT_T samples_written_;
   COUNT_T write_step_samples_count_;
   COUNT_T skip_tune_step_samples_count_;
   FREQ_T last_rx_freq_;
@@ -242,10 +251,17 @@ private:
   TIME_T open_time_;
 
   boost::scoped_ptr<boost::iostreams::filtering_ostream> outbuf_p;
-  std::string zstfile_;
+  std::string datafile_;
   std::string sigmffile_;
+  sigmf::SigMF<
+      sigmf::Global<sigmf::core::DescrT>,
+      sigmf::Capture<sigmf::core::DescrT, sigmf::capture_details::DescrT>,
+      sigmf::Annotation<sigmf::core::DescrT>>
+      sigmf_record;
 
 public:
+  void add_sigmf_annotation(COUNT_T sample_start, COUNT_T sample_count, double freq_lower_edge, double freq_upper_edge, std::string label);
+
   write_freq_samples_impl(const std::string &tag, COUNT_T itemsize,
                           const std::string &datatype, COUNT_T vlen,
                           const std::string &sdir, const std::string &prefix,
