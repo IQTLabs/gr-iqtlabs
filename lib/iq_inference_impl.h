@@ -207,11 +207,8 @@
 
 #include "base_impl.h"
 #include "torchserve_client.h"
-#include <boost/asio/connect.hpp>
-#include <boost/asio/ip/tcp.hpp>
 #include <boost/beast/core.hpp>
 #include <boost/beast/http.hpp>
-#include <boost/beast/version.hpp>
 #include <boost/lockfree/spsc_queue.hpp>
 #include <boost/scoped_array.hpp>
 #include <boost/scoped_ptr.hpp>
