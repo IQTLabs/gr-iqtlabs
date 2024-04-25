@@ -211,6 +211,7 @@
 #include <boost/iostreams/filter/zstd.hpp>
 #include <boost/iostreams/filtering_stream.hpp>
 #include <boost/scoped_ptr.hpp>
+#include <sigmf/sigmf.h>
 #include <gnuradio/iqtlabs/write_freq_samples.h>
 
 namespace gr {
@@ -242,7 +243,8 @@ private:
   COUNT_T samp_rate_;
   double gain_;
   bool sigmf_;
-
+  bool use_zst_;
+  
   COUNT_T samples_written_;
   COUNT_T write_step_samples_count_;
   COUNT_T skip_tune_step_samples_count_;
@@ -267,7 +269,7 @@ public:
                           const std::string &sdir, const std::string &prefix,
                           COUNT_T write_step_samples,
                           COUNT_T skip_tune_step_samples, COUNT_T samp_rate,
-                          COUNT_T rotate_secs, double gain, bool sigmf);
+                          COUNT_T rotate_secs, double gain, bool sigmf, bool use_zst);
   ~write_freq_samples_impl();
   int general_work(int noutput_items, gr_vector_int &ninput_items,
                    gr_vector_const_void_star &input_items,

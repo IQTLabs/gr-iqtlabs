@@ -52,6 +52,7 @@ void bind_write_freq_samples(py::module& m)
              py::arg("rotate_secs"),
              py::arg("gain"),
              py::arg("sigmf"),
+             py::arg("use_zst"),
              D(write_freq_samples, make))
 
 

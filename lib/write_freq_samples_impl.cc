@@ -229,7 +229,7 @@ write_freq_samples_impl::write_freq_samples_impl(
     const std::string &tag, COUNT_T itemsize, const std::string &datatype,
     COUNT_T vlen, const std::string &sdir, const std::string &prefix,
     COUNT_T write_step_samples, COUNT_T skip_tune_step_samples,
-    COUNT_T samp_rate, COUNT_T rotate_secs, double gain, bool sigmf)
+    COUNT_T samp_rate, COUNT_T rotate_secs, double gain, bool sigmf, bool use_zst)
     : gr::block("write_freq_samples",
                 gr::io_signature::make(1 /* min inputs */, 1 /* max inputs */,
                                        vlen * itemsize),
@@ -417,7 +417,7 @@ int write_freq_samples_impl::general_work(
         } else {
           start_new_sigmf_capture(rx_freq); // we switched freq so start a new SigMF Capture
         }
-      } else {}
+      } else {
         open_(1);
       }
     }
