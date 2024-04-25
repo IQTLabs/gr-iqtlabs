@@ -13,6 +13,7 @@ list(
   APPEND
   iqtlabs_sources
   base_impl.cc
+  torchserve_client.cc
   image_inference_impl.cc
   iq_inference_impl.cc
   retune_fft_impl.cc

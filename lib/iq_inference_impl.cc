@@ -321,16 +321,9 @@ void iq_inference_impl::run_inference_() {
         const std::string_view body(
             reinterpret_cast<char const *>(output_item.samples),
             output_item.sample_count * sizeof(gr_complex));
-        boost::beast::http::request<boost::beast::http::string_body> req{
-            boost::beast::http::verb::post, "/predictions/" + model_name, 11};
-        req.keep_alive(true);
-        req.set(boost::beast::http::field::connection, "keep-alive");
-        req.set(boost::beast::http::field::host, host_);
-        req.set(boost::beast::http::field::user_agent,
-                BOOST_BEAST_VERSION_STRING);
-        req.set(boost::beast::http::field::content_type,
-                "application/octet-stream");
-        req.body() = body;
+        boost::beast::http::request<boost::beast::http::string_body> req =
+            make_inference_request(model_name, host_, body,
+                                   "application/octet-stream");
         if (power_inference_) {
           const std::string_view power_body(
               reinterpret_cast<char const *>(output_item.power),
@@ -348,11 +341,7 @@ void iq_inference_impl::run_inference_() {
         // TODO: handle case where model server is up but blocks us forever.
         if (inference_connected_) {
           try {
-            boost::beast::flat_buffer buffer;
-            boost::beast::http::response<boost::beast::http::string_body> res;
-            boost::beast::http::write(*stream_, req);
-            boost::beast::http::read(*stream_, buffer, res);
-            results = res.body().data();
+            results = send_inference_request(stream_.get(), req);
           } catch (std::exception &ex) {
             stream_->socket().shutdown(
                 boost::asio::ip::tcp::socket::shutdown_both, ec);
@@ -368,11 +357,7 @@ void iq_inference_impl::run_inference_() {
               stream_->connect(resolve_results);
               inference_connected_ = true;
             }
-            boost::beast::flat_buffer buffer;
-            boost::beast::http::response<boost::beast::http::string_body> res;
-            boost::beast::http::write(*stream_, req);
-            boost::beast::http::read(*stream_, buffer, res);
-            results = res.body().data();
+            results = send_inference_request(stream_.get(), req);
           } catch (std::exception &ex) {
             error = "inference connection error: " + std::string(ex.what());
           }
