@@ -206,6 +206,7 @@
 #define INCLUDED_IQTLABS_IQ_INFERENCE_IMPL_H
 
 #include "base_impl.h"
+#include "torchserve_client.h"
 #include <boost/asio/connect.hpp>
 #include <boost/asio/ip/tcp.hpp>
 #include <boost/beast/core.hpp>
