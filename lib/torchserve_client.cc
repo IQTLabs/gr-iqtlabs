@@ -1,5 +1,9 @@
 #include "torchserve_client.h"
 
+#include <boost/asio/connect.hpp>
+#include <boost/asio/ip/tcp.hpp>
+#include <nlohmann/json.hpp>
+
 namespace gr {
 namespace iqtlabs {
 
@@ -70,6 +74,15 @@ void torchserve_client::send_inference_request(
     } catch (std::exception &ex) {
       error = "inference connection error: " + std::string(ex.what());
     }
+  }
+
+  if (error.size() == 0 &&
+      (results.size() == 0 || !nlohmann::json::accept(results))) {
+    error = "invalid json: " + results;
+  }
+
+  if (error.size()) {
+    disconnect();
   }
 }
 

@@ -332,7 +332,6 @@ bool image_inference_impl::stop() {
   running_ = false;
   inference_thread_->join();
   run_inference_();
-  torchserve_client_->disconnect();
   if (points_buffer_) {
     delete points_buffer_;
   }
@@ -457,7 +456,7 @@ void image_inference_impl::bbox_text(const output_item_type &output_item,
 COUNT_T image_inference_impl::parse_inference_(
     const output_item_type &output_item, const std::string &results,
     const std::string &model_name, nlohmann::json &results_json,
-    std::string &error, bool &valid_json) {
+    std::string &error) {
   COUNT_T rendered_predictions = 0;
   const float xf = float(output_item.points_buffer->cols) /
                    float(output_item.image_buffer->cols);
@@ -515,8 +514,8 @@ COUNT_T image_inference_impl::parse_inference_(
       }
     }
   } catch (std::exception &ex) {
-    error = "invalid json: " + std::string(ex.what()) + " " + results;
-    valid_json = false;
+    d_logger->error("invalid json: " + std::string(ex.what()) + " " + results);
+    error = "invalid json: " + std::string(ex.what());
   }
   return rendered_predictions;
 }
@@ -573,29 +572,15 @@ void image_inference_impl::run_inference_() {
                                                        "image/" + IMAGE_TYPE);
         req.prepare_payload();
         std::string results;
-        bool valid_json = true;
         torchserve_client_->send_inference_request(req, results, error);
 
-        if (error.size() == 0 &&
-            (results.size() == 0 || !nlohmann::json::accept(results))) {
-          error = "invalid json: " + results;
-          valid_json = false;
-        }
-
         if (error.size() == 0) {
-          rendered_predictions +=
-              parse_inference_(output_item, results, model_name, results_json,
-                               error, valid_json);
+          rendered_predictions += parse_inference_(
+              output_item, results, model_name, results_json, error);
         }
 
         if (error.size()) {
           d_logger->error(error);
-          if (valid_json) {
-            output_json["error"] = error;
-          } else {
-            output_json["error"] = "invalid json";
-          }
-          torchserve_client_->disconnect();
         }
       }
       output_json["predictions"] = results_json;

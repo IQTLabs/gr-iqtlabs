@@ -294,7 +294,6 @@ bool iq_inference_impl::stop() {
   running_ = false;
   inference_thread_->join();
   run_inference_();
-  torchserve_client_->disconnect();
   return true;
 }
 
@@ -330,14 +329,6 @@ void iq_inference_impl::run_inference_() {
         req.prepare_payload();
         std::string results;
         // TODO: troubleshoot test flask server hang after one request.
-        bool valid_json = true;
-        torchserve_client_->send_inference_request(req, results, error);
-        if (error.size() == 0 &&
-            (results.size() == 0 || !nlohmann::json::accept(results))) {
-          error = "invalid json: " + results;
-          valid_json = false;
-        }
-
         if (error.size() == 0) {
           try {
             nlohmann::json original_results_json =
@@ -355,19 +346,15 @@ void iq_inference_impl::run_inference_() {
               }
             }
           } catch (std::exception &ex) {
-            error = "invalid json: " + std::string(ex.what()) + " " + results;
-            valid_json = false;
+            d_logger->error("invalid json: " + std::string(ex.what()) + " " +
+                            results);
+            error = "invalid json: " + std::string(ex.what());
           }
         }
 
         if (error.size()) {
           d_logger->error(error);
-          if (valid_json) {
-            output_json["error"] = error;
-          } else {
-            output_json["error"] = "invalid json";
-          }
-          torchserve_client_->disconnect();
+          output_json["error"] = error;
         }
       }
 

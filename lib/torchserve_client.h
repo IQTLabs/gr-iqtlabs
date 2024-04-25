@@ -205,8 +205,6 @@
 #ifndef INCLUDED_IQTLABS_TORCHSERVE_CLIENT_H
 #define INCLUDED_IQTLABS_TORCHSERVE_CLIENT_H
 
-#include <boost/asio/connect.hpp>
-#include <boost/asio/ip/tcp.hpp>
 #include <boost/beast/core.hpp>
 #include <boost/beast/http.hpp>
 #include <boost/beast/version.hpp>
@@ -225,8 +223,6 @@ public:
   void send_inference_request(
       boost::beast::http::request<boost::beast::http::string_body> &req,
       std::string &results, std::string &error);
-  void connect();
-  void disconnect();
 
 private:
   boost::asio::io_context ioc_;
@@ -234,6 +230,8 @@ private:
   bool inference_connected_;
   std::string host_, port_;
 
+  void connect();
+  void disconnect();
   std::string send_inference_request_(
       boost::beast::http::request<boost::beast::http::string_body> &req);
 };

@@ -275,8 +275,7 @@ private:
   COUNT_T parse_inference_(const output_item_type &output_item,
                            const std::string &results,
                            const std::string &model_names,
-                           nlohmann::json &results_json, std::string &error,
-                           bool &valid_json);
+                           nlohmann::json &results_json, std::string &error);
   void bbox_text(const output_item_type &output_item, const std::string &text,
                  int pos, int cx, int cy);
   void volk_min_max_mean(const cv::Mat &mat, float &min, float &max,
