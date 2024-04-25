@@ -254,8 +254,7 @@ image_inference_impl::image_inference_impl(
       min_peak_points_(min_peak_points), confidence_(confidence),
       max_rows_(max_rows), rotate_secs_(rotate_secs), n_image_(n_image),
       n_inference_(n_inference), samp_rate_(samp_rate), running_(true),
-      inference_connected_(false), image_count_(0), inference_count_(0),
-      last_image_start_item_(0) {
+      image_count_(0), inference_count_(0), last_image_start_item_(0) {
   points_buffer_ = NULL;
   normalized_buffer_.reset(
       new cv::Mat(cv::Size(vlen_, 0), CV_32F, cv::Scalar::all(0)));
@@ -293,9 +292,9 @@ image_inference_impl::image_inference_impl(
                       text_color);
     }
   }
-  stream_.reset(new boost::beast::tcp_stream(ioc_));
   inference_thread_.reset(
       new std::thread(&image_inference_impl::background_run_inference_, this));
+  torchserve_client_.reset(new torchserve_client(host_, port_));
 }
 
 void image_inference_impl::volk_min_max_mean(const cv::Mat &mat, float &min,
@@ -333,10 +332,7 @@ bool image_inference_impl::stop() {
   running_ = false;
   inference_thread_->join();
   run_inference_();
-  if (inference_connected_) {
-    boost::beast::error_code ec;
-    stream_->socket().shutdown(boost::asio::ip::tcp::socket::shutdown_both, ec);
-  }
+  torchserve_client_->disconnect();
   if (points_buffer_) {
     delete points_buffer_;
   }
@@ -573,38 +569,12 @@ void image_inference_impl::run_inference_() {
             reinterpret_cast<char const *>(encoded_buffer->data()),
             encoded_buffer->size());
         boost::beast::http::request<boost::beast::http::string_body> req =
-            make_inference_request(model_name, host_, body,
-                                   "image/" + IMAGE_TYPE);
+            torchserve_client_->make_inference_request(model_name, body,
+                                                       "image/" + IMAGE_TYPE);
         req.prepare_payload();
         std::string results;
         bool valid_json = true;
-
-        // attempt to re-use existing connection. may fail if an http 1.1 server
-        // has dropped the connection to use in the meantime.
-        // TODO: handle case where model server is up but blocks us forever.
-        if (inference_connected_) {
-          try {
-            results = send_inference_request(stream_.get(), req);
-          } catch (std::exception &ex) {
-            stream_->socket().shutdown(
-                boost::asio::ip::tcp::socket::shutdown_both, ec);
-            inference_connected_ = false;
-          }
-        }
-
-        if (results.size() == 0) {
-          try {
-            if (!inference_connected_) {
-              boost::asio::ip::tcp::resolver resolver(ioc_);
-              auto const resolve_results = resolver.resolve(host_, port_);
-              stream_->connect(resolve_results);
-              inference_connected_ = true;
-            }
-            results = send_inference_request(stream_.get(), req);
-          } catch (std::exception &ex) {
-            error = "inference connection error: " + std::string(ex.what());
-          }
-        }
+        torchserve_client_->send_inference_request(req, results, error);
 
         if (error.size() == 0 &&
             (results.size() == 0 || !nlohmann::json::accept(results))) {
@@ -625,7 +595,7 @@ void image_inference_impl::run_inference_() {
           } else {
             output_json["error"] = "invalid json";
           }
-          inference_connected_ = false;
+          torchserve_client_->disconnect();
         }
       }
       output_json["predictions"] = results_json;

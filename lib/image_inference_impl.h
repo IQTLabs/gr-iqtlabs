@@ -207,11 +207,8 @@
 
 #include "base_impl.h"
 #include "torchserve_client.h"
-#include <boost/asio/connect.hpp>
-#include <boost/asio/ip/tcp.hpp>
 #include <boost/beast/core.hpp>
 #include <boost/beast/http.hpp>
-#include <boost/beast/version.hpp>
 #include <boost/lockfree/spsc_queue.hpp>
 #include <boost/scoped_ptr.hpp>
 #include <gnuradio/iqtlabs/image_inference.h>
@@ -260,11 +257,9 @@ private:
   std::string host_, port_;
   std::vector<std::string> model_names_;
   bool running_;
-  bool inference_connected_;
   boost::scoped_ptr<std::thread> inference_thread_;
-  boost::asio::io_context ioc_;
-  boost::scoped_ptr<boost::beast::tcp_stream> stream_;
   cv::Scalar text_color_;
+  boost::scoped_ptr<torchserve_client> torchserve_client_;
 
   void process_items_(COUNT_T c, COUNT_T &consumed, const input_type *&in);
   void create_image_(bool discard);
