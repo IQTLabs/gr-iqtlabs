@@ -260,11 +260,9 @@ private:
   std::string host_, port_;
   std::vector<std::string> model_names_;
   bool running_;
-  bool inference_connected_;
   boost::scoped_ptr<std::thread> inference_thread_;
-  boost::asio::io_context ioc_;
-  boost::scoped_ptr<boost::beast::tcp_stream> stream_;
   cv::Scalar text_color_;
+  boost::scoped_ptr<torchserve_client> torchserve_client_;
 
   void process_items_(COUNT_T c, COUNT_T &consumed, const input_type *&in);
   void create_image_(bool discard);

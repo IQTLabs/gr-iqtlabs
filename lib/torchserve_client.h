@@ -210,18 +210,33 @@
 #include <boost/beast/core.hpp>
 #include <boost/beast/http.hpp>
 #include <boost/beast/version.hpp>
-#include <boost/scoped_array.hpp>
 #include <boost/scoped_ptr.hpp>
 
 namespace gr {
 namespace iqtlabs {
-boost::beast::http::request<boost::beast::http::string_body>
-make_inference_request(const std::string &model_name, const std::string &host,
-                       const std::string_view &body,
-                       const std::string &content_type);
-std::string send_inference_request(
-    boost::beast::tcp_stream *stream,
-    boost::beast::http::request<boost::beast::http::string_body> &req);
+
+class torchserve_client {
+public:
+  torchserve_client(std::string &host, std::string &port);
+  boost::beast::http::request<boost::beast::http::string_body>
+  make_inference_request(const std::string &model_name,
+                         const std::string_view &body,
+                         const std::string &content_type);
+  void send_inference_request(
+      boost::beast::http::request<boost::beast::http::string_body> &req,
+      std::string &results, std::string &error);
+  void connect();
+  void disconnect();
+
+private:
+  boost::asio::io_context ioc_;
+  boost::scoped_ptr<boost::beast::tcp_stream> stream_;
+  bool inference_connected_;
+  std::string host_, port_;
+
+  std::string send_inference_request_(
+      boost::beast::http::request<boost::beast::http::string_body> &req);
+};
 
 } // namespace iqtlabs
 } // namespace gr

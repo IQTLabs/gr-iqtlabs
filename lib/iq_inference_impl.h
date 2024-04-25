@@ -261,10 +261,7 @@ private:
   FREQ_T last_rx_freq_;
   std::deque<char> out_buf_;
   std::string host_, port_;
-  bool inference_connected_;
   boost::scoped_ptr<std::thread> inference_thread_;
-  boost::asio::io_context ioc_;
-  boost::scoped_ptr<boost::beast::tcp_stream> stream_;
 
   void process_items_(COUNT_T power_in_count, COUNT_T &power_read,
                       const float *&power_in, COUNT_T &consumed);
@@ -272,6 +269,7 @@ private:
   void delete_inference_();
   void background_run_inference_();
   void run_inference_();
+  boost::scoped_ptr<torchserve_client> torchserve_client_;
 
 public:
   iq_inference_impl(const std::string &tag, COUNT_T vlen, COUNT_T vlen_,
