@@ -321,16 +321,9 @@ void iq_inference_impl::run_inference_() {
         const std::string_view body(
             reinterpret_cast<char const *>(output_item.samples),
             output_item.sample_count * sizeof(gr_complex));
-        boost::beast::http::request<boost::beast::http::string_body> req{
-            boost::beast::http::verb::post, "/predictions/" + model_name, 11};
-        req.keep_alive(true);
-        req.set(boost::beast::http::field::connection, "keep-alive");
-        req.set(boost::beast::http::field::host, host_);
-        req.set(boost::beast::http::field::user_agent,
-                BOOST_BEAST_VERSION_STRING);
-        req.set(boost::beast::http::field::content_type,
-                "application/octet-stream");
-        req.body() = body;
+        boost::beast::http::request<boost::beast::http::string_body> req =
+            make_inference_request(model_name, host_, body,
+                                   "application/octet-stream");
         if (power_inference_) {
           const std::string_view power_body(
               reinterpret_cast<char const *>(output_item.power),

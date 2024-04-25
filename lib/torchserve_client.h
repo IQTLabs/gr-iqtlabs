@@ -215,6 +215,10 @@
 
 namespace gr {
 namespace iqtlabs {
+boost::beast::http::request<boost::beast::http::string_body>
+make_inference_request(const std::string &model_name, const std::string &host,
+                       const std::string_view &body,
+                       const std::string &content_type);
 std::string send_inference_request(
     boost::beast::tcp_stream *stream,
     boost::beast::http::request<boost::beast::http::string_body> &req);
