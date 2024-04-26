@@ -224,7 +224,7 @@ class qa_iq_inference_standalone(gr_unittest.TestCase):
 
     def test_instance(self):
         # FIXME: Test will fail until you pass sensible arguments to the constructor
-        instance = iq_inference_standalone()
+        instance = iq_inference_standalone(1024, "host:1000", "model")
 
     def test_001_descriptive_test_name(self):
         # set up fg
