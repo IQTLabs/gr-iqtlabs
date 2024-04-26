@@ -216,24 +216,23 @@ namespace iqtlabs {
 class torchserve_client {
 public:
   torchserve_client(std::string &host, std::string &port);
-  boost::beast::http::request<boost::beast::http::string_body>
-  make_inference_request(const std::string &model_name,
-                         const std::string_view &body,
-                         const std::string &content_type);
-  void send_inference_request(
-      boost::beast::http::request<boost::beast::http::string_body> &req,
-      std::string &results, std::string &error);
+  void make_inference_request(const std::string &model_name,
+                              const std::string_view &body,
+                              const std::string &content_type);
+  void send_inference_request(std::string &results, std::string &error);
 
 private:
   boost::asio::io_context ioc_;
   boost::scoped_ptr<boost::beast::tcp_stream> stream_;
+  boost::scoped_ptr<
+      boost::beast::http::request<boost::beast::http::string_body>>
+      req_;
   bool inference_connected_;
   std::string host_, port_;
 
   void connect();
   void disconnect();
-  std::string send_inference_request_(
-      boost::beast::http::request<boost::beast::http::string_body> &req);
+  std::string send_inference_request_();
 };
 
 } // namespace iqtlabs

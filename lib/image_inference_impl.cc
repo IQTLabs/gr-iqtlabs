@@ -567,11 +567,10 @@ void image_inference_impl::run_inference_() {
         const std::string_view body(
             reinterpret_cast<char const *>(encoded_buffer->data()),
             encoded_buffer->size());
-        boost::beast::http::request<boost::beast::http::string_body> req =
-            torchserve_client_->make_inference_request(model_name, body,
-                                                       "image/" + IMAGE_TYPE);
+        torchserve_client_->make_inference_request(model_name, body,
+                                                   "image/" + IMAGE_TYPE);
         std::string results;
-        torchserve_client_->send_inference_request(req, results, error);
+        torchserve_client_->send_inference_request(results, error);
 
         if (error.size() == 0) {
           rendered_predictions += parse_inference_(

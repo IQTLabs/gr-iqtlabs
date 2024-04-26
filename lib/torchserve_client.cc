@@ -29,40 +29,36 @@ void torchserve_client::disconnect() {
   }
 }
 
-boost::beast::http::request<boost::beast::http::string_body>
-torchserve_client::make_inference_request(const std::string &model_name,
-                                          const std::string_view &body,
-                                          const std::string &content_type) {
-  boost::beast::http::request<boost::beast::http::string_body> req{
-      boost::beast::http::verb::post, "/predictions/" + model_name, 11};
-  req.keep_alive(true);
-  req.set(boost::beast::http::field::connection, "keep-alive");
-  req.set(boost::beast::http::field::host, host_);
-  req.set(boost::beast::http::field::user_agent, BOOST_BEAST_VERSION_STRING);
-  req.set(boost::beast::http::field::content_type, content_type);
-  req.body() = body;
-  return req;
+void torchserve_client::make_inference_request(
+    const std::string &model_name, const std::string_view &body,
+    const std::string &content_type) {
+  req_.reset(new boost::beast::http::request<boost::beast::http::string_body>(
+      {boost::beast::http::verb::post, "/predictions/" + model_name, 11}));
+  req_->keep_alive(true);
+  req_->set(boost::beast::http::field::connection, "keep-alive");
+  req_->set(boost::beast::http::field::host, host_);
+  req_->set(boost::beast::http::field::user_agent, BOOST_BEAST_VERSION_STRING);
+  req_->set(boost::beast::http::field::content_type, content_type);
+  req_->body() = body;
+  req_->prepare_payload();
 }
 
-std::string torchserve_client::send_inference_request_(
-    boost::beast::http::request<boost::beast::http::string_body> &req) {
-  req.prepare_payload();
+std::string torchserve_client::send_inference_request_() {
   boost::beast::flat_buffer buffer;
   boost::beast::http::response<boost::beast::http::string_body> res;
-  boost::beast::http::write(*stream_, req);
+  boost::beast::http::write(*stream_, *req_);
   boost::beast::http::read(*stream_, buffer, res);
   return res.body().data();
 }
 
-void torchserve_client::send_inference_request(
-    boost::beast::http::request<boost::beast::http::string_body> &req,
-    std::string &results, std::string &error) {
+void torchserve_client::send_inference_request(std::string &results,
+                                               std::string &error) {
   // attempt to re-use existing connection. may fail if an http 1.1 server
   // has dropped the connection to use in the meantime.
   // TODO: handle case where model server is up but blocks us forever.
   if (inference_connected_) {
     try {
-      results = send_inference_request_(req);
+      results = send_inference_request_();
     } catch (std::exception &ex) {
       disconnect();
     }
@@ -71,7 +67,7 @@ void torchserve_client::send_inference_request(
   if (results.size() == 0) {
     try {
       connect();
-      results = send_inference_request_(req);
+      results = send_inference_request_();
     } catch (std::exception &ex) {
       error = "inference connection error: " + std::string(ex.what());
     }

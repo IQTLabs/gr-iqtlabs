@@ -207,8 +207,6 @@
 
 #include "base_impl.h"
 #include "torchserve_client.h"
-#include <boost/beast/core.hpp>
-#include <boost/beast/http.hpp>
 #include <boost/lockfree/spsc_queue.hpp>
 #include <boost/scoped_array.hpp>
 #include <boost/scoped_ptr.hpp>
