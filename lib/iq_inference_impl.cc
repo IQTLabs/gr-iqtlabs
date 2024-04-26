@@ -326,8 +326,8 @@ void iq_inference_impl::run_inference_() {
               output_item.sample_count * sizeof(float));
           req.body() += power_body;
         }
-        req.prepare_payload();
         std::string results;
+        torchserve_client_->send_inference_request(req, results, error);
         // TODO: troubleshoot test flask server hang after one request.
         if (error.size() == 0) {
           try {

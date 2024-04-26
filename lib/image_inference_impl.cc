@@ -570,7 +570,6 @@ void image_inference_impl::run_inference_() {
         boost::beast::http::request<boost::beast::http::string_body> req =
             torchserve_client_->make_inference_request(model_name, body,
                                                        "image/" + IMAGE_TYPE);
-        req.prepare_payload();
         std::string results;
         torchserve_client_->send_inference_request(req, results, error);
 

@@ -46,6 +46,7 @@ torchserve_client::make_inference_request(const std::string &model_name,
 
 std::string torchserve_client::send_inference_request_(
     boost::beast::http::request<boost::beast::http::string_body> &req) {
+  req.prepare_payload();
   boost::beast::flat_buffer buffer;
   boost::beast::http::response<boost::beast::http::string_body> res;
   boost::beast::http::write(*stream_, req);
