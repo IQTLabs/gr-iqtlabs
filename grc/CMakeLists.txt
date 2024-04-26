@@ -11,6 +11,7 @@ install(
         iqtlabs_vector_roll.block.yml
         iqtlabs_vector_to_json.block.yml
         iqtlabs_write_freq_samples.block.yml
+        iqtlabs_iq_inference_standalone.block.yml
   DESTINATION share/gnuradio/grc/blocks)
 if(Vulkan_FOUND)
   install(FILES iqtlabs_vkfft.block.yml iqtlabs_vkfft_short.block.yml

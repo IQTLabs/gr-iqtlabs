@@ -15,6 +15,7 @@ install(
         vector_roll.h
         vector_to_json.h
         write_freq_samples.h
+        iq_inference_standalone.h
   DESTINATION include/gnuradio/iqtlabs)
 
 if(Vulkan_FOUND)

@@ -1,0 +1,54 @@
+---
+id: iqtlabs_iq_inference_standalone
+label: iq_inference_standalone
+category: '[iqtlabs]'
+flags: [python, cpp]
+documentation: |-
+  This block accepts a stream of complex I/Q samples 
+  and runs inference on the samples via Torchserve.
+
+  input:
+    vector of complex, representing original I/Q samples,
+  output:
+    JSON inference results.
+
+  parameters:
+    vlen: length of complex sample vector.
+    model_names: comma separated list of model names.
+    model_server: torchserve inference to this address.
+
+templates:
+  imports: from gnuradio import iqtlabs
+  make: >
+    iqtlabs.iq_inference_standalone(
+    ${vlen}, ${model_server}, ${model_names})
+
+cpp_templates:
+  includes: ['#include <gnuradio/iqtlabs/iq_inference_standalone.h>']
+  declarations: 'gr::iqtlabs::iq_inference_standalone::sptr ${id};'
+  make: >
+    this->${id} = gr::iqtlabs::iq_inference_standalone::make(
+    ${vlen}, ${model_server}, ${model_names});
+  link: ['libgnuradio-iqtlabs.so']
+
+parameters:
+  - id: vlen
+    dtype: int
+  - id: model_server
+    dtype: str
+  - id: model_names
+
+asserts:
+  - ${ vlen > 0 }
+  - ${ model_server != "" }
+  - ${ model_names != "" }
+
+inputs:
+  - label: samples
+    domain: stream
+    dtype: complex
+    vlen: ${ vlen }
+
+outputs:
+
+file_format: 1

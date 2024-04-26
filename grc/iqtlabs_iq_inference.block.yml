@@ -43,7 +43,7 @@ templates:
 
 cpp_templates:
   includes: ['#include <gnuradio/iqtlabs/iq_inference.h>']
-  declarations: 'gr::iqtlabs::image_inference::sptr ${id};'
+  declarations: 'gr::iqtlabs::iq_inference::sptr ${id};'
   make: >
     this->${id} = gr::iqtlabs::iq_inference::make(
     ${tag}, ${vlen}, ${n_vlen}, ${sample_buffer, ${min_peak_points},
