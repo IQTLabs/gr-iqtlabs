@@ -16,7 +16,7 @@ documentation: |-
   parameters:
     vlen: length of complex sample vector.
     model_names: comma separated list of model names.
-    model_server: torchserve inference to this address.
+    model_server: torchserve inference to this address ("hostname:port")
 
 templates:
   imports: from gnuradio import iqtlabs

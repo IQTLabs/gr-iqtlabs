@@ -27,7 +27,7 @@ documentation: |-
     sample_buffer: size of sample lookback buffer.
     min_peak_points: Only run inference with this minimum average dB power.
     model_names: if not empty, comma separated list of model names.
-    model_server: if not empty, do torchserve inference to this address.
+    model_server: if not empty, inference to this address ("hostname:port")
     confidence: Only output inference results where confidence is greater.
     n_inference: if > 0, only run inference on 1/n_inference images.
     samp_rate: sample rate.
