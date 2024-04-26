@@ -1,10 +1,7 @@
----
-id: iqtlabs_iq_inference_standalone
-label: iq_inference_standalone
-category: '[iqtlabs]'
+ot liory: '[iqtlabs]'
 flags: [python, cpp]
 documentation: |-
-  This block accepts a stream of complex I/Q samples
+  This block accepts a stream of complex I/Q samples 
   and runs inference on the samples via Torchserve.
 
   input:
@@ -43,12 +40,12 @@ asserts:
   - ${ model_server != "" }
   - ${ model_names != "" }
 
-outputs:
-
 inputs:
   - label: samples
     domain: stream
     dtype: complex
     vlen: ${ vlen }
 
+outputs:
 file_format: 1
+
