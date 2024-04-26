@@ -294,7 +294,6 @@ bool iq_inference_impl::stop() {
   running_ = false;
   inference_thread_->join();
   run_inference_();
-  torchserve_client_->disconnect();
   return true;
 }
 
@@ -318,26 +317,21 @@ void iq_inference_impl::run_inference_() {
         const std::string_view body(
             reinterpret_cast<char const *>(output_item.samples),
             output_item.sample_count * sizeof(gr_complex));
-        boost::beast::http::request<boost::beast::http::string_body> req =
-            torchserve_client_->make_inference_request(
-                model_name, body, "application/octet-stream");
+        const std::string_view power_body(
+            reinterpret_cast<char const *>(output_item.power),
+            output_item.sample_count * sizeof(float));
         if (power_inference_) {
-          const std::string_view power_body(
-              reinterpret_cast<char const *>(output_item.power),
-              output_item.sample_count * sizeof(float));
-          req.body() += power_body;
+          const std::string samples_power_body =
+              std::string(body) + std::string(power_body);
+          torchserve_client_->make_inference_request(
+              model_name, samples_power_body, "application/octet-stream");
+        } else {
+          torchserve_client_->make_inference_request(
+              model_name, body, "application/octet-stream");
         }
-        req.prepare_payload();
         std::string results;
+        torchserve_client_->send_inference_request(results, error);
         // TODO: troubleshoot test flask server hang after one request.
-        bool valid_json = true;
-        torchserve_client_->send_inference_request(req, results, error);
-        if (error.size() == 0 &&
-            (results.size() == 0 || !nlohmann::json::accept(results))) {
-          error = "invalid json: " + results;
-          valid_json = false;
-        }
-
         if (error.size() == 0) {
           try {
             nlohmann::json original_results_json =
@@ -355,19 +349,15 @@ void iq_inference_impl::run_inference_() {
               }
             }
           } catch (std::exception &ex) {
-            error = "invalid json: " + std::string(ex.what()) + " " + results;
-            valid_json = false;
+            d_logger->error("invalid json: " + std::string(ex.what()) + " " +
+                            results);
+            error = "invalid json: " + std::string(ex.what());
           }
         }
 
         if (error.size()) {
           d_logger->error(error);
-          if (valid_json) {
-            output_json["error"] = error;
-          } else {
-            output_json["error"] = "invalid json";
-          }
-          torchserve_client_->disconnect();
+          output_json["error"] = error;
         }
       }
 

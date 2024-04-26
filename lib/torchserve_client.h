@@ -205,8 +205,6 @@
 #ifndef INCLUDED_IQTLABS_TORCHSERVE_CLIENT_H
 #define INCLUDED_IQTLABS_TORCHSERVE_CLIENT_H
 
-#include <boost/asio/connect.hpp>
-#include <boost/asio/ip/tcp.hpp>
 #include <boost/beast/core.hpp>
 #include <boost/beast/http.hpp>
 #include <boost/beast/version.hpp>
@@ -218,24 +216,23 @@ namespace iqtlabs {
 class torchserve_client {
 public:
   torchserve_client(std::string &host, std::string &port);
-  boost::beast::http::request<boost::beast::http::string_body>
-  make_inference_request(const std::string &model_name,
-                         const std::string_view &body,
-                         const std::string &content_type);
-  void send_inference_request(
-      boost::beast::http::request<boost::beast::http::string_body> &req,
-      std::string &results, std::string &error);
-  void connect();
-  void disconnect();
+  void make_inference_request(const std::string &model_name,
+                              const std::string_view &body,
+                              const std::string &content_type);
+  void send_inference_request(std::string &results, std::string &error);
 
 private:
   boost::asio::io_context ioc_;
   boost::scoped_ptr<boost::beast::tcp_stream> stream_;
+  boost::scoped_ptr<
+      boost::beast::http::request<boost::beast::http::string_body>>
+      req_;
   bool inference_connected_;
   std::string host_, port_;
 
-  std::string send_inference_request_(
-      boost::beast::http::request<boost::beast::http::string_body> &req);
+  void connect();
+  void disconnect();
+  std::string send_inference_request_();
 };
 
 } // namespace iqtlabs
