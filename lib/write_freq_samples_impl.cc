@@ -307,6 +307,7 @@ void write_freq_samples_impl::handle_annotation_(const pmt::pmt_t& msg)
    std::cout << "***** MESSAGE DEBUG PRINT ********\n";
    pmt::print(msg);
    std::cout << "**********************************\n";
+   std::string str = pmt::symbol_to_string(P_str);
  }
 
 void write_freq_samples_impl::add_sigmf_annotation_(COUNT_T sample_start, COUNT_T sample_count, double freq_lower_edge, double freq_upper_edge, std::string label) {
