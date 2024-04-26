@@ -10,7 +10,11 @@ Produce a spectrogram like image for inference pipelines (typically Torchserve b
 
 ### [iq_inference](grc/iqtlabs_iq_inference.block.yml)
 
-Correlate samples and power for inference pipelines (typically Torchserve based) to infer the presence of signals raw I/Q samples.
+Correlate samples and power for inference pipelines (typically Torchserve based) to infer the presence of signals raw in I/Q samples.
+
+### [iq_inference_standalone](grc/iqtlabs_iq_inference_standalone.block.yml)
+
+Send samples to inference pipelines (typically Torchserve based) to infer the presence of signals in raw I/Q samples.
 
 ### [retune_pre_fft](grc/iqtlabs_retune_pre_fft.block.yml)
 

@@ -210,8 +210,8 @@
 namespace gr {
 namespace iqtlabs {
 
-#pragma message("set the following appropriately and remove this warning")
-using input_type = gr_complex;
+const pmt::pmt_t INFERENCE_KEY = pmt::mp("inference");
+
 iq_inference_standalone::sptr
 iq_inference_standalone::make(uint64_t vlen, const std::string &model_server,
                               const std::string &model_names) {
@@ -228,8 +228,9 @@ iq_inference_standalone_impl::iq_inference_standalone_impl(
     : gr::sync_block("iq_inference_standalone",
                      gr::io_signature::make(1 /* min inputs */,
                                             1 /* max inputs */,
-                                            sizeof(input_type)),
-                     gr::io_signature::make(0, 0, 0)) {
+                                            vlen * sizeof(gr_complex)),
+                     gr::io_signature::make(0, 0, 0)),
+      vlen_(vlen) {
   std::vector<std::string> model_server_parts_;
   boost::split(model_server_parts_, model_server, boost::is_any_of(":"),
                boost::token_compress_on);
@@ -238,6 +239,7 @@ iq_inference_standalone_impl::iq_inference_standalone_impl(
   std::string host = model_server_parts_[0];
   std::string port = model_server_parts_[1];
   torchserve_client_.reset(new torchserve_client(host, port));
+  message_port_register_out(INFERENCE_KEY);
 }
 
 /*
@@ -248,13 +250,25 @@ iq_inference_standalone_impl::~iq_inference_standalone_impl() {}
 int iq_inference_standalone_impl::work(int noutput_items,
                                        gr_vector_const_void_star &input_items,
                                        gr_vector_void_star &output_items) {
-  auto in = static_cast<const input_type *>(input_items[0]);
-
-#pragma message(                                                               \
-    "Implement the signal processing in your block and remove this warning")
-  // Do <+signal processing+>
-
-  // Tell runtime system how many output items we produced.
+  auto *in = static_cast<const gr_complex *>(input_items[0]);
+  std::string error, results;
+  for (int i = 0; i < noutput_items; ++i) {
+    for (auto model_name : model_names_) {
+      const std::string_view body(reinterpret_cast<char const *>(in),
+                                  vlen_ * sizeof(gr_complex));
+      torchserve_client_->make_inference_request(model_name, body,
+                                                 "application/octet-stream");
+      torchserve_client_->send_inference_request(results, error);
+      torchserve_client_->disconnect();
+      d_logger->info("results {}, error {}", results, error);
+      auto pdu =
+          pmt::cons(pmt::make_dict(),
+                    pmt::init_u8vector(results.length(),
+                                       (const uint8_t *)results.c_str()));
+      message_port_pub(INFERENCE_KEY, pdu);
+    }
+    in += vlen_;
+  }
   return noutput_items;
 }
 

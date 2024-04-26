@@ -205,6 +205,7 @@
 #ifndef INCLUDED_IQTLABS_IQ_INFERENCE_STANDALONE_IMPL_H
 #define INCLUDED_IQTLABS_IQ_INFERENCE_STANDALONE_IMPL_H
 
+#include "iqtlabs_types.h"
 #include "torchserve_client.h"
 #include <boost/scoped_ptr.hpp>
 #include <gnuradio/iqtlabs/iq_inference_standalone.h>
@@ -216,6 +217,7 @@ class iq_inference_standalone_impl : public iq_inference_standalone {
 private:
   boost::scoped_ptr<torchserve_client> torchserve_client_;
   std::vector<std::string> model_names_;
+  COUNT_T vlen_;
 
 public:
   iq_inference_standalone_impl(uint64_t vlen, const std::string &model_server,

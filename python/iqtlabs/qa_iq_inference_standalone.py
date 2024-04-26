@@ -203,34 +203,105 @@
 #    limitations under the License.
 #
 
+import concurrent.futures
+import json
+import os
+import pmt
+import time
+import tempfile
+from flask import Flask, request
+import numpy as np
 from gnuradio import gr, gr_unittest
-# from gnuradio import blocks
+from gnuradio import blocks
+
 try:
-    from gnuradio.iqtlabs import iq_inference_standalone
+    from gnuradio.iqtlabs import iq_inference_standalone, tuneable_test_source
 except ImportError:
-    import os
     import sys
+
     dirname, filename = os.path.split(os.path.abspath(__file__))
     sys.path.append(os.path.join(dirname, "bindings"))
-    from gnuradio.iqtlabs import iq_inference_standalone
+    from gnuradio.iqtlabs import iq_inference_standalone, tuneable_test_source
+
+
+class pdu_decoder(gr.sync_block):
+    def __init__(self):
+        gr.sync_block.__init__(
+            self,
+            name="pdu_decoder",
+            in_sig=[],
+            out_sig=[],
+        )
+        self.message_port_register_in(pmt.intern("pdu"))
+        self.set_msg_handler(pmt.intern("pdu"), self.receive_pdu)
+        self.json_output = []
+
+    def receive_pdu(self, pdu):
+        pdu_decoded = pmt.to_python(pmt.cdr(pdu)).tobytes().decode("utf8")
+        self.json_output.append(json.loads(pdu_decoded))
+
 
 class qa_iq_inference_standalone(gr_unittest.TestCase):
-
     def setUp(self):
         self.tb = gr.top_block()
+        self.pid = os.fork()
 
     def tearDown(self):
         self.tb = None
+        if self.pid:
+            os.kill(self.pid, 15)
+
+    def simulate_torchserve(self, port, model_name, result, vlen):
+        app = Flask(__name__)
+
+        # nosemgrep:github.workflows.config.useless-inner-function
+        @app.route(f"/predictions/{model_name}", methods=["POST"])
+        def predictions_test():
+            print("got %s, count %u" % (type(request.data), len(request.data)))
+            samples = np.frombuffer(request.data, dtype=np.complex64, count=vlen)
+            power_offset = samples.size * samples.itemsize
+            unique_samples = np.unique(samples)
+            if unique_samples.size != 1:
+                print("not unique samples: ", unique_samples)
+                raise ValueError
+            if unique_samples[0].real != unique_samples[0].imag:
+                print("not equal sample: ", unique_samples)
+                raise ValueError
+            return json.dumps(result, indent=2), 200
+
+        try:
+            app.run(host="127.0.0.1", port=port)
+        except RuntimeError:
+            return
 
     def test_instance(self):
-        # FIXME: Test will fail until you pass sensible arguments to the constructor
-        instance = iq_inference_standalone(1024, "host:1000", "model")
+        samp_rate = 10e3
+        freq_divisor = 1e9
+        fft_size = 1024
+        port = 11003
+        model_name = "testmodel"
+        predictions_result = {"modulation": [{"conf": 0.9}]}
+        if self.pid == 0:
+            self.simulate_torchserve(port, model_name, predictions_result, fft_size)
+            return
+        instance = iq_inference_standalone(1024, "localhost:11003", "testmodel")
+        pdu_decoder_0 = pdu_decoder()
+        source = tuneable_test_source(freq_divisor)
+        throttle = blocks.throttle(gr.sizeof_gr_complex, samp_rate, True)
+        stream2vector_samples = blocks.stream_to_vector(gr.sizeof_gr_complex, fft_size)
+        self.tb.connect((source, 0), (throttle, 0))
+        self.tb.connect((throttle, 0), (stream2vector_samples, 0))
+        self.tb.connect((stream2vector_samples, 0), (instance, 0))
+        self.tb.msg_connect((instance, "inference"), (pdu_decoder_0, "pdu"))
 
-    def test_001_descriptive_test_name(self):
-        # set up fg
-        self.tb.run()
-        # check data
+        self.tb.start()
+        time.sleep(5)
+        self.tb.stop()
+        self.tb.wait()
+        self.assertTrue(pdu_decoder_0.json_output)
+        for result in pdu_decoder_0.json_output:
+            self.assertEqual(predictions_result, result)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     gr_unittest.run(qa_iq_inference_standalone)
