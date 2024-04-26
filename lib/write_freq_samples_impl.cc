@@ -241,6 +241,9 @@ write_freq_samples_impl::write_freq_samples_impl(
       write_step_samples_count_(0), skip_tune_step_samples_count_(0),
       last_rx_freq_(0), rotate_secs_(rotate_secs), gain_(gain), sigmf_(sigmf), use_zst_(use_zst) {
   outbuf_p.reset(new boost::iostreams::filtering_ostream());
+  message_port_register_in(pmt::mp("annotation"));
+  set_msg_handler(pmt::mp("annotation"),
+     [this](const pmt::pmt_t& msg) { handle_annotation_(msg); });
 }
 
 write_freq_samples_impl::~write_freq_samples_impl() {}
@@ -256,7 +259,7 @@ void write_freq_samples_impl::write_(const char *data, COUNT_T len) {
   }
 }
 
-void write_freq_samples_impl::open_sigmf(const std::string &source_file, double timestamp,
+void write_freq_samples_impl::open_sigmf_(const std::string &source_file, double timestamp,
                             const std::string &datatype, double sample_rate,
                             double frequency, double gain) {
   // sigmf_record = sigmf::SigMF<sigmf::Global<core::DescrT, antenna::DescrT>,
@@ -286,7 +289,7 @@ void write_freq_samples_impl::open_sigmf(const std::string &source_file, double 
 
 }
 
-void write_freq_samples_impl::start_new_sigmf_capture(double frequency) {
+void write_freq_samples_impl::start_new_sigmf_capture_(double frequency) {
   auto capture =
     sigmf::Capture<sigmf::core::DescrT, sigmf::capture_details::DescrT>();
   capture.get<sigmf::core::DescrT>().sample_start = samples_written_;
@@ -296,10 +299,17 @@ void write_freq_samples_impl::start_new_sigmf_capture(double frequency) {
   ts_ss << std::put_time(gmtime(&timestamp_t), "%FT%TZ");
   capture.get<sigmf::core::DescrT>().datetime = ts_ss.str();
   sigmf_record.captures.emplace_back(capture);
-  write_sigmf();
+  write_sigmf_();
 }
 
-void write_freq_samples_impl::add_sigmf_annotation(COUNT_T sample_start, COUNT_T sample_count, double freq_lower_edge, double freq_upper_edge, std::string label) {
+void write_freq_samples_impl::handle_annotation_(const pmt::pmt_t& msg)
+ {
+   std::cout << "***** MESSAGE DEBUG PRINT ********\n";
+   pmt::print(msg);
+   std::cout << "**********************************\n";
+ }
+
+void write_freq_samples_impl::add_sigmf_annotation_(COUNT_T sample_start, COUNT_T sample_count, double freq_lower_edge, double freq_upper_edge, std::string label) {
     auto anno = sigmf::Annotation<core::DescrT>();
     anno.access<core::AnnotationT>().sample_start = sample_start;
     anno.access<core::AnnotationT>().sample_count = sample_count;
@@ -310,7 +320,7 @@ void write_freq_samples_impl::add_sigmf_annotation(COUNT_T sample_start, COUNT_T
 
 } 
 
-void write_freq_samples_impl::write_sigmf() {
+void write_freq_samples_impl::write_sigmf_() {
   if (!sigmf_) {
     return;
   }
@@ -340,7 +350,7 @@ void write_freq_samples_impl::open_(COUNT_T zlevel) {
   }
 
   if (sigmf_) {
-    open_sigmf( datafile_, open_time_, datatype_, samp_rate_,
+    open_sigmf_( datafile_, open_time_, datatype_, samp_rate_,
                   last_rx_freq_, gain_);
   }
 
@@ -354,7 +364,7 @@ void write_freq_samples_impl::close_() {
   if (!outbuf_p->empty()) {
     outbuf_p->reset();
     if (sigmf_) {
-      write_sigmf();
+      write_sigmf_();
     }
     std::string dotfile = get_dotfile_(datafile_);
     rename(dotfile.c_str(), datafile_.c_str());
@@ -415,7 +425,7 @@ int write_freq_samples_impl::general_work(
         if (outbuf_p->empty()) {  // Check if the files have been opened by looking at the output filter pipeline
           open_(1); 
         } else {
-          start_new_sigmf_capture(rx_freq); // we switched freq so start a new SigMF Capture
+          start_new_sigmf_capture_(rx_freq); // we switched freq so start a new SigMF Capture
         }
       } else {
         open_(1);

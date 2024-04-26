@@ -224,13 +224,13 @@ private:
   void close_();
   void write_samples_(COUNT_T c, const char *&in);
 
-  void open_sigmf( const std::string &source_file,
+  void open_sigmf_( const std::string &source_file,
                    double timestamp, const std::string &datatype,
                    double sample_rate, double frequency, double gain);
   
-  void write_sigmf();
-  void start_new_sigmf_capture(double frequency); 
-
+  void write_sigmf_();
+  void start_new_sigmf_capture_(double frequency); 
+  void handle_annotation_(const pmt::pmt_t& msg);
 
   pmt::pmt_t tag_;
   COUNT_T itemsize_;
@@ -262,7 +262,7 @@ private:
       sigmf_record;
 
 public:
-  void add_sigmf_annotation(COUNT_T sample_start, COUNT_T sample_count, double freq_lower_edge, double freq_upper_edge, std::string label);
+  void add_sigmf_annotation_(COUNT_T sample_start, COUNT_T sample_count, double freq_lower_edge, double freq_upper_edge, std::string label);
 
   write_freq_samples_impl(const std::string &tag, COUNT_T itemsize,
                           const std::string &datatype, COUNT_T vlen,
