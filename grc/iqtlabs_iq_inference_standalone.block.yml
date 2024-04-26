@@ -43,7 +43,7 @@ asserts:
   - ${ model_server != "" }
   - ${ model_names != "" }
 
-outputs:
+outputs: []
 
 inputs:
   - label: samples
