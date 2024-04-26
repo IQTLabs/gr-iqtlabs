@@ -337,11 +337,9 @@ class qa_image_inference(gr_unittest.TestCase):
             self.assertTrue(os.stat(test_file).st_size)
             with open(test_file) as f:
                 content = f.read()
-            json_raw_all = content.split("\n\n")
+            json_raw_all = [json_raw for json_raw in content.split("\n\n") if json_raw]
             self.assertTrue(json_raw_all)
             for json_raw in json_raw_all:
-                if not json_raw:
-                    continue
                 result = json.loads(json_raw)
                 print(result)
                 metadata_result = result["metadata"]

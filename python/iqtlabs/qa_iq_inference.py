@@ -349,14 +349,12 @@ class qa_iq_inference(gr_unittest.TestCase):
             self.assertTrue(os.stat(test_file).st_size)
             with open(test_file) as f:
                 content = f.read()
-            json_raw_all = content.split("\n\n")
+            json_raw_all = [json_raw for json_raw in content.split("\n\n") if json_raw]
             self.assertTrue(json_raw_all)
             last_sc = 0
             last_ts = 0
             last_rx_freq = 0
             for json_raw in json_raw_all:
-                if not json_raw:
-                    continue
                 result = json.loads(json_raw)
                 print(result)
                 sample_value = float(
