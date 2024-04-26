@@ -4,13 +4,14 @@ label: iq_inference_standalone
 category: '[iqtlabs]'
 flags: [python, cpp]
 documentation: |-
-  This block accepts a stream of complex I/Q samples
+  This block accepts a vector of complex I/Q samples
   and runs inference on the samples via Torchserve.
 
   input:
     vector of complex, representing original I/Q samples,
   output:
-    JSON inference results.
+    inference:
+      JSON inference results.
 
   parameters:
     vlen: length of complex sample vector.
@@ -43,7 +44,9 @@ asserts:
   - ${ model_server != "" }
   - ${ model_names != "" }
 
-outputs: []
+outputs:
+  - id: inference
+    domain: message
 
 inputs:
   - label: samples
