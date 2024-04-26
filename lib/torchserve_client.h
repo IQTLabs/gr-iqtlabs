@@ -220,6 +220,8 @@ public:
                               const std::string_view &body,
                               const std::string &content_type);
   void send_inference_request(std::string &results, std::string &error);
+  void connect();
+  void disconnect();
 
 private:
   boost::asio::io_context ioc_;
@@ -230,8 +232,6 @@ private:
   bool inference_connected_;
   std::string host_, port_;
 
-  void connect();
-  void disconnect();
   std::string send_inference_request_();
 };
 

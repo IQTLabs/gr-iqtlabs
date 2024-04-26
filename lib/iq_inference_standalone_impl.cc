@@ -228,7 +228,7 @@ iq_inference_standalone_impl::iq_inference_standalone_impl(
     : gr::sync_block("iq_inference_standalone",
                      gr::io_signature::make(1 /* min inputs */,
                                             1 /* max inputs */,
-                                            sizeof(gr_complex)),
+                                            vlen * sizeof(gr_complex)),
                      gr::io_signature::make(0, 0, 0)),
       vlen_(vlen) {
   std::vector<std::string> model_server_parts_;
@@ -252,7 +252,6 @@ int iq_inference_standalone_impl::work(int noutput_items,
                                        gr_vector_void_star &output_items) {
   auto *in = static_cast<const gr_complex *>(input_items[0]);
   std::string error, results;
-
   for (int i = 0; i < noutput_items; ++i) {
     for (auto model_name : model_names_) {
       const std::string_view body(reinterpret_cast<char const *>(in),
@@ -260,6 +259,7 @@ int iq_inference_standalone_impl::work(int noutput_items,
       torchserve_client_->make_inference_request(model_name, body,
                                                  "application/octet-stream");
       torchserve_client_->send_inference_request(results, error);
+      torchserve_client_->disconnect();
       d_logger->info("results {}, error {}", results, error);
       auto pdu =
           pmt::cons(pmt::make_dict(),
@@ -269,7 +269,6 @@ int iq_inference_standalone_impl::work(int noutput_items,
     }
     in += vlen_;
   }
-
   return noutput_items;
 }
 
