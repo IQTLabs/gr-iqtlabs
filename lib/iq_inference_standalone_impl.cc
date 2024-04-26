@@ -203,6 +203,8 @@
  */
 
 #include "iq_inference_standalone_impl.h"
+#include <boost/algorithm/string.hpp>
+#include <boost/lexical_cast.hpp>
 #include <gnuradio/io_signature.h>
 
 namespace gr {
@@ -227,7 +229,16 @@ iq_inference_standalone_impl::iq_inference_standalone_impl(
                      gr::io_signature::make(1 /* min inputs */,
                                             1 /* max inputs */,
                                             sizeof(input_type)),
-                     gr::io_signature::make(0, 0, 0)) {}
+                     gr::io_signature::make(0, 0, 0)) {
+  std::vector<std::string> model_server_parts_;
+  boost::split(model_server_parts_, model_server, boost::is_any_of(":"),
+               boost::token_compress_on);
+  boost::split(model_names_, model_names, boost::is_any_of(","),
+               boost::token_compress_on);
+  std::string host = model_server_parts_[0];
+  std::string port = model_server_parts_[1];
+  torchserve_client_.reset(new torchserve_client(host, port));
+}
 
 /*
  * Our virtual destructor.

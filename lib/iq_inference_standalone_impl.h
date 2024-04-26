@@ -205,6 +205,8 @@
 #ifndef INCLUDED_IQTLABS_IQ_INFERENCE_STANDALONE_IMPL_H
 #define INCLUDED_IQTLABS_IQ_INFERENCE_STANDALONE_IMPL_H
 
+#include "torchserve_client.h"
+#include <boost/scoped_ptr.hpp>
 #include <gnuradio/iqtlabs/iq_inference_standalone.h>
 
 namespace gr {
@@ -212,14 +214,14 @@ namespace iqtlabs {
 
 class iq_inference_standalone_impl : public iq_inference_standalone {
 private:
-  // Nothing to declare in this block.
+  boost::scoped_ptr<torchserve_client> torchserve_client_;
+  std::vector<std::string> model_names_;
 
 public:
   iq_inference_standalone_impl(uint64_t vlen, const std::string &model_server,
                                const std::string &model_names);
   ~iq_inference_standalone_impl();
 
-  // Where all the action really happens
   int work(int noutput_items, gr_vector_const_void_star &input_items,
            gr_vector_void_star &output_items);
 };
