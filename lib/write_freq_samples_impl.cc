@@ -337,16 +337,27 @@ void write_freq_samples_impl::handle_annotation_(const pmt::pmt_t& msg)
    std::string msg_str = pmt::symbol_to_string(msg);
 
 
+  std::replace(msg_str.begin(), msg_str.end(), '\'', '\"');
 
-
-   try {
+double sample_clock = 0.0;
+try {
       nlohmann::json inference_results = nlohmann::json::parse(msg_str);
       std::cout << "Inference results: " << inference_results.dump(4) << "\n";
       if (inference_results.contains("metadata")) {
         auto metadata = inference_results["metadata"];
-        std::cout << "metadat: " << metadata.dump(4) << "\n";
-        if (metadata.contains("predictions")) {
-          auto predictions = metadata["predictions"];
+        std::cout << "metadata: " << metadata.dump(4) << "\n";
+        if (metadata.contains("sample_clock")) {
+            std::string sample_clock_str = metadata["sample_clock"];
+            sample_clock = std::stod(sample_clock_str);
+            std::cout << "Sample Clock: " << sample_clock << "\n";
+        } else {
+            std::cout << "No sample clock found in metadata\n";
+        }
+      } else {
+        std::cout << "No metadata found in message\n";
+      }  
+      if (inference_results.contains("predictions")) {
+          auto predictions = inference_results["predictions"];
           for (auto &prediction_class : predictions.items()) {
             if (prediction_class.key() == "No signal") {
               std::cout << "No signal detected\n";
@@ -356,20 +367,16 @@ void write_freq_samples_impl::handle_annotation_(const pmt::pmt_t& msg)
               float confidence = prediction["confidence"];
               std::string model = prediction["model"];
               std::cout << "Prediction - class " << prediction_class.key() << "\t confidence " << confidence << "\n";
-              d_logger->info("Prediction - class {} \t confidence {}", prediction_class.key(), confidence);
-              // Do something with confidence and model
+              add_sigmf_annotation_(sample_clock, 1024, 0, 0, prediction_class.key());
             }
           }
         } else {
           std::cout << "No predictions found in message\n";
         } 
-      } else {
-        std::cout << "No metadata found in message\n";
-      }  
   } catch (std::exception &ex) {
     std::string error = "invalid json: " + std::string(ex.what());
-    d_logger->error("{}", error);
-  }
+    std::cout << error << "\n";
+      }
  }
 
 void write_freq_samples_impl::add_sigmf_annotation_(COUNT_T sample_start, COUNT_T sample_count, double freq_lower_edge, double freq_upper_edge, std::string label) {
