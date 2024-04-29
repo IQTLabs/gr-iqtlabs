@@ -211,6 +211,7 @@
 #include <boost/iostreams/filter/zstd.hpp>
 #include <boost/iostreams/filtering_stream.hpp>
 #include <boost/scoped_ptr.hpp>
+#include <nlohmann/json.hpp>
 #include <sigmf/sigmf.h>
 #include <gnuradio/iqtlabs/write_freq_samples.h>
 

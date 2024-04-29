@@ -348,6 +348,7 @@ void iq_inference_impl::run_inference_() {
               }
               for (auto &prediction_ref : prediction_class.value().items()) {
                 auto prediction = prediction_ref.value();
+                std::cout << prediction.dump(4) << std::endl;
                 prediction["model"] = model_name;
                 // TODO: gate on minimum confidence.
                 // float conf = prediction["conf"];

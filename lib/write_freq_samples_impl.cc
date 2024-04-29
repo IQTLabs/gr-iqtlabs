@@ -307,7 +307,28 @@ void write_freq_samples_impl::handle_annotation_(const pmt::pmt_t& msg)
    std::cout << "***** MESSAGE DEBUG PRINT ********\n";
    pmt::print(msg);
    std::cout << "**********************************\n";
-   std::string str = pmt::symbol_to_string(P_str);
+   std::string msg_str = pmt::symbol_to_string(msg);
+   try {
+      nlohmann::json inference_results = nlohmann::json::parse(msg_str);
+      if (inference_results.contains("predictions")) {
+        auto predictions = inference_results["predictions"];
+        for (auto &prediction_class : predictions.items()) {
+          if (prediction_class.key() == "No signal") {
+            continue;
+          }
+          for (auto &prediction : prediction_class.value()) {
+            float confidence = prediction["confidence"];
+            std::string model = prediction["model"];
+            d_logger->info("Prediction - class {} \t confidence {}", prediction_class.key(), confidence);
+            // Do something with confidence and model
+          }
+        }
+      }    
+  } catch (std::exception &ex) {
+    error = "invalid json: " + std::string(ex.what()) + " " + results;
+    d_logger->error("{}", error);
+    valid_json = false;
+  }
  }
 
 void write_freq_samples_impl::add_sigmf_annotation_(COUNT_T sample_start, COUNT_T sample_count, double freq_lower_edge, double freq_upper_edge, std::string label) {
