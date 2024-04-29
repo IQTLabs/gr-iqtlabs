@@ -289,6 +289,31 @@ void write_freq_samples_impl::open_sigmf_(const std::string &source_file, double
 
 }
 
+std::string write_freq_samples_impl::sigmf_datetime()
+{
+    using namespace std::chrono;
+
+    // get current time
+    auto now = system_clock::now();
+
+    // get number of milliseconds for the current second
+    // (remainder after division into seconds)
+    auto ms = duration_cast<milliseconds>(now.time_since_epoch()) % 1000;
+
+    // convert to std::time_t in order to convert to std::tm (broken time)
+    auto timer = system_clock::to_time_t(now);
+
+    // convert to broken time
+    std::tm bt = *std::localtime(&timer);
+
+    std::ostringstream oss;
+
+    oss << std::put_time(&bt, "%FT%T"); // HH:MM:SS
+    oss << '.' << std::setfill('0') << std::setw(7) << "Z" << ms.count();
+
+    return oss.str();
+}
+
 void write_freq_samples_impl::start_new_sigmf_capture_(double frequency) {
   auto capture =
     sigmf::Capture<sigmf::core::DescrT, sigmf::capture_details::DescrT>();
@@ -296,8 +321,10 @@ void write_freq_samples_impl::start_new_sigmf_capture_(double frequency) {
   capture.get<sigmf::core::DescrT>().frequency = frequency;
   std::ostringstream ts_ss;
   time_t timestamp_t = static_cast<time_t>(host_now_());
-  ts_ss << std::put_time(gmtime(&timestamp_t), "%FT%TZ");
-  capture.get<sigmf::core::DescrT>().datetime = ts_ss.str();
+
+  // ts_ss << std::put_time(gmtime(&timestamp_t), "%FT%TZ");
+  // capture.get<sigmf::core::DescrT>().datetime = ts_ss.str();
+  capture.get<sigmf::core::DescrT>().datetime = sigmf_datetime();
   sigmf_record.captures.emplace_back(capture);
   write_sigmf_();
 }
@@ -308,22 +335,37 @@ void write_freq_samples_impl::handle_annotation_(const pmt::pmt_t& msg)
    pmt::print(msg);
    std::cout << "**********************************\n";
    std::string msg_str = pmt::symbol_to_string(msg);
+
+
+
+
    try {
       nlohmann::json inference_results = nlohmann::json::parse(msg_str);
-      if (inference_results.contains("predictions")) {
-        auto predictions = inference_results["predictions"];
-        for (auto &prediction_class : predictions.items()) {
-          if (prediction_class.key() == "No signal") {
-            continue;
+      std::cout << "Inference results: " << inference_results.dump(4) << "\n";
+      if (inference_results.contains("metadata")) {
+        auto metadata = inference_results["metadata"];
+        std::cout << "metadat: " << metadata.dump(4) << "\n";
+        if (metadata.contains("predictions")) {
+          auto predictions = metadata["predictions"];
+          for (auto &prediction_class : predictions.items()) {
+            if (prediction_class.key() == "No signal") {
+              std::cout << "No signal detected\n";
+              continue;
+            }
+            for (auto &prediction : prediction_class.value()) {
+              float confidence = prediction["confidence"];
+              std::string model = prediction["model"];
+              std::cout << "Prediction - class " << prediction_class.key() << "\t confidence " << confidence << "\n";
+              d_logger->info("Prediction - class {} \t confidence {}", prediction_class.key(), confidence);
+              // Do something with confidence and model
+            }
           }
-          for (auto &prediction : prediction_class.value()) {
-            float confidence = prediction["confidence"];
-            std::string model = prediction["model"];
-            d_logger->info("Prediction - class {} \t confidence {}", prediction_class.key(), confidence);
-            // Do something with confidence and model
-          }
-        }
-      }    
+        } else {
+          std::cout << "No predictions found in message\n";
+        } 
+      } else {
+        std::cout << "No metadata found in message\n";
+      }  
   } catch (std::exception &ex) {
     std::string error = "invalid json: " + std::string(ex.what());
     d_logger->error("{}", error);

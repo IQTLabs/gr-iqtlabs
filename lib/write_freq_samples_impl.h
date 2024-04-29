@@ -224,7 +224,7 @@ private:
   void open_(COUNT_T zlevel);
   void close_();
   void write_samples_(COUNT_T c, const char *&in);
-
+  std::string sigmf_datetime();
   void open_sigmf_( const std::string &source_file,
                    double timestamp, const std::string &datatype,
                    double sample_rate, double frequency, double gain);
