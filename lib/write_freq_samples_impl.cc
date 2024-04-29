@@ -325,9 +325,8 @@ void write_freq_samples_impl::handle_annotation_(const pmt::pmt_t& msg)
         }
       }    
   } catch (std::exception &ex) {
-    error = "invalid json: " + std::string(ex.what()) + " " + results;
+    std::string error = "invalid json: " + std::string(ex.what());
     d_logger->error("{}", error);
-    valid_json = false;
   }
  }
 
