@@ -223,12 +223,16 @@ const COUNT_T MAX_INFERENCE = 5;
 
 typedef struct output_item {
   FREQ_T rx_freq;
+  FREQ_T freq_lower_edge;
+  FREQ_T freq_upper_edge;
   TIME_T rx_time;
   double points_max;
   COUNT_T sample_count;
   COUNT_T sample_clock;
   gr_complex *samples;
   float *power;
+  int sample_rate;
+
 } output_item_type;
 
 class iq_inference_impl : public iq_inference, base_impl {

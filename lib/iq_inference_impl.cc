@@ -307,6 +307,10 @@ void iq_inference_impl::run_inference_() {
     metadata_json["ts"] = host_now_str_(output_item.rx_time);
     metadata_json["sample_clock"] = std::to_string(output_item.sample_clock);
     metadata_json["rx_freq"] = std::to_string(output_item.rx_freq);
+    metadata_json["freq_lower_edge"] = std::to_string(output_item.freq_lower_edge);
+    metadata_json["freq_upper_edge"] = std::to_string(output_item.freq_upper_edge);
+    metadata_json["sample_rate"] = std::to_string(output_item.sample_rate);
+    metadata_json["sample_count"] = std::to_string(output_item.sample_count);
     nlohmann::json output_json;
 
     if ((host_.size() && port_.size()) && (model_names_.size() > 0)) {
@@ -421,6 +425,9 @@ void iq_inference_impl::process_items_(COUNT_T power_in_count,
         last_rx_time_ + (samples_since_tag_ / TIME_T(samp_rate_));
     output_item.sample_clock = sample_clock_;
     output_item.rx_freq = last_rx_freq_;
+    output_item.freq_lower_edge = last_rx_freq_ - samp_rate_ / 2;
+    output_item.freq_upper_edge = last_rx_freq_ + samp_rate_ / 2;
+    output_item.sample_rate = samp_rate_;
     output_item.sample_count = batch_;
     output_item.samples = new gr_complex[output_item.sample_count];
     output_item.power = new float[output_item.sample_count];

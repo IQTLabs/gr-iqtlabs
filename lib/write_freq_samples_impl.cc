@@ -340,6 +340,9 @@ void write_freq_samples_impl::handle_annotation_(const pmt::pmt_t& msg)
   std::replace(msg_str.begin(), msg_str.end(), '\'', '\"');
 
 double sample_clock = 0.0;
+int sample_count = 0;
+FREQ_T freq_lower_edge = 0;
+FREQ_T freq_upper_edge = 0;
 try {
       nlohmann::json inference_results = nlohmann::json::parse(msg_str);
       std::cout << "Inference results: " << inference_results.dump(4) << "\n";
@@ -353,6 +356,15 @@ try {
         } else {
             std::cout << "No sample clock found in metadata\n";
         }
+        std::string sample_count_str = metadata["sample_count"];
+        sample_count = std::stoi(sample_count_str);
+        std::cout << "Sample Count: " << sample_count << "\n";
+        std::string freq_lower_edge_str = metadata["freq_lower_edge"];
+        freq_lower_edge = std::stod(freq_lower_edge_str);
+        std::cout << "Freq Lower Edge: " << freq_lower_edge << "\n";
+        std::string freq_upper_edge_str = metadata["freq_upper_edge"];
+        freq_upper_edge = std::stod(freq_upper_edge_str);
+        std::cout << "Freq Upper Edge: " << freq_upper_edge << "\n";
       } else {
         std::cout << "No metadata found in message\n";
       }  
@@ -367,7 +379,7 @@ try {
               float confidence = prediction["confidence"];
               std::string model = prediction["model"];
               std::cout << "Prediction - class " << prediction_class.key() << "\t confidence " << confidence << "\n";
-              add_sigmf_annotation_(sample_clock, 1024, -100, 100, prediction_class.key());
+              add_sigmf_annotation_(sample_clock, sample_count, freq_lower_edge, freq_upper_edge, prediction_class.key());
             }
           }
           write_sigmf_();
@@ -385,6 +397,8 @@ void write_freq_samples_impl::add_sigmf_annotation_(COUNT_T sample_start, COUNT_
     std::cout << "Adding annotation: " << label << "\n";
     anno.access<core::AnnotationT>().sample_start = sample_start;
     anno.access<core::AnnotationT>().sample_count = sample_count;
+    anno.access<core::AnnotationT>().freq_lower_edge = freq_lower_edge;
+    anno.access<core::AnnotationT>().freq_upper_edge = freq_upper_edge;
     anno.access<core::AnnotationT>().description = label;
     anno.access<core::AnnotationT>().label = label;
     anno.access<core::AnnotationT>().generator = "GamutRF";
