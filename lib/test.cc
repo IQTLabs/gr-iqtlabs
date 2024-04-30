@@ -6,6 +6,7 @@ int main()
 {
 std::cout << "Hello, World!" << std::endl;
 std::string msg_str = "{\"metadata\": {\"rx_freq\": \"2449999999\", \"sample_clock\": \"3964928\", \"ts\": \"1714410255.961\"}, \"predictions\": {\"5\": [{\"confidence\": 9.409838676452637, \"model\": \"torchsig_model\"}]}}";
+double sample_clock = 0.0;
 try {
       nlohmann::json inference_results = nlohmann::json::parse(msg_str);
       std::cout << "Inference results: " << inference_results.dump(4) << "\n";
@@ -14,7 +15,7 @@ try {
         std::cout << "metadata: " << metadata.dump(4) << "\n";
         if (metadata.contains("sample_clock")) {
             std::string sample_clock_str = metadata["sample_clock"];
-            double sample_clock = std::stod(sample_clock_str);
+            sample_clock = std::stod(sample_clock_str);
             std::cout << "Sample Clock: " << sample_clock << "\n";
         } else {
             std::cout << "No sample clock found in metadata\n";

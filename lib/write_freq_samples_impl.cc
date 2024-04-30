@@ -367,9 +367,10 @@ try {
               float confidence = prediction["confidence"];
               std::string model = prediction["model"];
               std::cout << "Prediction - class " << prediction_class.key() << "\t confidence " << confidence << "\n";
-              add_sigmf_annotation_(sample_clock, 1024, 0, 0, prediction_class.key());
+              add_sigmf_annotation_(sample_clock, 1024, -100, 100, prediction_class.key());
             }
           }
+          write_sigmf_();
         } else {
           std::cout << "No predictions found in message\n";
         } 
@@ -381,12 +382,14 @@ try {
 
 void write_freq_samples_impl::add_sigmf_annotation_(COUNT_T sample_start, COUNT_T sample_count, double freq_lower_edge, double freq_upper_edge, std::string label) {
     auto anno = sigmf::Annotation<core::DescrT>();
+    std::cout << "Adding annotation: " << label << "\n";
     anno.access<core::AnnotationT>().sample_start = sample_start;
     anno.access<core::AnnotationT>().sample_count = sample_count;
     anno.access<core::AnnotationT>().description = label;
     anno.access<core::AnnotationT>().label = label;
     anno.access<core::AnnotationT>().generator = "GamutRF";
     sigmf_record.annotations.emplace_back(anno);
+    std::cout << "Total annotations: " << sigmf_record.annotations.size() << "\n";
 
 } 
 
