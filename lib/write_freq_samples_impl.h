@@ -234,6 +234,7 @@ private:
   void handle_annotation_(const pmt::pmt_t& msg);
 
   pmt::pmt_t tag_;
+  pmt::pmt_t sample_count_tag_;
   COUNT_T itemsize_;
   COUNT_T vlen_;
   std::string sdir_;

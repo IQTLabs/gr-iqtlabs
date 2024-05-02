@@ -213,6 +213,7 @@ const pmt::pmt_t FREQ_KEY = pmt::mp("freq");
 const pmt::pmt_t TUNE_KEY = pmt::mp("tune");
 const pmt::pmt_t RX_TIME_KEY = pmt::string_to_symbol("rx_time");
 const pmt::pmt_t RX_FREQ_KEY = pmt::string_to_symbol("rx_freq");
+const pmt::pmt_t RX_SAMPLE_COUNT_KEY = pmt::string_to_symbol("rx_sample_count");
 
 #define OUTPUT_TAGS(rx_time, rx_freq, stream, offset)                          \
   {                                                                            \

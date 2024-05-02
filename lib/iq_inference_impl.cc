@@ -452,7 +452,7 @@ int iq_inference_impl::general_work(int noutput_items,
   const gr_complex *samples_in =
       static_cast<const gr_complex *>(input_items[0]);
   const float *power_in = static_cast<const float *>(input_items[1]);
-  std::vector<tag_t> all_tags, rx_freq_tags;
+  std::vector<tag_t> all_tags, rx_freq_tags, sample_count_tags;
   std::vector<TIME_T> rx_times;
   COUNT_T consumed = 0;
   COUNT_T leftover = 0;
@@ -471,6 +471,22 @@ int iq_inference_impl::general_work(int noutput_items,
     std::copy(from, to, out);
     out_buf_.erase(from, to);
   }
+
+  get_tags_in_window(sample_count_tags, 0, 0, samples_in_count, RX_SAMPLE_COUNT_KEY);
+
+  for (COUNT_T t = 0; t < sample_count_tags.size(); ++t) {
+    const auto &tag = sample_count_tags[t];
+    const auto rel = tag.offset - in_first;
+
+    double our_sample_count = sample_clock_ + rel;
+    double retune_freq_count = pmt::to_double(tag.value);
+
+    if (our_sample_count != retune_freq_count) {
+      std::cout <<  "our_sample_count: " << our_sample_count << " \tretune_freq_count: " << retune_freq_count << " \tsamples_clock: " << sample_clock_ << " \tin_first: " << in_first << " \ttag.offset : " << tag.offset << "\n";
+    }
+  }
+
+
 
   get_tags_in_window(all_tags, 1, 0, power_in_count);
   get_tags(tag_, all_tags, rx_freq_tags, rx_times, power_in_count);

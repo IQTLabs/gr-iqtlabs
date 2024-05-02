@@ -244,6 +244,8 @@ retune_pre_fft_impl::retune_pre_fft_impl(
   total_.reset((float *)volk_malloc(sizeof(float), alignment));
   set_tag_propagation_policy(TPP_DONT);
   set_output_multiple(nfft_);
+  sample_count = 0;
+  last_sample_count_tag = 0;
 }
 
 retune_pre_fft_impl::~retune_pre_fft_impl() {}
@@ -291,6 +293,8 @@ void retune_pre_fft_impl::process_items_(COUNT_T c, const block_type *&in,
       std::memcpy((void *)out, (void *)in, sizeof(block_type) * nfft_);
       out += nfft_;
       ++produced;
+      sample_count += nfft_;
+
       if (!all_zeros || !total_tune_count_) {
         if (need_retune_(1)) {
           RETUNE_NOW();
@@ -308,10 +312,20 @@ void retune_pre_fft_impl::process_items_(COUNT_T c, const block_type *&in,
       std::memcpy((void *)out, (void *)in, sizeof(block_type) * nfft_);
       out += nfft_;
       ++produced;
+      sample_count += nfft_;
       if (need_retune_(1)) {
         RETUNE_NOW();
       }
     }
+  }
+  if (sample_count - (last_sample_count_tag + nfft_*100) >= 0) {
+    int offset = (produced / fft_batch_size_);
+    last_sample_count_tag = sample_count;
+    std::stringstream str;                                                     
+    str << name() << unique_id();                                              
+    pmt::pmt_t _id = pmt::string_to_symbol(str.str());                         
+    this->add_item_tag(0, nitems_written(0) + offset, RX_SAMPLE_COUNT_KEY,   
+                       pmt::from_double((double)sample_count), _id);        
   }
 }
 

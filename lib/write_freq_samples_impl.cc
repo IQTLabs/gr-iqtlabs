@@ -488,8 +488,21 @@ int write_freq_samples_impl::general_work(
   const COUNT_T in_count = ninput_items[0];
   COUNT_T in_first = nitems_read(0);
 
-  std::vector<tag_t> tags;
+  std::vector<tag_t> tags, sample_count_tags;
   get_tags_in_window(tags, 0, 0, in_count, tag_);
+  get_tags_in_window(sample_count_tags, 0, 0, in_count, RX_SAMPLE_COUNT_KEY);
+
+  for (COUNT_T t = 0; t < sample_count_tags.size(); ++t) {
+    const auto &tag = sample_count_tags[t];
+    const auto rel = tag.offset - in_first;
+
+    double our_sample_count = samples_written_ + rel;
+    double retune_freq_count = pmt::to_double(tag.value);
+
+    if (our_sample_count != retune_freq_count) {
+      std::cout <<  "our_sample_count: " << our_sample_count << " \tretune_freq_count: " << retune_freq_count << " \tsamples_written_: " << samples_written_ << " \tin_first: " << in_first << " \ttag.offset : " << tag.offset << "\n";
+    }
+  }
 
   if (tags.empty()) {
     write_samples_(in_count, in);
@@ -504,6 +517,7 @@ int write_freq_samples_impl::general_work(
       }
 
       const FREQ_T rx_freq = GET_FREQ(tag);
+      std::cout << "rx_freq: " << rx_freq << " sample_written: " << samples_written_ << "  " << "\n";
       d_logger->debug("new rx_freq tag: {}, last {}", rx_freq, last_rx_freq_);
       last_rx_freq_ = rx_freq;
       skip_tune_step_samples_count_ = skip_tune_step_samples_;
