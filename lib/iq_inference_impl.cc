@@ -484,6 +484,10 @@ int iq_inference_impl::general_work(int noutput_items,
     if (our_sample_count != retune_freq_count) {
       std::cout <<  std::fixed << std::setprecision(0) << "INFERENCE: \t diff: " <<   diff  << " \t sample_count: " << our_sample_count << " \tretune_freq_count: " << retune_freq_count << " \tsamples_clock: " << sample_clock_ << " \tin_first: " << in_first << " \ttag.offset : " << tag.offset << "\n";
     }
+    if (diff > 500000) {
+      sample_clock_ = retune_freq_count;
+      std::cout << "INFERENCE: \t sample_clock_ updated to: " << sample_clock_ << "\n";
+    }
   }
 
 
