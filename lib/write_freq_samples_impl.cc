@@ -463,7 +463,7 @@ void write_freq_samples_impl::write_samples_(COUNT_T c, const char *&in) {
     if (skip_tune_step_samples_count_) {
       in += itemsize_ * vlen_;
       --skip_tune_step_samples_count_;
-      continue;
+      //continue;
     }
 
     if (sigmf_) {
@@ -498,9 +498,9 @@ int write_freq_samples_impl::general_work(
 
     double our_sample_count = samples_written_ + rel;
     double retune_freq_count = pmt::to_double(tag.value);
-
+    double diff = retune_freq_count - our_sample_count;
     if (our_sample_count != retune_freq_count) {
-      std::cout <<  "our_sample_count: " << our_sample_count << " \tretune_freq_count: " << retune_freq_count << " \tsamples_written_: " << samples_written_ << " \tin_first: " << in_first << " \ttag.offset : " << tag.offset << "\n";
+      std::cout << std::fixed << "WRITE_SAMPLES: \t diff: " <<   diff  << " \t sample_count: " << our_sample_count << " \tretune_freq_count: " << retune_freq_count << " \tsamples_written_: " << samples_written_ << " \tin_first: " << in_first << " \ttag.offset : " << tag.offset << "\n";
     }
   }
 

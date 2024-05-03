@@ -480,9 +480,9 @@ int iq_inference_impl::general_work(int noutput_items,
 
     double our_sample_count = sample_clock_ + rel;
     double retune_freq_count = pmt::to_double(tag.value);
-
+    double diff = retune_freq_count - our_sample_count;
     if (our_sample_count != retune_freq_count) {
-      std::cout <<  "our_sample_count: " << our_sample_count << " \tretune_freq_count: " << retune_freq_count << " \tsamples_clock: " << sample_clock_ << " \tin_first: " << in_first << " \ttag.offset : " << tag.offset << "\n";
+      std::cout <<  std::fixed <<  "INFERENCE: \t diff: " <<   diff  << " \t sample_count: " << our_sample_count << " \tretune_freq_count: " << retune_freq_count << " \tsamples_clock: " << sample_clock_ << " \tin_first: " << in_first << " \ttag.offset : " << tag.offset << "\n";
     }
   }
 
