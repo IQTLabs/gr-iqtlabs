@@ -224,6 +224,8 @@ private:
 
   COUNT_T nfft_;
   COUNT_T fft_batch_size_;
+  COUNT_T sample_count;
+  COUNT_T last_sample_count_tag;
   pmt::pmt_t tag_;
   boost::scoped_ptr<float> total_;
 

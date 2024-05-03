@@ -306,6 +306,10 @@ void iq_inference_impl::run_inference_() {
     metadata_json["ts"] = host_now_str_(output_item.rx_time);
     metadata_json["sample_clock"] = std::to_string(output_item.sample_clock);
     metadata_json["rx_freq"] = std::to_string(output_item.rx_freq);
+    metadata_json["freq_lower_edge"] = std::to_string(output_item.freq_lower_edge);
+    metadata_json["freq_upper_edge"] = std::to_string(output_item.freq_upper_edge);
+    metadata_json["sample_rate"] = std::to_string(output_item.sample_rate);
+    metadata_json["sample_count"] = std::to_string(output_item.sample_count);
     nlohmann::json output_json;
 
     if ((host_.size() && port_.size()) && (model_names_.size() > 0)) {
@@ -342,6 +346,7 @@ void iq_inference_impl::run_inference_() {
               }
               for (auto &prediction_ref : prediction_class.value().items()) {
                 auto prediction = prediction_ref.value();
+                std::cout << prediction.dump(4) << std::endl;
                 prediction["model"] = model_name;
                 // TODO: gate on minimum confidence.
                 // float conf = prediction["conf"];
@@ -410,6 +415,9 @@ void iq_inference_impl::process_items_(COUNT_T power_in_count,
         last_rx_time_ + (samples_since_tag_ / TIME_T(samp_rate_));
     output_item.sample_clock = sample_clock_;
     output_item.rx_freq = last_rx_freq_;
+    output_item.freq_lower_edge = last_rx_freq_ - samp_rate_ / 2;
+    output_item.freq_upper_edge = last_rx_freq_ + samp_rate_ / 2;
+    output_item.sample_rate = samp_rate_;
     output_item.sample_count = batch_;
     output_item.samples = new gr_complex[output_item.sample_count];
     output_item.power = new float[output_item.sample_count];
@@ -434,7 +442,7 @@ int iq_inference_impl::general_work(int noutput_items,
   const gr_complex *samples_in =
       static_cast<const gr_complex *>(input_items[0]);
   const float *power_in = static_cast<const float *>(input_items[1]);
-  std::vector<tag_t> all_tags, rx_freq_tags;
+  std::vector<tag_t> all_tags, rx_freq_tags, sample_count_tags;
   std::vector<TIME_T> rx_times;
   COUNT_T consumed = 0;
   COUNT_T leftover = 0;
@@ -454,6 +462,26 @@ int iq_inference_impl::general_work(int noutput_items,
     out_buf_.erase(from, to);
   }
 
+  get_tags_in_window(sample_count_tags, 0, 0, samples_in_count, RX_SAMPLE_COUNT_KEY);
+
+  for (COUNT_T t = 0; t < sample_count_tags.size(); ++t) {
+    const auto &tag = sample_count_tags[t];
+    const auto rel = tag.offset - in_first;
+
+    double our_sample_count = sample_clock_ + rel;
+    double retune_freq_count = pmt::to_double(tag.value);
+    double diff = retune_freq_count - our_sample_count;
+    if (our_sample_count != retune_freq_count) {
+      std::cout <<  std::fixed << std::setprecision(0) << "INFERENCE: \t diff: " <<   diff  << " \t sample_count: " << our_sample_count << " \tretune_freq_count: " << retune_freq_count << " \tsamples_clock: " << sample_clock_ << " \tin_first: " << in_first << " \ttag.offset : " << tag.offset << "\n";
+    }
+    if (diff > 500000) {
+      sample_clock_ = retune_freq_count;
+      std::cout << "INFERENCE: \t sample_clock_ updated to: " << sample_clock_ << "\n";
+    }
+  }
+
+
+
   get_tags_in_window(all_tags, 1, 0, power_in_count);
   get_tags(tag_, all_tags, rx_freq_tags, rx_times, power_in_count);
 
@@ -465,9 +493,9 @@ int iq_inference_impl::general_work(int noutput_items,
   }
 
   COUNT_T power_read = nitems_read(1);
-  if (rx_freq_tags.empty()) {
+  // if (rx_freq_tags.empty()) {
     process_items_(power_in_count, power_read, power_in, consumed);
-  } else {
+  //} else {
     for (COUNT_T t = 0; t < rx_freq_tags.size(); ++t) {
       const auto &tag = rx_freq_tags[t];
       const TIME_T rx_time = rx_times[t];
@@ -478,9 +506,9 @@ int iq_inference_impl::general_work(int noutput_items,
       // samples, as the SDR probably isn't vector aligned. In practice this
       // should not happen in the most common Ettus low power workaround state,
       // because tags are delayed until after re-tuning has been verified.
-      if (rel > 0) {
-        process_items_(rel, power_read, power_in, consumed);
-      }
+      // if (rel > 0) {
+      //   process_items_(rel, power_read, power_in, consumed);
+      // }
 
       const FREQ_T rx_freq = GET_FREQ(tag);
       d_logger->debug("new rx_freq tag: {}", rx_freq);
@@ -491,7 +519,7 @@ int iq_inference_impl::general_work(int noutput_items,
     if (consumed < power_in_count) {
       process_items_(power_in_count - consumed, power_read, power_in, consumed);
     }
-  }
+  //}
 
   consume(0, samples_in_count);
   consume(1, power_in_count);

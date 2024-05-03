@@ -211,6 +211,8 @@
 #include <boost/iostreams/filter/zstd.hpp>
 #include <boost/iostreams/filtering_stream.hpp>
 #include <boost/scoped_ptr.hpp>
+#include <nlohmann/json.hpp>
+#include <sigmf/sigmf.h>
 #include <gnuradio/iqtlabs/write_freq_samples.h>
 
 namespace gr {
@@ -222,8 +224,17 @@ private:
   void open_(COUNT_T zlevel);
   void close_();
   void write_samples_(COUNT_T c, const char *&in);
+  std::string sigmf_datetime();
+  void open_sigmf_( const std::string &source_file,
+                   double timestamp, const std::string &datatype,
+                   double sample_rate, double frequency, double gain);
+  
+  void write_sigmf_();
+  void start_new_sigmf_capture_(double frequency); 
+  void handle_annotation_(const pmt::pmt_t& msg);
 
   pmt::pmt_t tag_;
+  pmt::pmt_t sample_count_tag_;
   COUNT_T itemsize_;
   COUNT_T vlen_;
   std::string sdir_;
@@ -234,7 +245,9 @@ private:
   COUNT_T samp_rate_;
   double gain_;
   bool sigmf_;
-
+  bool use_zst_;
+  
+  COUNT_T samples_written_;
   COUNT_T write_step_samples_count_;
   COUNT_T skip_tune_step_samples_count_;
   FREQ_T last_rx_freq_;
@@ -242,16 +255,23 @@ private:
   TIME_T open_time_;
 
   boost::scoped_ptr<boost::iostreams::filtering_ostream> outbuf_p;
-  std::string zstfile_;
+  std::string datafile_;
   std::string sigmffile_;
+  sigmf::SigMF<
+      sigmf::Global<sigmf::core::DescrT>,
+      sigmf::Capture<sigmf::core::DescrT, sigmf::capture_details::DescrT>,
+      sigmf::Annotation<sigmf::core::DescrT>>
+      sigmf_record;
 
 public:
+  void add_sigmf_annotation_(COUNT_T sample_start, COUNT_T sample_count, double freq_lower_edge, double freq_upper_edge, std::string label);
+
   write_freq_samples_impl(const std::string &tag, COUNT_T itemsize,
                           const std::string &datatype, COUNT_T vlen,
                           const std::string &sdir, const std::string &prefix,
                           COUNT_T write_step_samples,
                           COUNT_T skip_tune_step_samples, COUNT_T samp_rate,
-                          COUNT_T rotate_secs, double gain, bool sigmf);
+                          COUNT_T rotate_secs, double gain, bool sigmf, bool use_zst);
   ~write_freq_samples_impl();
   int general_work(int noutput_items, gr_vector_int &ninput_items,
                    gr_vector_const_void_star &input_items,
