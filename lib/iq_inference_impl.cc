@@ -482,7 +482,7 @@ int iq_inference_impl::general_work(int noutput_items,
     double retune_freq_count = pmt::to_double(tag.value);
     double diff = retune_freq_count - our_sample_count;
     if (our_sample_count != retune_freq_count) {
-      std::cout <<  std::fixed <<  "INFERENCE: \t diff: " <<   diff  << " \t sample_count: " << our_sample_count << " \tretune_freq_count: " << retune_freq_count << " \tsamples_clock: " << sample_clock_ << " \tin_first: " << in_first << " \ttag.offset : " << tag.offset << "\n";
+      std::cout <<  std::fixed << std::setprecision(0) << "INFERENCE: \t diff: " <<   diff  << " \t sample_count: " << our_sample_count << " \tretune_freq_count: " << retune_freq_count << " \tsamples_clock: " << sample_clock_ << " \tin_first: " << in_first << " \ttag.offset : " << tag.offset << "\n";
     }
   }
 
@@ -499,9 +499,9 @@ int iq_inference_impl::general_work(int noutput_items,
   }
 
   COUNT_T power_read = nitems_read(1);
-  if (rx_freq_tags.empty()) {
+  // if (rx_freq_tags.empty()) {
     process_items_(power_in_count, power_read, power_in, consumed);
-  } else {
+  //} else {
     for (COUNT_T t = 0; t < rx_freq_tags.size(); ++t) {
       const auto &tag = rx_freq_tags[t];
       const TIME_T rx_time = rx_times[t];
@@ -512,9 +512,9 @@ int iq_inference_impl::general_work(int noutput_items,
       // samples, as the SDR probably isn't vector aligned. In practice this
       // should not happen in the most common Ettus low power workaround state,
       // because tags are delayed until after re-tuning has been verified.
-      if (rel > 0) {
-        process_items_(rel, power_read, power_in, consumed);
-      }
+      // if (rel > 0) {
+      //   process_items_(rel, power_read, power_in, consumed);
+      // }
 
       const FREQ_T rx_freq = GET_FREQ(tag);
       d_logger->debug("new rx_freq tag: {}", rx_freq);
@@ -525,7 +525,7 @@ int iq_inference_impl::general_work(int noutput_items,
     if (consumed < power_in_count) {
       process_items_(power_in_count - consumed, power_read, power_in, consumed);
     }
-  }
+  //}
 
   consume(0, samples_in_count);
   consume(1, power_in_count);
