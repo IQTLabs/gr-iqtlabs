@@ -504,17 +504,17 @@ int write_freq_samples_impl::general_work(
     }
   }
 
-  if (tags.empty()) {
+  // if (tags.empty()) {
     write_samples_(in_count, in);
-  } else {
+  // } else {
     for (COUNT_T t = 0; t < tags.size(); ++t) {
       const auto &tag = tags[t];
       const auto rel = tag.offset - in_first;
       in_first += rel;
 
-      if (rel > 0) {
-        write_samples_(rel, in);
-      }
+      // if (rel > 0) {
+      //   write_samples_(rel, in);
+      // }
 
       const FREQ_T rx_freq = GET_FREQ(tag);
       std::cout << "rx_freq: " << rx_freq << " sample_written: " << samples_written_ << "  " << "\n";
@@ -531,7 +531,7 @@ int write_freq_samples_impl::general_work(
       } else {
         open_(1);
       }
-    }
+    // }
   }
 
   consume_each(in_count);
