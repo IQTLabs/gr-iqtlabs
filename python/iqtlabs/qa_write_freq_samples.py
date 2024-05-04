@@ -229,27 +229,29 @@ except ImportError:
 
 class qa_write_freq_samples(gr_unittest.TestCase):
     def run_flowgraph(
-        self, freq, tune_freq, samp_rate, points, samples_write_count, tmpdir
+        self, freq, tune_freq, samp_rate, points, samples_write_count, rotate, tmpdir
     ):
         strobe = blocks.message_strobe(pmt.to_pmt({"freq": tune_freq}), 1000)
         iqtlabs_tuneable_test_source_0 = tuneable_test_source(freq)
         write_freq_samples_0 = write_freq_samples(
             "rx_freq",
-            gr.sizeof_gr_complex * 1,
+            gr.sizeof_gr_complex,
             "cf32_le",
             points,
             tmpdir,
             "samples",
-            samples_write_count,
-            samples_write_count,
-            samp_rate,
-            3600,
-            25,
-            True,
+            write_step_samples=samples_write_count,
+            skip_tune_step_samples=0,  # samples_write_count,
+            samp_rate=samp_rate,
+            rotate_secs=3600,
+            gain=25,
+            sigmf=True,
+            zstd=True,
+            rotate=rotate,
         )
-        blocks_throttle_0 = blocks.throttle(gr.sizeof_gr_complex * 1, samp_rate, True)
+        blocks_throttle_0 = blocks.throttle(gr.sizeof_gr_complex, samp_rate, True)
         blocks_stream_to_vector_0 = blocks.stream_to_vector(
-            gr.sizeof_gr_complex * 1, points
+            gr.sizeof_gr_complex, points
         )
         tb = gr.top_block()
         tb.msg_connect((strobe, "strobe"), (iqtlabs_tuneable_test_source_0, "cmd"))
@@ -261,24 +263,33 @@ class qa_write_freq_samples(gr_unittest.TestCase):
         time.sleep(sleep_time)
         tb.stop()
         tb.wait()
+        return write_freq_samples_0.nitems_read(0) * points
 
-    def test_write_freq_samples(self):
+    def write_freq_samples(self, rotate):
         points = int(1024)
         samp_rate = points * points
         freq = int(1.1e9 / samp_rate) * samp_rate
         tune_freq = freq + 1e9
-        samples_write_count = 2
+        samples_write_count = int(1e9)
 
         with tempfile.TemporaryDirectory() as tmpdir:
-            self.run_flowgraph(
-                freq, tune_freq, samp_rate, points, samples_write_count, tmpdir
+            input_samples = self.run_flowgraph(
+                freq, tune_freq, samp_rate, points, samples_write_count, rotate, tmpdir
             )
             total_samples = 0
-            for zst_file in glob.glob(f"{tmpdir}/*/*zst"):
+            zst_files = list(sorted(glob.glob(f"{tmpdir}/*/*zst")))
+            if rotate:
+                self.assertGreater(len(zst_files), 1)
+            else:
+                self.assertEqual(len(zst_files), 1)
+            for zst_file in zst_files:
                 sigmf_file = zst_file.replace("zst", "sigmf-meta")
                 bin_file = zst_file.replace(".zst", "")
-                self.assertTrue(os.path.exists(sigmf_file))
-                self.assertIn(str(int(tune_freq)), zst_file)
+                self.assertTrue(os.path.exists(sigmf_file), sigmf_file)
+                expected_tune_freq = tune_freq
+                if rotate and zst_file == zst_files[0]:
+                    expected_tune_freq = 0
+                self.assertIn(str(int(expected_tune_freq)), zst_file)
                 with open(sigmf_file, "r", encoding="utf8") as f:
                     sigmf = json.loads(f.read())
                     sigmf_global = sigmf["global"]
@@ -286,7 +297,9 @@ class qa_write_freq_samples(gr_unittest.TestCase):
                     self.assertEqual(samp_rate, sigmf_global["core:sample_rate"], sigmf)
                     self.assertEqual("1.0.0", sigmf_global["core:version"], sigmf)
                     self.assertTrue(sigmf_global["core:datatype"])
-                    self.assertEqual(tune_freq, sigmf_capture["core:frequency"], sigmf)
+                    self.assertEqual(
+                        expected_tune_freq, sigmf_capture["core:frequency"], sigmf
+                    )
                     source_file = sigmf_capture["capture_details:source_file"]
                     self.assertEqual(
                         source_file,
@@ -297,9 +310,14 @@ class qa_write_freq_samples(gr_unittest.TestCase):
                 subprocess.check_call(["zstd", "-d", zst_file])
                 samples = len(np.fromfile(bin_file, dtype=np.complex64))
                 total_samples += samples
-                if samples:
-                    self.assertEqual(samples, samples_write_count * points)
             self.assertTrue(total_samples)
+            self.assertEqual(input_samples, total_samples)
+
+    def test_rotate(self):
+        self.write_freq_samples(True)
+
+    def test_no_rotate(self):
+        self.write_freq_samples(False)
 
 
 if __name__ == "__main__":

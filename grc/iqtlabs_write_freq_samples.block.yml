@@ -4,8 +4,8 @@ label: write_freq_samples
 category: '[iqtlabs]'
 flags: [python, cpp]
 documentation: |-
-  This block writes N vectors of complex samples from a source to disk as a zst,
-  after receiving an rx_freq tag.
+  This block writes N vectors of complex samples from a source to disk
+  (optionally, as a zst) after receiving an rx_freq tag.
 
   input:
     vector of gr_complex, samples.
@@ -22,12 +22,16 @@ documentation: |-
     rotate_secs: if > 0, use a new epoch timestamped directory every N seconds.
     gain: SDR gain in dB.
     sigmf: if True, write a sigmf file.
+    zstd: if True, use zstd comporession.
+    rotate: If True, rotate file on tag.
 
 templates:
   imports: from gnuradio import iqtlabs
   make: >
-    iqtlabs.write_freq_samples(${tag}, ${type.size}, ${vlen}, ${sdir},
-    ${prefix}, ${write_step_samples}, ${skip_tune_step_samples})
+    iqtlabs.write_freq_samples(${tag}, ${type.size},
+    "${type.datatype}", ${vlen}, ${sdir}, ${prefix}, ${write_step_samples},
+    ${skip_tune_step_samples}, ${samp_rate}, ${rotate_secs}, ${gain},
+    ${sigmf}, ${zstd}, ${rotate})
 
 cpp_templates:
   includes: ['#include <gnuradio/iqtlabs/write_freq_samples.h>']
@@ -36,7 +40,7 @@ cpp_templates:
     this->${id} = gr::iqtlabs::write_freq_samples::make(${tag}, ${type.size},
     "${type.datatype}", ${vlen}, ${sdir}, ${prefix}, ${write_step_samples},
     ${skip_tune_step_samples}, ${samp_rate}, ${rotate_secs}, ${gain},
-    ${sigmf});
+    ${sigmf}, ${zstd}, ${rotate});
   link: ['libgnuradio-iqtlabs.so']
 
 parameters:
@@ -69,6 +73,10 @@ parameters:
   - id: gain
     dtype: float
   - id: sigmf
+    dtype: bool
+  - id: zstd
+    dtype: bool
+  - id: rotate
     dtype: bool
 
 inputs:

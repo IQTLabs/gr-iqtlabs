@@ -1,2 +1,10 @@
 ./include/gnuradio/iqtlabs/retune_pre_fft.hError occurred while running CASTXML xml file does not exist
 ./include/gnuradio/iqtlabs/retune_fft.hError occurred while running CASTXML xml file does not exist
+./include/gnuradio/iqtlabs/write_freq_samples.hError occurred while running CASTXML xml file does not exist
+./include/gnuradio/iqtlabs/write_freq_samples.hError occurred while running CASTXML xml file does not exist
+./include/gnuradio/iqtlabs/write_freq_samples.hError occurred while running CASTXML xml file does not exist
+./include/gnuradio/iqtlabs/write_freq_samples.hError occurred while running CASTXML xml file does not exist
+./include/gnuradio/iqtlabs/write_freq_samples.hError occurred while running CASTXML xml file does not exist
+./include/gnuradio/iqtlabs/write_freq_samples.hError occurred while running CASTXML xml file does not exist
+./include/gnuradio/iqtlabs/write_freq_samples.hError occurred while running CASTXML xml file does not exist
+./include/gnuradio/iqtlabs/write_freq_samples.hError occurred while running CASTXML xml file does not exist

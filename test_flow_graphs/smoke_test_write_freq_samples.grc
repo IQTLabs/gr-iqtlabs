@@ -80,6 +80,8 @@ blocks:
     rotate_secs: '3600'
     gain: '25'
     sigmf: '1'
+    zstd: '1'
+    rotate: '1'
   states:
     bus_sink: false
     bus_source: false
