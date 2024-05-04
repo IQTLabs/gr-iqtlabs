@@ -366,6 +366,8 @@ class qa_iq_inference(gr_unittest.TestCase):
                 rx_freq = float(result["metadata"]["rx_freq"])
                 ts = float(result["metadata"]["ts"])
                 sc = float(result["metadata"]["sample_clock"])
+                count = float(result["metadata"]["sample_count"])
+                self.assertEqual(count, fft_size * 2)
                 self.assertGreater(rx_freq, last_rx_freq)
                 self.assertGreater(ts, last_ts)
                 self.assertGreater(sc, last_sc)

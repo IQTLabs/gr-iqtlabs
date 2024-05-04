@@ -203,14 +203,13 @@
  */
 
 #include "iq_inference_standalone_impl.h"
+#include "base_impl.h"
 #include <boost/algorithm/string.hpp>
 #include <boost/lexical_cast.hpp>
 #include <gnuradio/io_signature.h>
 
 namespace gr {
 namespace iqtlabs {
-
-const pmt::pmt_t INFERENCE_KEY = pmt::mp("inference");
 
 iq_inference_standalone::sptr
 iq_inference_standalone::make(uint64_t vlen, const std::string &model_server,

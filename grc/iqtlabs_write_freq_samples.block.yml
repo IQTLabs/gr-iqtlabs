@@ -84,5 +84,8 @@ inputs:
     domain: stream
     dtype: ${ type }
     vlen: ${ vlen }
+  - id: inference
+    domain: message
+    optional: 1
 
 file_format: 1

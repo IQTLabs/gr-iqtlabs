@@ -210,11 +210,23 @@
 #include <boost/iostreams/device/file.hpp>
 #include <boost/iostreams/filter/zstd.hpp>
 #include <boost/iostreams/filtering_stream.hpp>
+#include <boost/lockfree/spsc_queue.hpp>
 #include <boost/scoped_ptr.hpp>
 #include <gnuradio/iqtlabs/write_freq_samples.h>
 
 namespace gr {
 namespace iqtlabs {
+
+#define MAX_ANNOTATIONS 128
+
+typedef struct inference_item {
+  COUNT_T sample_count;
+  COUNT_T sample_start;
+  FREQ_T freq_lower_edge;
+  FREQ_T freq_upper_edge;
+  std::string description;
+  std::string label;
+} inference_item_type;
 
 class write_freq_samples_impl : public write_freq_samples, base_impl {
 private:
@@ -222,6 +234,7 @@ private:
   void open_(COUNT_T zlevel);
   void close_();
   void write_samples_(COUNT_T c, const char *&in, COUNT_T &consumed);
+  void recv_inference_(const pmt::pmt_t &msg);
 
   pmt::pmt_t tag_;
   COUNT_T itemsize_;
@@ -243,6 +256,8 @@ private:
   COUNT_T rotate_secs_;
   TIME_T open_time_;
 
+  boost::lockfree::spsc_queue<inference_item_type> inference_q_{
+      MAX_ANNOTATIONS};
   boost::scoped_ptr<boost::iostreams::filtering_ostream> outbuf_p;
   std::string outfile_;
 

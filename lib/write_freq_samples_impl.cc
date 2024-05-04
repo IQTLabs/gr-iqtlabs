@@ -244,9 +244,39 @@ write_freq_samples_impl::write_freq_samples_impl(
       zstd_(zstd), rotate_(rotate) {
   outbuf_p.reset(new boost::iostreams::filtering_ostream());
   open_(1);
+  message_port_register_in(INFERENCE_KEY);
+  set_msg_handler(INFERENCE_KEY,
+                  [this](const pmt::pmt_t &msg) { recv_inference_(msg); });
 }
 
 write_freq_samples_impl::~write_freq_samples_impl() {}
+
+void write_freq_samples_impl::recv_inference_(const pmt::pmt_t &msg) {
+  // inference_item_type inference_item;
+  // try {
+  //   ￼ nlohmann::json inference_results = nlohmann::json::parse(msg_str);
+  //   ￼ if (inference_results.contains("predictions")) {
+  //     auto metadata = inference_results["metadata"];
+  //     inference_item.sample_clock = std::stod(metadata["sample_clock"]);
+  //     inference_item.sample_count = std::stoi(metadata["sample_count"]);
+  //     double half_samp_rate = std::stod(metadata["sample_rate"]) / 2;
+  //     inference_item.freq_lower_edge = last_rx_freq_ - half_samp_rate;
+  //     inference_item.freq_upper_edge = last_rx_freq_ + half_samp_rate;
+  //     ￼ auto predictions = inference_results["predictions"];
+  //     ￼ for (auto &prediction_class : predictions.items()) {
+  //       std::string prediction_name = prediction_class.key();
+  //       ￼ for (auto &prediction : prediction_class.value()) {
+  //         if (prediction_name != "No signal") {
+  //           continue;
+  //         }
+  //         inference_item.description = prediction_name;
+  //       }
+  //     }
+  //     inference_q_.push(inference_item);
+  // } catch (std::exception &ex) {
+  // ￼ d_logger->error("invalid json: " + std::string(ex.what()));
+  // }
+}
 
 bool write_freq_samples_impl::stop() {
   close_();
@@ -288,8 +318,34 @@ void write_freq_samples_impl::close_() {
       final_samples_path += ".zst";
     }
     if (sigmf_) {
-      write_sigmf(final_samples_path_base + ".sigmf-meta", final_samples_path,
-                  open_time_, datatype_, samp_rate_, last_rx_freq_, gain_);
+      sigmf_record_t record =
+          create_sigmf(final_samples_path, open_time_, datatype_, samp_rate_,
+                       last_rx_freq_, gain_);
+      // TODO: handle annotations for the rotate case.
+      while (!inference_q_.empty()) {
+        inference_item_type inference_item;
+        inference_q_.pop(inference_item);
+        auto anno = sigmf::Annotation<sigmf::core::DescrT>();
+        anno.access<sigmf::core::AnnotationT>().sample_start =
+            inference_item.sample_start;
+        anno.access<sigmf::core::AnnotationT>().sample_count =
+            inference_item.sample_count;
+        anno.access<sigmf::core::AnnotationT>().freq_lower_edge =
+            inference_item.freq_lower_edge;
+        anno.access<sigmf::core::AnnotationT>().freq_upper_edge =
+            inference_item.freq_upper_edge;
+        anno.access<sigmf::core::AnnotationT>().description =
+            inference_item.description;
+        anno.access<sigmf::core::AnnotationT>().label = inference_item.label;
+        anno.access<sigmf::core::AnnotationT>().generator = "GamutRF";
+        record.annotations.emplace_back(anno);
+      }
+      std::string sigmf_filename = final_samples_path_base + ".sigmf-meta";
+      std::string dotfilename = get_dotfile_(sigmf_filename);
+      std::ofstream jsonfile(dotfilename);
+      jsonfile << record.to_json();
+      jsonfile.close();
+      rename(dotfilename.c_str(), sigmf_filename.c_str());
     }
     rename(outfile_.c_str(), final_samples_path.c_str());
   }
