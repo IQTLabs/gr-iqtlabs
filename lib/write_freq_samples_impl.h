@@ -221,7 +221,7 @@ private:
   void write_(const char *data, COUNT_T len);
   void open_(COUNT_T zlevel);
   void close_();
-  void write_samples_(COUNT_T c, const char *&in);
+  void write_samples_(COUNT_T c, const char *&in, COUNT_T &consumed);
 
   pmt::pmt_t tag_;
   COUNT_T itemsize_;
@@ -234,6 +234,8 @@ private:
   COUNT_T samp_rate_;
   double gain_;
   bool sigmf_;
+  bool zstd_;
+  bool rotate_;
 
   COUNT_T write_step_samples_count_;
   COUNT_T skip_tune_step_samples_count_;
@@ -242,8 +244,7 @@ private:
   TIME_T open_time_;
 
   boost::scoped_ptr<boost::iostreams::filtering_ostream> outbuf_p;
-  std::string zstfile_;
-  std::string sigmffile_;
+  std::string outfile_;
 
 public:
   write_freq_samples_impl(const std::string &tag, COUNT_T itemsize,
@@ -251,7 +252,8 @@ public:
                           const std::string &sdir, const std::string &prefix,
                           COUNT_T write_step_samples,
                           COUNT_T skip_tune_step_samples, COUNT_T samp_rate,
-                          COUNT_T rotate_secs, double gain, bool sigmf);
+                          COUNT_T rotate_secs, double gain, bool sigmf,
+                          bool zstd, bool rotate);
   ~write_freq_samples_impl();
   int general_work(int noutput_items, gr_vector_int &ninput_items,
                    gr_vector_const_void_star &input_items,
