@@ -204,6 +204,7 @@
 
 #include "iqtlabs_types.h"
 #include <gnuradio/tags.h>
+#include <sigmf/sigmf.h>
 #include <string>
 
 namespace gr {
@@ -213,6 +214,13 @@ const pmt::pmt_t FREQ_KEY = pmt::mp("freq");
 const pmt::pmt_t TUNE_KEY = pmt::mp("tune");
 const pmt::pmt_t RX_TIME_KEY = pmt::string_to_symbol("rx_time");
 const pmt::pmt_t RX_FREQ_KEY = pmt::string_to_symbol("rx_freq");
+const pmt::pmt_t INFERENCE_KEY = pmt::mp("inference");
+
+typedef sigmf::SigMF<
+    sigmf::Global<sigmf::core::DescrT>,
+    sigmf::Capture<sigmf::core::DescrT, sigmf::capture_details::DescrT>,
+    sigmf::Annotation<sigmf::core::DescrT>>
+    sigmf_record_t;
 
 #define OUTPUT_TAGS(rx_time, rx_freq, stream, offset)                          \
   {                                                                            \
@@ -238,6 +246,9 @@ public:
   pmt::pmt_t make_rx_time_key_(TIME_T host_now);
   TIME_T rx_time_from_tag_(const gr::tag_t tag);
   std::string secs_dir(const std::string &dir, COUNT_T rotate_secs);
+  sigmf_record_t create_sigmf(const std::string &source_file, double timestamp,
+                              const std::string &datatype, double sample_rate,
+                              double frequency, double gain);
   void write_sigmf(const std::string &filename, const std::string &source_file,
                    double timestamp, const std::string &datatype,
                    double sample_rate, double frequency, double gain);

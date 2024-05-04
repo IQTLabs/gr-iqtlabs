@@ -136,5 +136,7 @@ outputs:
     domain: stream
     dtype: byte
     vlen: 1
+  - id: inference
+    domain: message
 
 file_format: 1

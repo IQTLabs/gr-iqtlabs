@@ -269,6 +269,7 @@ iq_inference_impl::iq_inference_impl(const std::string &tag, COUNT_T vlen,
       new std::thread(&iq_inference_impl::background_run_inference_, this));
   torchserve_client_.reset(new torchserve_client(host_, port_));
   set_output_multiple(n_vlen_);
+  message_port_register_out(INFERENCE_KEY);
 }
 
 void iq_inference_impl::delete_output_item_(output_item_type &output_item) {
@@ -305,7 +306,9 @@ void iq_inference_impl::run_inference_() {
     nlohmann::json metadata_json;
     metadata_json["ts"] = host_now_str_(output_item.rx_time);
     metadata_json["sample_clock"] = std::to_string(output_item.sample_clock);
+    metadata_json["sample_count"] = std::to_string(output_item.sample_count);
     metadata_json["rx_freq"] = std::to_string(output_item.rx_freq);
+    metadata_json["sample_rate"] = std::to_string(samp_rate_);
     nlohmann::json output_json;
 
     if ((host_.size() && port_.size()) && (model_names_.size() > 0)) {
@@ -366,8 +369,14 @@ void iq_inference_impl::run_inference_() {
     // double new line to facilitate json parsing, since prediction may
     // contain new lines.
     output_json["metadata"] = metadata_json;
-    json_q_.push(output_json.dump() + "\n\n");
+    const std::string output_json_str = output_json.dump();
+    json_q_.push(output_json_str + "\n\n");
     delete_output_item_(output_item);
+    auto pdu =
+        pmt::cons(pmt::make_dict(),
+                  pmt::init_u8vector(output_json_str.length(),
+                                     (const uint8_t *)output_json_str.c_str()));
+    message_port_pub(INFERENCE_KEY, pdu);
   }
 }
 

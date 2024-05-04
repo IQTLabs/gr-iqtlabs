@@ -209,7 +209,6 @@
 #include <fstream>
 #include <iomanip>
 #include <pmt/pmt.h>
-#include <sigmf/sigmf.h>
 
 namespace gr {
 namespace iqtlabs {
@@ -262,15 +261,12 @@ std::string base_impl::secs_dir(const std::string &dir, COUNT_T rotate_secs) {
   return dir + "/";
 }
 
-void base_impl::write_sigmf(const std::string &filename,
-                            const std::string &source_file, double timestamp,
-                            const std::string &datatype, double sample_rate,
-                            double frequency, double gain) {
-  sigmf::SigMF<
-      sigmf::Global<sigmf::core::DescrT>,
-      sigmf::Capture<sigmf::core::DescrT, sigmf::capture_details::DescrT>,
-      sigmf::Annotation<sigmf::core::DescrT>>
-      record;
+sigmf_record_t base_impl::create_sigmf(const std::string &source_file,
+                                       double timestamp,
+                                       const std::string &datatype,
+                                       double sample_rate, double frequency,
+                                       double gain) {
+  sigmf_record_t record;
   record.global.access<sigmf::core::GlobalT>().datatype = datatype;
   record.global.access<sigmf::core::GlobalT>().sample_rate = sample_rate;
   record.global.access<sigmf::core::GlobalT>().version = "1.0.0";
@@ -287,6 +283,15 @@ void base_impl::write_sigmf(const std::string &filename,
       basename(source_file.c_str());
   capture.get<sigmf::capture_details::DescrT>().gain = gain;
   record.captures.emplace_back(capture);
+  return record;
+}
+
+void base_impl::write_sigmf(const std::string &filename,
+                            const std::string &source_file, double timestamp,
+                            const std::string &datatype, double sample_rate,
+                            double frequency, double gain) {
+  sigmf_record_t record = create_sigmf(source_file, timestamp, datatype,
+                                       sample_rate, frequency, gain);
   std::string dotfilename = get_dotfile_(filename);
   std::ofstream jsonfile(dotfilename);
   jsonfile << record.to_json();

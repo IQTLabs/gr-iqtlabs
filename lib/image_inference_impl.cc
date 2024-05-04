@@ -295,6 +295,7 @@ image_inference_impl::image_inference_impl(
   inference_thread_.reset(
       new std::thread(&image_inference_impl::background_run_inference_, this));
   torchserve_client_.reset(new torchserve_client(host_, port_));
+  message_port_register_out(INFERENCE_KEY);
 }
 
 void image_inference_impl::volk_min_max_mean(const cv::Mat &mat, float &min,
@@ -535,9 +536,11 @@ void image_inference_impl::run_inference_() {
     metadata_json["ts"] = host_now_str_(output_item.ts);
     metadata_json["rx_freq"] = std::to_string(output_item.rx_freq);
     metadata_json["start_item"] = std::to_string(output_item.start_item);
+    // TODO: may not be accurate due to zero suppression in retune_fft.
     metadata_json["sample_clock"] =
         std::to_string(output_item.start_item * vlen_);
     metadata_json["orig_rows"] = output_item.points_buffer->rows;
+    metadata_json["sample_rate"] = std::to_string(samp_rate_);
 
     const std::string secs_image_dir = secs_dir(image_dir_, rotate_secs_);
     ++image_count_;
@@ -590,8 +593,14 @@ void image_inference_impl::run_inference_() {
     // double new line to facilitate json parsing, since prediction may
     // contain new lines.
     output_json["metadata"] = metadata_json;
-    json_q_.push(output_json.dump() + "\n\n");
+    const std::string output_json_str = output_json.dump();
+    json_q_.push(output_json_str + "\n\n");
     delete_output_item_(output_item);
+    auto pdu =
+        pmt::cons(pmt::make_dict(),
+                  pmt::init_u8vector(output_json_str.length(),
+                                     (const uint8_t *)output_json_str.c_str()));
+    message_port_pub(INFERENCE_KEY, pdu);
   }
 }
 

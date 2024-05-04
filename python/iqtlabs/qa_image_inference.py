@@ -343,12 +343,19 @@ class qa_image_inference(gr_unittest.TestCase):
                 result = json.loads(json_raw)
                 print(result)
                 metadata_result = result["metadata"]
-                rssi_min, rssi_mean, rssi_max, rx_freq = [
+                rssi_min, rssi_mean, rssi_max, rx_freq, meta_samp_rate = [
                     float(metadata_result[v])
-                    for v in ("rssi_min", "rssi_mean", "rssi_max", "rx_freq")
+                    for v in (
+                        "rssi_min",
+                        "rssi_mean",
+                        "rssi_max",
+                        "rx_freq",
+                        "sample_rate",
+                    )
                 ]
                 self.assertGreaterEqual(rssi_mean, rssi_min, metadata_result)
                 self.assertGreaterEqual(rssi_max, rssi_mean, metadata_result)
+                self.assertEqual(samp_rate, meta_samp_rate, metadata_result)
                 self.assertTrue(os.path.exists(metadata_result["image_path"]))
                 self.assertTrue(
                     os.path.exists(metadata_result["predictions_image_path"])
