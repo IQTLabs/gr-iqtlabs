@@ -256,6 +256,8 @@ public:
                 std::vector<tag_t> &rx_freq_tags, std::vector<TIME_T> &rx_times,
                 COUNT_T in_count);
   pmt::pmt_t tune_rx_msg(COUNT_T tune_freq, bool tag_now);
+  pmt::pmt_t string_to_pmt(const std::string &s);
+  std::string pmt_to_string(const pmt::pmt_t &pmt);
 };
 } /* namespace iqtlabs */
 } /* namespace gr */

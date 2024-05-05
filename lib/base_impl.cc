@@ -332,5 +332,16 @@ pmt::pmt_t base_impl::tune_rx_msg(FREQ_T tune_freq, bool tag_now) {
   }
   return tune_rx;
 }
+
+pmt::pmt_t base_impl::string_to_pmt(const std::string &s) {
+  return pmt::cons(pmt::make_dict(),
+                   pmt::make_blob((const uint8_t *)s.c_str(), s.length()));
+}
+
+std::string base_impl::pmt_to_string(const pmt::pmt_t &msg) {
+  auto blob = pmt::cdr(msg);
+  return std::string(reinterpret_cast<const char *>(pmt::blob_data(blob)),
+                     pmt::blob_length(blob));
+}
 } /* namespace iqtlabs */
 } /* namespace gr */

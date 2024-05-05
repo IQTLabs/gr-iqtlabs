@@ -205,6 +205,7 @@
 #ifndef INCLUDED_IQTLABS_IQ_INFERENCE_STANDALONE_IMPL_H
 #define INCLUDED_IQTLABS_IQ_INFERENCE_STANDALONE_IMPL_H
 
+#include "base_impl.h"
 #include "iqtlabs_types.h"
 #include "torchserve_client.h"
 #include <boost/scoped_ptr.hpp>
@@ -213,7 +214,7 @@
 namespace gr {
 namespace iqtlabs {
 
-class iq_inference_standalone_impl : public iq_inference_standalone {
+class iq_inference_standalone_impl : public iq_inference_standalone, base_impl {
 private:
   boost::scoped_ptr<torchserve_client> torchserve_client_;
   std::vector<std::string> model_names_;

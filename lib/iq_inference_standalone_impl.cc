@@ -203,7 +203,6 @@
  */
 
 #include "iq_inference_standalone_impl.h"
-#include "base_impl.h"
 #include <boost/algorithm/string.hpp>
 #include <boost/lexical_cast.hpp>
 #include <gnuradio/io_signature.h>
@@ -260,16 +259,11 @@ int iq_inference_standalone_impl::work(int noutput_items,
       torchserve_client_->send_inference_request(results, error);
       torchserve_client_->disconnect();
       d_logger->info("results {}, error {}", results, error);
-      auto pdu =
-          pmt::cons(pmt::make_dict(),
-                    pmt::init_u8vector(results.length(),
-                                       (const uint8_t *)results.c_str()));
-      message_port_pub(INFERENCE_KEY, pdu);
+      message_port_pub(INFERENCE_KEY, string_to_pmt(results));
     }
     in += vlen_;
   }
   return noutput_items;
 }
-
 } /* namespace iqtlabs */
 } /* namespace gr */
