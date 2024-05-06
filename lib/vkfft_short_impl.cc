@@ -217,12 +217,11 @@ vkfft_short::sptr vkfft_short::make(COUNT_T fft_batch_size, COUNT_T nfft,
 
 vkfft_short_impl::vkfft_short_impl(COUNT_T fft_batch_size, COUNT_T nfft,
                                    bool shift)
-    : fft_batch_size_(fft_batch_size),
-      nfft_(nfft), gr::sync_block("vkfft_short",
-                                  gr::io_signature::make(
-                                      1, 1, sizeof(std::int16_t) * nfft * 2),
-                                  gr::io_signature::make(
-                                      1, 1, sizeof(gr_complex) * nfft)) {
+    : fft_batch_size_(fft_batch_size), nfft_(nfft),
+      gr::sync_block(
+          "vkfft_short",
+          gr::io_signature::make(1, 1, sizeof(std::int16_t) * nfft * 2),
+          gr::io_signature::make(1, 1, sizeof(gr_complex) * nfft)) {
   init_converter_();
   input_buffer_.reset(new gr_complex[nfft * fft_batch_size]);
   init_vkfft(fft_batch_size, nfft, sizeof(gr_complex), shift);

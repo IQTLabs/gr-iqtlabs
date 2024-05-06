@@ -453,8 +453,7 @@ void retune_fft_impl::write_buckets_(TIME_T host_now, FREQ_T rx_freq) {
     return;
   }
   std::stringstream ss("", std::ios_base::app | std::ios_base::out);
-  ss << "{"
-     << "\"ts\": " << host_now_str_(host_now)
+  ss << "{" << "\"ts\": " << host_now_str_(host_now)
      << ", \"sweep_start\": " << host_now_str_(last_sweep_start_)
      << ", \"total_tune_count\": " << total_tune_count_ << ", \"config\": {"
      << "\"description\": \"" << description_ << "\""

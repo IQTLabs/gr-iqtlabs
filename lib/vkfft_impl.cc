@@ -214,12 +214,10 @@ vkfft::sptr vkfft::make(COUNT_T fft_batch_size, COUNT_T nfft, bool shift) {
 }
 
 vkfft_impl::vkfft_impl(COUNT_T fft_batch_size, COUNT_T nfft, bool shift)
-    : fft_batch_size_(fft_batch_size),
-      nfft_(nfft), gr::sync_block(
-                       "vkfft",
-                       gr::io_signature::make(1, 1, sizeof(gr_complex) * nfft),
-                       gr::io_signature::make(1, 1,
-                                              sizeof(gr_complex) * nfft)) {
+    : fft_batch_size_(fft_batch_size), nfft_(nfft),
+      gr::sync_block("vkfft",
+                     gr::io_signature::make(1, 1, sizeof(gr_complex) * nfft),
+                     gr::io_signature::make(1, 1, sizeof(gr_complex) * nfft)) {
   init_vkfft(fft_batch_size, nfft, sizeof(gr_complex), shift);
   set_output_multiple(fft_batch_size);
 }
