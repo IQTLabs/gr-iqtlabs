@@ -596,11 +596,7 @@ void image_inference_impl::run_inference_() {
     const std::string output_json_str = output_json.dump();
     json_q_.push(output_json_str + "\n\n");
     delete_output_item_(output_item);
-    auto pdu =
-        pmt::cons(pmt::make_dict(),
-                  pmt::init_u8vector(output_json_str.length(),
-                                     (const uint8_t *)output_json_str.c_str()));
-    message_port_pub(INFERENCE_KEY, pdu);
+    message_port_pub(INFERENCE_KEY, string_to_pmt(output_json_str));
   }
 }
 

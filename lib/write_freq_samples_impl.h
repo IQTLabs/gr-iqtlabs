@@ -217,7 +217,7 @@
 namespace gr {
 namespace iqtlabs {
 
-#define MAX_ANNOTATIONS 128
+#define MAX_ANNOTATIONS 1024
 
 typedef struct inference_item {
   COUNT_T sample_count;

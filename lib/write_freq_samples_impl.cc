@@ -252,30 +252,46 @@ write_freq_samples_impl::write_freq_samples_impl(
 write_freq_samples_impl::~write_freq_samples_impl() {}
 
 void write_freq_samples_impl::recv_inference_(const pmt::pmt_t &msg) {
-  // inference_item_type inference_item;
-  // try {
-  //   ￼ nlohmann::json inference_results = nlohmann::json::parse(msg_str);
-  //   ￼ if (inference_results.contains("predictions")) {
-  //     auto metadata = inference_results["metadata"];
-  //     inference_item.sample_clock = std::stod(metadata["sample_clock"]);
-  //     inference_item.sample_count = std::stoi(metadata["sample_count"]);
-  //     double half_samp_rate = std::stod(metadata["sample_rate"]) / 2;
-  //     inference_item.freq_lower_edge = last_rx_freq_ - half_samp_rate;
-  //     inference_item.freq_upper_edge = last_rx_freq_ + half_samp_rate;
-  //     ￼ auto predictions = inference_results["predictions"];
-  //     ￼ for (auto &prediction_class : predictions.items()) {
-  //       std::string prediction_name = prediction_class.key();
-  //       ￼ for (auto &prediction : prediction_class.value()) {
-  //         if (prediction_name != "No signal") {
-  //           continue;
-  //         }
-  //         inference_item.description = prediction_name;
-  //       }
-  //     }
-  //     inference_q_.push(inference_item);
-  // } catch (std::exception &ex) {
-  // ￼ d_logger->error("invalid json: " + std::string(ex.what()));
-  // }
+  // TODO: non-rotate not supported.
+  // Among other things, need to delineate inference results for current
+  // window and adjust sample clock.
+  if (rotate_) {
+    return;
+  }
+  const std::string msg_str = pmt_to_string(msg);
+  d_logger->info("inference results: {}", msg_str);
+  try {
+    nlohmann::json inference_results = nlohmann::json::parse(msg_str);
+    const auto metadata = inference_results["metadata"];
+    const TIME_T sample_clock =
+        std::stod((std::string)metadata["sample_clock"]);
+    const int sample_count = std::stoi((std::string)metadata["sample_count"]);
+    const FREQ_T sample_rate = std::stod((std::string)metadata["sample_rate"]);
+    if (inference_results.contains("predictions")) {
+      auto predictions = inference_results["predictions"];
+      for (auto &prediction_class : predictions.items()) {
+        // TODO: make configurable.
+        if (prediction_class.key() == "No signal") {
+          continue;
+        }
+        for (auto &prediction : prediction_class.value()) {
+          // TODO: add confidence and model to description.
+          inference_item_type inference_item;
+          inference_item.sample_start = sample_clock;
+          inference_item.sample_count = sample_count;
+          inference_item.freq_lower_edge = last_rx_freq_ - (sample_rate / 2);
+          inference_item.freq_upper_edge = last_rx_freq_ + (sample_rate / 2);
+          inference_item.description = prediction_class.key();
+          inference_item.label = inference_item.description;
+          if (!inference_q_.push(inference_item)) {
+            d_logger->error("inference annotation queue full");
+          }
+        }
+      }
+    }
+  } catch (std::exception &ex) {
+    std::string error = "invalid json: " + std::string(ex.what());
+  }
 }
 
 bool write_freq_samples_impl::stop() {
@@ -321,6 +337,7 @@ void write_freq_samples_impl::close_() {
       sigmf_record_t record =
           create_sigmf(final_samples_path, open_time_, datatype_, samp_rate_,
                        last_rx_freq_, gain_);
+      d_logger->info("writing {} annotations", inference_q_.read_available());
       // TODO: handle annotations for the rotate case.
       while (!inference_q_.empty()) {
         inference_item_type inference_item;
