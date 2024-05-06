@@ -20,4 +20,5 @@ sudo apt-get update && \
     python3-pandas \
     vulkan-tools \
     wget && \
-  sudo pip3 install zstandard
+  sudo pip3 install zstandard clang-format
+
