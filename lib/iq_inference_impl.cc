@@ -310,6 +310,7 @@ void iq_inference_impl::run_inference_() {
     metadata_json["rx_freq"] = std::to_string(output_item.rx_freq);
     metadata_json["sample_rate"] = std::to_string(samp_rate_);
     nlohmann::json output_json;
+    COUNT_T signal_predictions = 0;
 
     if ((host_.size() && port_.size()) && (model_names_.size() > 0)) {
       std::string error;
@@ -349,6 +350,9 @@ void iq_inference_impl::run_inference_() {
                 // TODO: gate on minimum confidence.
                 // float conf = prediction["conf"];
                 results_json[prediction_class.key()].emplace_back(prediction);
+                if (prediction_class.key() != INFERENCE_NO_SIGNAL) {
+                  ++signal_predictions;
+                }
               }
             }
           } catch (std::exception &ex) {
@@ -368,11 +372,13 @@ void iq_inference_impl::run_inference_() {
     }
     // double new line to facilitate json parsing, since prediction may
     // contain new lines.
-    output_json["metadata"] = metadata_json;
-    const std::string output_json_str = output_json.dump();
-    json_q_.push(output_json_str + "\n\n");
+    if (signal_predictions) {
+      output_json["metadata"] = metadata_json;
+      const std::string output_json_str = output_json.dump();
+      json_q_.push(output_json_str + "\n\n");
+      message_port_pub(INFERENCE_KEY, string_to_pmt(output_json_str));
+    }
     delete_output_item_(output_item);
-    message_port_pub(INFERENCE_KEY, string_to_pmt(output_json_str));
   }
 }
 

@@ -234,7 +234,7 @@ private:
   void open_(COUNT_T zlevel);
   void close_();
   void write_samples_(COUNT_T c, const char *&in, COUNT_T &consumed);
-  void recv_inference_(const pmt::pmt_t &msg);
+  void recv_inference_(const pmt::pmt_t msg);
 
   pmt::pmt_t tag_;
   COUNT_T itemsize_;

@@ -207,6 +207,8 @@
 #include <sigmf/sigmf.h>
 #include <string>
 
+#define INFERENCE_NO_SIGNAL "No signal"
+
 namespace gr {
 namespace iqtlabs {
 const pmt::pmt_t CMD_KEY = pmt::mp("cmd");
