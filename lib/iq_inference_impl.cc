@@ -246,7 +246,7 @@ iq_inference_impl::iq_inference_impl(const std::string &tag, COUNT_T vlen,
       n_inference_(n_inference), samp_rate_(samp_rate),
       power_inference_(power_inference), inference_count_(0), running_(true),
       last_rx_freq_(0), last_rx_time_(0), samples_since_tag_(0),
-      sample_clock_(0) {
+      sample_clock_(0), last_full_time_(0) {
   batch_ = vlen_ * n_vlen_;
   samples_lookback_.reset(new gr_complex[batch_ * sample_buffer]);
   unsigned int alignment = volk_get_alignment();
@@ -429,8 +429,11 @@ void iq_inference_impl::process_items_(COUNT_T power_in_count,
     memcpy(output_item.power, (void *)power_in, batch_ * sizeof(float));
     if (!inference_q_.push(output_item)) {
       delete_output_item_(output_item);
-      d_logger->error("inference queue full (increase inference dB threshold "
-                      "to admit fewer signals?)");
+      if (host_now_() - last_full_time_ > 5) {
+        d_logger->error("inference queue full (increase inference dB threshold "
+                        "to admit fewer signals?)");
+        last_full_time_ = host_now_();
+      }
     }
   }
 }
