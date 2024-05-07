@@ -258,7 +258,7 @@ void write_freq_samples_impl::recv_inference_(const pmt::pmt_t msg) {
   if (rotate_) {
     return;
   }
-  if (inference_q_.write_available()) {
+  if (!inference_q_.write_available()) {
     d_logger->error("inference annotation queue full");
     return;
   }
