@@ -252,6 +252,7 @@ private:
   boost::lockfree::spsc_queue<output_item_type> inference_q_{MAX_INFERENCE};
   boost::lockfree::spsc_queue<std::string> json_q_{MAX_INFERENCE};
   bool running_;
+  TIME_T last_full_time_;
   TIME_T last_rx_time_;
   FREQ_T last_rx_freq_;
   std::deque<char> out_buf_;

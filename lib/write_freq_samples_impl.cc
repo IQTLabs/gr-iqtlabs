@@ -251,11 +251,15 @@ write_freq_samples_impl::write_freq_samples_impl(
 
 write_freq_samples_impl::~write_freq_samples_impl() {}
 
-void write_freq_samples_impl::recv_inference_(const pmt::pmt_t &msg) {
+void write_freq_samples_impl::recv_inference_(const pmt::pmt_t msg) {
   // TODO: non-rotate not supported.
   // Among other things, need to delineate inference results for current
   // window and adjust sample clock.
   if (rotate_) {
+    return;
+  }
+  if (!inference_q_.write_available()) {
+    d_logger->error("inference annotation queue full");
     return;
   }
   const std::string msg_str = pmt_to_string(msg);
@@ -271,7 +275,7 @@ void write_freq_samples_impl::recv_inference_(const pmt::pmt_t &msg) {
       auto predictions = inference_results["predictions"];
       for (auto &prediction_class : predictions.items()) {
         // TODO: make configurable.
-        if (prediction_class.key() == "No signal") {
+        if (prediction_class.key() == INFERENCE_NO_SIGNAL) {
           continue;
         }
         for (auto &prediction : prediction_class.value()) {
