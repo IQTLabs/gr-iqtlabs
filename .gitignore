@@ -9,3 +9,4 @@ SPIRV-Tools/
 
 test_flow_graphs/test/
 *.swp
+python/iqtlabs/bindings/failed_conversions.txt
