@@ -294,7 +294,7 @@ void iq_inference_impl::background_run_inference_() {
 bool iq_inference_impl::stop() {
   d_logger->info("stopping");
   running_ = false;
-  if (_inference_thread_) {
+  if (inference_thread_) {
     inference_thread_->join();
   }
   run_inference_();
