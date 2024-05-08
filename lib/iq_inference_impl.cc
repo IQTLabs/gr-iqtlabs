@@ -385,6 +385,7 @@ void iq_inference_impl::run_inference_() {
 void iq_inference_impl::forecast(int noutput_items,
                                  gr_vector_int &ninput_items_required) {
   ninput_items_required[0] = 1;
+  ninput_items_required[1] = 1;
 }
 
 void iq_inference_impl::process_items_(COUNT_T power_in_count,
@@ -453,6 +454,17 @@ int iq_inference_impl::general_work(int noutput_items,
   COUNT_T consumed = 0;
   COUNT_T leftover = 0;
 
+  COUNT_T samples_available = nitems_read(0) + samples_in_count;
+  COUNT_T power_available = nitems_read(1) + power_in_count;
+  // power data got ahead of sample data.
+  if (samples_available < power_available) {
+    if (samples_available > nitems_read(1)) {
+      power_in_count = samples_available - nitems_read(1);
+    } else {
+      return 0;
+    }
+  }
+
   while (!json_q_.empty()) {
     std::string json;
     json_q_.pop(json);
@@ -508,7 +520,7 @@ int iq_inference_impl::general_work(int noutput_items,
   }
 
   consume(0, samples_in_count);
-  consume(1, power_in_count);
+  consume(1, consumed);
   return leftover;
 }
 
