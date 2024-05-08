@@ -217,7 +217,7 @@
 namespace gr {
 namespace iqtlabs {
 
-const COUNT_T MAX_INFERENCE = 1000000;
+const COUNT_T MAX_INFERENCE = 5;
 
 typedef struct output_item {
   FREQ_T rx_freq;

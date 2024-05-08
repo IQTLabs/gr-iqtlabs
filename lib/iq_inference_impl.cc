@@ -265,8 +265,9 @@ iq_inference_impl::iq_inference_impl(const std::string &tag, COUNT_T vlen,
       d_logger->error("missing model name(s)");
     }
   }
-  inference_thread_.reset(
-      new std::thread(&iq_inference_impl::background_run_inference_, this));
+  //inference_thread_.reset(
+  //    new std::thread(&iq_inference_impl::background_run_inference_, this));
+  inference_thread_.reset(NULL);
   torchserve_client_.reset(new torchserve_client(host_, port_));
   set_output_multiple(n_vlen_);
   message_port_register_out(INFERENCE_KEY);
@@ -293,7 +294,9 @@ void iq_inference_impl::background_run_inference_() {
 bool iq_inference_impl::stop() {
   d_logger->info("stopping");
   running_ = false;
-  inference_thread_->join();
+  if (_inference_thread_) {
+    inference_thread_->join();
+  }
   run_inference_();
   return true;
 }
@@ -435,6 +438,9 @@ void iq_inference_impl::process_items_(COUNT_T power_in_count,
                         "to admit fewer signals?)");
         last_full_time_ = host_now_();
       }
+    }
+    if (!inference_thread_) {
+      run_inference_();
     }
   }
 }
