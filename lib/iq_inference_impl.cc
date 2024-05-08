@@ -440,6 +440,7 @@ void iq_inference_impl::process_items_(COUNT_T power_in_count,
       }
     }
     if (!inference_thread_) {
+      d_logger->info("inference attempt at sample position {}", output_item.sample_clock);
       run_inference_();
     }
   }
