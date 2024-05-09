@@ -231,7 +231,7 @@ class qa_tuneable_test_source(gr_unittest.TestCase):
     def test_bad_msg(self):
         freq_divisor = 1e9
         delay = 500
-        source = tuneable_test_source(freq_divisor)
+        source = tuneable_test_source(0, freq_divisor)
         msg = pmt.to_pmt("TEST")
         strobe = blocks.message_strobe(msg, delay)
         samp_rate = 32e3
@@ -251,7 +251,7 @@ class qa_tuneable_test_source(gr_unittest.TestCase):
             freq_divisor = 1e9
             new_freq = 1e9 / 2
             delay = 500
-            source = tuneable_test_source(freq_divisor)
+            source = tuneable_test_source(0, freq_divisor)
             msg = pmt.to_pmt({"freq": new_freq})
             strobe = blocks.message_strobe(msg, delay)
             samp_rate = 32e3

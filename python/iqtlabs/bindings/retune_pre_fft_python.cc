@@ -30,31 +30,44 @@ namespace py = pybind11;
 void bind_retune_pre_fft(py::module& m)
 {
 
-    using retune_pre_fft = ::gr::iqtlabs::retune_pre_fft;
+    using retune_pre_fft    = ::gr::iqtlabs::retune_pre_fft;
 
 
-    py::class_<retune_pre_fft,
-               gr::block,
-               gr::basic_block,
-               std::shared_ptr<retune_pre_fft>>(m, "retune_pre_fft", D(retune_pre_fft))
+    py::class_<retune_pre_fft, gr::block, gr::basic_block,
+        std::shared_ptr<retune_pre_fft>>(m, "retune_pre_fft", D(retune_pre_fft))
 
         .def(py::init(&retune_pre_fft::make),
-             py::arg("nfft"),
-             py::arg("samp_rate"),
-             py::arg("tune_jitter_hz"),
-             py::arg("fft_batch_size"),
-             py::arg("tag"),
-             py::arg("freq_start"),
-             py::arg("freq_end"),
-             py::arg("tune_step_hz"),
-             py::arg("tune_step_fft"),
-             py::arg("skip_tune_step_fft"),
-             py::arg("tuning_ranges"),
-             py::arg("tag_now"),
-             py::arg("low_power_hold_down"),
-             py::arg("slew_rx_time"),
-             D(retune_pre_fft, make))
+           py::arg("nfft"),
+           py::arg("samp_rate"),
+           py::arg("tune_jitter_hz"),
+           py::arg("fft_batch_size"),
+           py::arg("tag"),
+           py::arg("freq_start"),
+           py::arg("freq_end"),
+           py::arg("tune_step_hz"),
+           py::arg("tune_step_fft"),
+           py::arg("skip_tune_step_fft"),
+           py::arg("tuning_ranges"),
+           py::arg("tag_now"),
+           py::arg("low_power_hold_down"),
+           py::arg("slew_rx_time"),
+           D(retune_pre_fft,make)
+        )
+        
+
 
 
         ;
+
+
+
+
 }
+
+
+
+
+
+
+
+

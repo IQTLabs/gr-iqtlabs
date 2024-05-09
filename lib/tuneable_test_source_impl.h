@@ -219,7 +219,7 @@ private:
   bool tag_now;
 
 public:
-  tuneable_test_source_impl(float freq_divisor);
+  tuneable_test_source_impl(double freq, double freq_divisor);
   ~tuneable_test_source_impl();
 
   int work(int noutput_items, gr_vector_const_void_star &input_items,

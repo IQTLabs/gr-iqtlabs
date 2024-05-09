@@ -227,11 +227,9 @@ except ImportError:
 
 class qa_iq_inference(gr_unittest.TestCase):
     def setUp(self):
-        self.tb = gr.top_block()
         self.pid = os.fork()
 
     def tearDown(self):
-        self.tb = None
         if self.pid:
             os.kill(self.pid, 15)
 
@@ -273,18 +271,18 @@ class qa_iq_inference(gr_unittest.TestCase):
             return
 
     def run_flowgraph(self, tmpdir, n_vlen, fft_size, samp_rate, port, model_name):
+        tb = gr.top_block()
         test_file = os.path.join(tmpdir, "samples")
         freq_divisor = 1e9
         new_freq = 1e9 / 2
         delay = 300
 
-        source = tuneable_test_source(freq_divisor)
+        source = tuneable_test_source(new_freq, freq_divisor)
         strobe = blocks.message_strobe(pmt.to_pmt({"freq": new_freq}), delay)
         throttle = blocks.throttle(gr.sizeof_gr_complex, samp_rate, True)
         fs = blocks.file_sink(gr.sizeof_char, os.path.join(tmpdir, test_file), False)
-        c2r = blocks.complex_to_real(1)
-        stream2vector_power = blocks.stream_to_vector(gr.sizeof_float, fft_size)
-        stream2vector_samples = blocks.stream_to_vector(gr.sizeof_gr_complex, fft_size)
+        c2r = blocks.complex_to_real(fft_size)
+        stream2vector = blocks.stream_to_vector(gr.sizeof_gr_complex, fft_size)
 
         iq_inf = iq_inference(
             tag="rx_freq",
@@ -295,28 +293,27 @@ class qa_iq_inference(gr_unittest.TestCase):
             model_server=f"localhost:{port}",
             model_names=model_name,
             confidence=0.8,
-            n_inference=5001,
+            n_inference=4096,
             samp_rate=int(samp_rate),
             power_inference=True,
             background=False,
         )
 
-        self.tb.msg_connect((strobe, "strobe"), (source, "cmd"))
-        self.tb.connect((source, 0), (throttle, 0))
-        self.tb.connect((throttle, 0), (c2r, 0))
-        self.tb.connect((throttle, 0), (stream2vector_samples, 0))
-        self.tb.connect((c2r, 0), (stream2vector_power, 0))
-        self.tb.connect((stream2vector_samples, 0), (iq_inf, 0))
-        self.tb.connect((stream2vector_power, 0), (iq_inf, 1))
-        self.tb.connect((iq_inf, 0), (fs, 0))
+        tb.msg_connect((strobe, "strobe"), (source, "cmd"))
+        tb.connect((source, 0), (throttle, 0))
+        tb.connect((throttle, 0), (stream2vector, 0))
+        tb.connect((stream2vector, 0), (c2r, 0))
+        tb.connect((c2r, 0), (iq_inf, 1))
+        tb.connect((stream2vector, 0), (iq_inf, 0))
+        tb.connect((iq_inf, 0), (fs, 0))
 
-        self.tb.start()
+        tb.start()
         for i in range(10):
             new_freq *= 1.1
             strobe.set_msg(pmt.to_pmt({"freq": int(new_freq)}))
             time.sleep(1)
-        self.tb.stop()
-        self.tb.wait()
+        tb.stop()
+        tb.wait()
         return test_file
 
     def test_error_predict(self):
@@ -330,7 +327,7 @@ class qa_iq_inference(gr_unittest.TestCase):
                 port, model_name, predictions_result, fft_size * n_vlen
             )
             return
-        samp_rate = 4e6
+        samp_rate = 1024 * 1024 * 4
         with tempfile.TemporaryDirectory() as tmpdir:
             self.run_flowgraph(tmpdir, n_vlen, fft_size, samp_rate, port, model_name)
 
@@ -346,42 +343,58 @@ class qa_iq_inference(gr_unittest.TestCase):
                 port, model_name, predictions_result, fft_size * n_vlen
             )
             return
-        samp_rate = 4e6
+        samp_rate = 1024 * 1024 * 4
         # added by inference client.
         predictions_result["modulation"][0]["model"] = model_name
-        with tempfile.TemporaryDirectory() as tmpdir:
-            test_file = self.run_flowgraph(
-                tmpdir, n_vlen, fft_size, samp_rate, port, model_name
-            )
-            self.assertTrue(os.stat(test_file).st_size)
-            with open(test_file) as f:
-                content = f.read()
-            json_raw_all = [json_raw for json_raw in content.split("\n\n") if json_raw]
-            self.assertTrue(json_raw_all)
-            last_sc = 0
-            last_ts = 0
-            last_rx_freq = 0
-            for json_raw in json_raw_all:
-                result = json.loads(json_raw)
-                print(result)
-                sample_value = float(
-                    result["predictions"]["modulation"][0]["sample_value"]
+
+        reference_sample_clocks = set()
+        for cycle in range(10):
+            test_sample_clocks = set()
+            with tempfile.TemporaryDirectory() as tmpdir:
+                test_file = self.run_flowgraph(
+                    tmpdir, n_vlen, fft_size, samp_rate, port, model_name
                 )
-                del result["predictions"]["modulation"][0]["sample_value"]
-                self.assertEqual(result["predictions"], predictions_result)
-                self.assertEqual(result.get("error", None), None)
-                rx_freq = float(result["metadata"]["rx_freq"])
-                ts = float(result["metadata"]["ts"])
-                sc = float(result["metadata"]["sample_clock"])
-                count = float(result["metadata"]["sample_count"])
-                self.assertEqual(count, fft_size * n_vlen)
-                self.assertGreater(rx_freq, last_rx_freq)
-                self.assertGreater(ts, last_ts)
-                self.assertGreater(sc, last_sc)
-                self.assertEqual(round(sample_value, 3), round(rx_freq / 1e9, 3))
-                last_ts = ts
-                last_sc = sc
-                last_rx_freq = rx_freq
+                self.assertTrue(os.stat(test_file).st_size)
+                with open(test_file) as f:
+                    content = f.read()
+                json_raw_all = [
+                    json_raw for json_raw in content.split("\n\n") if json_raw
+                ]
+                self.assertTrue(json_raw_all)
+                last_sc = 0
+                last_ts = 0
+                last_rx_freq = 0
+                for json_raw in json_raw_all:
+                    result = json.loads(json_raw)
+                    print(result)
+                    sample_value = float(
+                        result["predictions"]["modulation"][0]["sample_value"]
+                    )
+                    del result["predictions"]["modulation"][0]["sample_value"]
+                    self.assertEqual(result["predictions"], predictions_result)
+                    self.assertEqual(result.get("error", None), None)
+                    rx_freq = float(result["metadata"]["rx_freq"])
+                    ts = float(result["metadata"]["ts"])
+                    sc = float(result["metadata"]["sample_clock"])
+                    test_sample_clocks.add(sc)
+                    count = float(result["metadata"]["sample_count"])
+                    self.assertEqual(count, fft_size * n_vlen)
+                    self.assertGreater(rx_freq, last_rx_freq)
+                    self.assertGreater(ts, last_ts)
+                    self.assertGreater(sc, last_sc)
+                    self.assertEqual(round(sample_value, 3), round(rx_freq / 1e9, 3))
+                    last_ts = ts
+                    last_sc = sc
+                    last_rx_freq = rx_freq
+
+            if reference_sample_clocks:
+                self.assertEqual(
+                    reference_sample_clocks,
+                    test_sample_clocks,
+                    (cycle, reference_sample_clocks - test_sample_clocks),
+                )
+            else:
+                reference_sample_clocks = test_sample_clocks
 
 
 if __name__ == "__main__":

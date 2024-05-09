@@ -232,7 +232,7 @@ class qa_write_freq_samples(gr_unittest.TestCase):
         self, freq, tune_freq, samp_rate, points, samples_write_count, rotate, tmpdir
     ):
         strobe = blocks.message_strobe(pmt.to_pmt({"freq": tune_freq}), 1000)
-        iqtlabs_tuneable_test_source_0 = tuneable_test_source(freq)
+        iqtlabs_tuneable_test_source_0 = tuneable_test_source(0, freq)
         write_freq_samples_0 = write_freq_samples(
             "rx_freq",
             gr.sizeof_gr_complex,

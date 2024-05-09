@@ -242,8 +242,9 @@ iq_inference_impl::iq_inference_impl(
       model_server_(model_server), confidence_(confidence),
       n_inference_(n_inference), samp_rate_(samp_rate),
       power_inference_(power_inference), background_(background),
-      inference_count_(0), running_(true), last_rx_freq_(0), last_rx_time_(0),
-      samples_since_tag_(0), sample_clock_(0), last_full_time_(0) {
+      inference_count_(n_inference), running_(true), last_rx_freq_(0),
+      last_rx_time_(0), samples_since_tag_(0), sample_clock_(0),
+      last_full_time_(0) {
   batch_ = vlen_ * n_vlen_;
   samples_lookback_.reset(new gr_complex[batch_ * sample_buffer]);
   unsigned int alignment = volk_get_alignment();
@@ -267,7 +268,6 @@ iq_inference_impl::iq_inference_impl(
         new std::thread(&iq_inference_impl::background_run_inference_, this));
   }
   torchserve_client_.reset(new torchserve_client(host_, port_));
-  set_output_multiple(n_vlen_);
   message_port_register_out(INFERENCE_KEY);
 }
 
@@ -409,9 +409,10 @@ void iq_inference_impl::process_items_(COUNT_T power_in_count,
     if (*samples_total_ == 0) {
       continue;
     }
-    if (n_inference_ > 0 && ++inference_count_ % n_inference_) {
+    if (n_inference_ > 0 && --inference_count_) {
       continue;
     }
+    inference_count_ = n_inference_;
     // TODO: we select one slice in time (samples and power),
     // where at least one sample exceeded the minimum. We could
     // potentially select more samples either side for example.
@@ -455,7 +456,7 @@ int iq_inference_impl::general_work(int noutput_items,
                                     gr_vector_void_star &output_items) {
   COUNT_T samples_in_count = ninput_items[0];
   COUNT_T power_in_count = ninput_items[1];
-  COUNT_T in_first = nitems_read(1);
+  COUNT_T power_read_first = nitems_read(1);
   const gr_complex *samples_in =
       static_cast<const gr_complex *>(input_items[0]);
   const float *power_in = static_cast<const float *>(input_items[1]);
@@ -468,21 +469,6 @@ int iq_inference_impl::general_work(int noutput_items,
   samples_in_count =
       int(std::min(samples_in_count, power_in_count) / n_vlen_) * n_vlen_;
   power_in_count = samples_in_count;
-
-  while (!json_q_.empty()) {
-    std::string json;
-    json_q_.pop(json);
-    out_buf_.insert(out_buf_.end(), json.begin(), json.end());
-  }
-
-  if (!out_buf_.empty()) {
-    auto out = static_cast<char *>(output_items[0]);
-    leftover = std::min(out_buf_.size(), (COUNT_T)noutput_items);
-    auto from = out_buf_.begin();
-    auto to = from + leftover;
-    std::copy(from, to, out);
-    out_buf_.erase(from, to);
-  }
 
   get_tags_in_window(all_tags, 1, 0, power_in_count);
   get_tags(tag_, all_tags, rx_freq_tags, rx_times, power_in_count);
@@ -501,8 +487,7 @@ int iq_inference_impl::general_work(int noutput_items,
     for (COUNT_T t = 0; t < rx_freq_tags.size(); ++t) {
       const auto &tag = rx_freq_tags[t];
       const TIME_T rx_time = rx_times[t];
-      const auto rel = tag.offset - in_first;
-      in_first += rel;
+      const auto rel = tag.offset - power_read;
 
       // TODO: in theory we might have a vector with more than one frequency's
       // samples, as the SDR probably isn't vector aligned. In practice this
@@ -510,6 +495,7 @@ int iq_inference_impl::general_work(int noutput_items,
       // because tags are delayed until after re-tuning has been verified.
       if (rel > 0) {
         process_items_(rel, power_read, power_in, consumed);
+        power_read += rel;
       }
 
       const FREQ_T rx_freq = GET_FREQ(tag);
@@ -518,13 +504,34 @@ int iq_inference_impl::general_work(int noutput_items,
       last_rx_time_ = rx_time;
       samples_since_tag_ = 0;
     }
-    if (consumed < power_in_count) {
-      process_items_(power_in_count - consumed, power_read, power_in, consumed);
+    if (consumed < samples_in_count) {
+      process_items_(samples_in_count - consumed, power_read, power_in,
+                     consumed);
     }
   }
 
-  consume(0, samples_in_count);
-  consume(1, consumed);
+  consume_each(consumed);
+
+  while (!json_q_.empty()) {
+    std::string json;
+    json_q_.pop(json);
+    out_buf_.insert(out_buf_.end(), json.begin(), json.end());
+  }
+
+  if (!out_buf_.empty()) {
+    auto out = static_cast<char *>(output_items[0]);
+    leftover = std::min(out_buf_.size(), (COUNT_T)noutput_items);
+    auto from = out_buf_.begin();
+    auto to = from + leftover;
+    std::copy(from, to, out);
+    out_buf_.erase(from, to);
+  }
+
+  if (consumed != samples_in_count) {
+    d_logger->error("mismatch consumed {} versus in count {}", consumed,
+                    samples_in_count);
+  }
+
   return leftover;
 }
 

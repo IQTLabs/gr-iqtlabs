@@ -87,6 +87,7 @@ blocks:
     affinity: ''
     alias: ''
     comment: ''
+    freq: 0
     freq_divisor: 1e9
     maxoutbuf: '0'
     minoutbuf: '0'

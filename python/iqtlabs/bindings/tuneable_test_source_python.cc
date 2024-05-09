@@ -14,7 +14,7 @@
 /* BINDTOOL_GEN_AUTOMATIC(0)                                                       */
 /* BINDTOOL_USE_PYGCCXML(0)                                                        */
 /* BINDTOOL_HEADER_FILE(tuneable_test_source.h)                                        */
-/* BINDTOOL_HEADER_FILE_HASH(1261812399acca738cb78b6ccc94da80)                     */
+/* BINDTOOL_HEADER_FILE_HASH(e63c7ab2fcd5d0e0b20127a38cc965fa)                     */
 /***********************************************************************************/
 
 #include <pybind11/complex.h>
@@ -30,20 +30,32 @@ namespace py = pybind11;
 void bind_tuneable_test_source(py::module& m)
 {
 
-    using tuneable_test_source = ::gr::iqtlabs::tuneable_test_source;
+    using tuneable_test_source    = ::gr::iqtlabs::tuneable_test_source;
 
 
-    py::class_<tuneable_test_source,
-               gr::sync_block,
-               gr::block,
-               gr::basic_block,
-               std::shared_ptr<tuneable_test_source>>(
-        m, "tuneable_test_source", D(tuneable_test_source))
+    py::class_<tuneable_test_source, gr::sync_block, gr::block, gr::basic_block,
+        std::shared_ptr<tuneable_test_source>>(m, "tuneable_test_source", D(tuneable_test_source))
 
         .def(py::init(&tuneable_test_source::make),
-             py::arg("divisor"),
-             D(tuneable_test_source, make))
+           py::arg("freq"),
+           py::arg("divisor"),
+           D(tuneable_test_source,make)
+        )
+        
+
 
 
         ;
+
+
+
+
 }
+
+
+
+
+
+
+
+

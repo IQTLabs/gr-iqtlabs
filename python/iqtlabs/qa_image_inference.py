@@ -254,7 +254,7 @@ class qa_image_inference(gr_unittest.TestCase):
         freq_divisor = 1e9
         new_freq = 1e9 / 2
         delay = 500
-        source = tuneable_test_source(freq_divisor)
+        source = tuneable_test_source(0, freq_divisor)
         strobe = blocks.message_strobe(pmt.to_pmt({"freq": new_freq}), delay)
         image_inf = image_inference(
             "rx_freq",
