@@ -210,14 +210,13 @@
 #include <boost/iostreams/device/file.hpp>
 #include <boost/iostreams/filter/zstd.hpp>
 #include <boost/iostreams/filtering_stream.hpp>
-#include <boost/lockfree/spsc_queue.hpp>
 #include <boost/scoped_ptr.hpp>
+#include <boost/thread/mutex.hpp>
 #include <gnuradio/iqtlabs/write_freq_samples.h>
+#include <queue>
 
 namespace gr {
 namespace iqtlabs {
-
-#define MAX_ANNOTATIONS 1024
 
 typedef struct inference_item {
   COUNT_T sample_count;
@@ -256,8 +255,8 @@ private:
   COUNT_T rotate_secs_;
   TIME_T open_time_;
 
-  boost::lockfree::spsc_queue<inference_item_type> inference_q_{
-      MAX_ANNOTATIONS};
+  std::queue<inference_item_type> inference_q_;
+  boost::mutex queue_lock_;
   boost::scoped_ptr<boost::iostreams::filtering_ostream> outbuf_p;
   std::string outfile_;
 
