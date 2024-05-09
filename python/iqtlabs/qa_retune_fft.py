@@ -288,7 +288,7 @@ class qa_retune_fft_base:
 
         with tempfile.TemporaryDirectory() as tmpdir:
             test_file = os.path.join(tmpdir, "samples.csv")
-            iqtlabs_tuneable_test_source_0 = tuneable_test_source(freq_end)
+            iqtlabs_tuneable_test_source_0 = tuneable_test_source(0, freq_end)
             iqtlabs_retune_pre_fft_0 = retune_pre_fft(
                 nfft=points,
                 samp_rate=samp_rate,

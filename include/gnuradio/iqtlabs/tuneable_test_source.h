@@ -229,7 +229,7 @@ public:
    * class. iqtlabs::tuneable_test_source::make is the public interface for
    * creating new instances.
    */
-  static sptr make(float divisor);
+  static sptr make(double freq, double divisor);
 };
 
 } // namespace iqtlabs

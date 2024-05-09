@@ -7,7 +7,7 @@
  *
  */
 #include "pydoc_macros.h"
-#define D(...) DOC(gr, iqtlabs, __VA_ARGS__)
+#define D(...) DOC(gr,iqtlabs, __VA_ARGS__ )
 /*
   This file contains placeholders for docstrings for the Python bindings.
   Do not edit! These were automatically extracted during the binding process
@@ -15,10 +15,13 @@
  */
 
 
-static const char* __doc_gr_iqtlabs_retune_fft = R"doc()doc";
+ 
+ static const char *__doc_gr_iqtlabs_retune_fft = R"doc()doc";
 
 
-static const char* __doc_gr_iqtlabs_retune_fft_retune_fft = R"doc()doc";
+ static const char *__doc_gr_iqtlabs_retune_fft_retune_fft = R"doc()doc";
 
 
-static const char* __doc_gr_iqtlabs_retune_fft_make = R"doc()doc";
+ static const char *__doc_gr_iqtlabs_retune_fft_make = R"doc()doc";
+
+  

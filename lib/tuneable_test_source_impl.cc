@@ -209,17 +209,22 @@ namespace gr {
 namespace iqtlabs {
 
 using output_type = gr_complex;
-tuneable_test_source::sptr tuneable_test_source::make(float freq_divisor) {
-  return gnuradio::make_block_sptr<tuneable_test_source_impl>(freq_divisor);
+tuneable_test_source::sptr tuneable_test_source::make(double freq,
+                                                      double freq_divisor) {
+  return gnuradio::make_block_sptr<tuneable_test_source_impl>(freq,
+                                                              freq_divisor);
 }
 
-tuneable_test_source_impl::tuneable_test_source_impl(float freq_divisor)
+tuneable_test_source_impl::tuneable_test_source_impl(double freq,
+                                                     double freq_divisor)
     : gr::sync_block("tuneable_test_source", gr::io_signature::make(0, 0, 0),
                      gr::io_signature::make(1 /* min outputs */,
                                             1 /*max outputs */,
                                             sizeof(output_type))),
-      d_freq_divisor(freq_divisor), last_freq(0), last_sample(gr_complex(0, 0)),
-      tag_now(false) {
+      d_freq_divisor(freq_divisor), last_freq(freq),
+      last_sample(gr_complex(0, 0)), tag_now(false) {
+  last_sample =
+      gr_complex(last_freq / d_freq_divisor, last_freq / d_freq_divisor);
   message_port_register_in(CMD_KEY);
   set_msg_handler(CMD_KEY, [this](const pmt::pmt_t &msg) { recv_cmd(msg); });
 }

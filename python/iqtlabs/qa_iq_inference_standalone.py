@@ -286,7 +286,7 @@ class qa_iq_inference_standalone(gr_unittest.TestCase):
             return
         instance = iq_inference_standalone(1024, "localhost:11003", "testmodel")
         pdu_decoder_0 = pdu_decoder()
-        source = tuneable_test_source(freq_divisor)
+        source = tuneable_test_source(0, freq_divisor)
         throttle = blocks.throttle(gr.sizeof_gr_complex, samp_rate, True)
         stream2vector_samples = blocks.stream_to_vector(gr.sizeof_gr_complex, fft_size)
         self.tb.connect((source, 0), (throttle, 0))

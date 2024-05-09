@@ -15,19 +15,28 @@ documentation: |-
     complex samples proportional to frequency.
 
   parameters:
+    freq: initial frequency.
     freq_divisor: value to divide requested frequency by, to produce samples.
 
 templates:
   imports: from gnuradio import iqtlabs
-  make: iqtlabs.tuneable_test_source(${freq_divisor})
+  make: >
+    iqtlabs.tuneable_test_source(
+    ${freq}, ${freq_divisor})
 
 cpp_templates:
   includes: ['#include <gnuradio/iqtlabs/tuneable_test_source.h>']
   declarations: 'iqtlabs::tuneable_test_source::sptr ${id};'
-  make: 'this->${id} = iqtlabs::tuneable_test_source::make(${freq_divisor});'
+  make: >
+    this->${id} = iqtlabs::tuneable_test_source::make(
+    ${freq}, ${freq_divisor});
   link: ['libgnuradio-iqtlabs.so']
 
 parameters:
+  - id: freq
+    label: freq_divisor
+    dtype: float
+    default: 1e9
   - id: freq_divisor
     label: freq_divisor
     dtype: float

@@ -238,7 +238,7 @@ class qa_vector_to_json(gr_unittest.TestCase):
             samp_rate = 32e3
             msg = pmt.to_pmt({"freq": new_freq})
 
-            source = tuneable_test_source(freq_divisor)
+            source = tuneable_test_source(0, freq_divisor)
             instance = vector_to_json_ff(int(1024))
             strobe = blocks.message_strobe(msg, delay)
             throttle = blocks.throttle(gr.sizeof_gr_complex * 1, samp_rate, True)
