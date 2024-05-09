@@ -258,10 +258,6 @@ void write_freq_samples_impl::recv_inference_(const pmt::pmt_t msg) {
   if (rotate_) {
     return;
   }
-  if (!inference_q_.write_available()) {
-    d_logger->error("inference annotation queue full");
-    return;
-  }
   const std::string msg_str = pmt_to_string(msg);
   d_logger->info("inference results: {}", msg_str);
   try {
@@ -279,6 +275,7 @@ void write_freq_samples_impl::recv_inference_(const pmt::pmt_t msg) {
           continue;
         }
         for (auto &prediction : prediction_class.value()) {
+          boost::lock_guard<boost::mutex> guard(queue_lock_);
           // TODO: add confidence and model to description.
           inference_item_type inference_item;
           inference_item.sample_start = sample_clock;
@@ -287,9 +284,7 @@ void write_freq_samples_impl::recv_inference_(const pmt::pmt_t msg) {
           inference_item.freq_upper_edge = last_rx_freq_ + (sample_rate / 2);
           inference_item.description = prediction_class.key();
           inference_item.label = inference_item.description;
-          if (!inference_q_.push(inference_item)) {
-            d_logger->error("inference annotation queue full");
-          }
+          inference_q_.push(inference_item);
         }
       }
     }
@@ -341,11 +336,11 @@ void write_freq_samples_impl::close_() {
       sigmf_record_t record =
           create_sigmf(final_samples_path, open_time_, datatype_, samp_rate_,
                        last_rx_freq_, gain_);
-      d_logger->info("writing {} annotations", inference_q_.read_available());
       // TODO: handle annotations for the rotate case.
+      boost::lock_guard<boost::mutex> guard(queue_lock_);
       while (!inference_q_.empty()) {
-        inference_item_type inference_item;
-        inference_q_.pop(inference_item);
+        inference_item_type inference_item = inference_q_.front();
+        inference_q_.pop();
         auto anno = sigmf::Annotation<sigmf::core::DescrT>();
         anno.access<sigmf::core::AnnotationT>().sample_start =
             inference_item.sample_start;
