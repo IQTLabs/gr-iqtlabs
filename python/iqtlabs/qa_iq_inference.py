@@ -293,7 +293,7 @@ class qa_iq_inference(gr_unittest.TestCase):
             model_server=f"localhost:{port}",
             model_names=model_name,
             confidence=0.8,
-            n_inference=4096,
+            n_inference=1024,
             samp_rate=int(samp_rate),
             power_inference=True,
             background=False,
@@ -327,7 +327,7 @@ class qa_iq_inference(gr_unittest.TestCase):
                 port, model_name, predictions_result, fft_size * n_vlen
             )
             return
-        samp_rate = 1024 * 1024 * 4
+        samp_rate = 1024 * 1024
         with tempfile.TemporaryDirectory() as tmpdir:
             self.run_flowgraph(tmpdir, n_vlen, fft_size, samp_rate, port, model_name)
 
@@ -343,7 +343,7 @@ class qa_iq_inference(gr_unittest.TestCase):
                 port, model_name, predictions_result, fft_size * n_vlen
             )
             return
-        samp_rate = 1024 * 1024 * 4
+        samp_rate = 1024 * 1024
         # added by inference client.
         predictions_result["modulation"][0]["model"] = model_name
 
