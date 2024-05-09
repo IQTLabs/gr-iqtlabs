@@ -7,7 +7,7 @@
  *
  */
 #include "pydoc_macros.h"
-#define D(...) DOC(gr, iqtlabs, __VA_ARGS__)
+#define D(...) DOC(gr,iqtlabs, __VA_ARGS__ )
 /*
   This file contains placeholders for docstrings for the Python bindings.
   Do not edit! These were automatically extracted during the binding process
@@ -15,11 +15,13 @@
  */
 
 
-static const char* __doc_gr_iqtlabs_iq_inference_standalone = R"doc()doc";
+ 
+ static const char *__doc_gr_iqtlabs_iq_inference_standalone = R"doc()doc";
 
 
-static const char* __doc_gr_iqtlabs_iq_inference_standalone_iq_inference_standalone =
-    R"doc()doc";
+ static const char *__doc_gr_iqtlabs_iq_inference_standalone_iq_inference_standalone = R"doc()doc";
 
 
-static const char* __doc_gr_iqtlabs_iq_inference_standalone_make = R"doc()doc";
+ static const char *__doc_gr_iqtlabs_iq_inference_standalone_make = R"doc()doc";
+
+  

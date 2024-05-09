@@ -258,6 +258,7 @@ private:
   std::deque<char> out_buf_;
   std::string host_, port_;
   boost::scoped_ptr<std::thread> inference_thread_;
+  bool background_;
 
   void process_items_(COUNT_T power_in_count, COUNT_T &power_read,
                       const float *&power_in, COUNT_T &consumed);
@@ -272,7 +273,8 @@ public:
                     COUNT_T sample_buffer, double min_peak_points,
                     const std::string &model_server,
                     const std::string &model_names, double confidence,
-                    COUNT_T n_inference, int samp_rate, bool power_inference);
+                    COUNT_T n_inference, int samp_rate, bool power_inference,
+                    bool background);
   void forecast(int noutput_items, gr_vector_int &ninput_items_required);
   int general_work(int noutput_items, gr_vector_int &ninput_items,
                    gr_vector_const_void_star &input_items,

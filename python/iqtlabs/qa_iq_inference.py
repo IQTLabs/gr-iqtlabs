@@ -272,7 +272,7 @@ class qa_iq_inference(gr_unittest.TestCase):
         except RuntimeError:
             return
 
-    def run_flowgraph(self, tmpdir, fft_size, samp_rate, port, model_name):
+    def run_flowgraph(self, tmpdir, n_vlen, fft_size, samp_rate, port, model_name):
         test_file = os.path.join(tmpdir, "samples")
         freq_divisor = 1e9
         new_freq = 1e9 / 2
@@ -289,7 +289,7 @@ class qa_iq_inference(gr_unittest.TestCase):
         iq_inf = iq_inference(
             tag="rx_freq",
             vlen=fft_size,
-            n_vlen=2,
+            n_vlen=n_vlen,
             sample_buffer=512,
             min_peak_points=-1e9,
             model_server=f"localhost:{port}",
@@ -298,6 +298,7 @@ class qa_iq_inference(gr_unittest.TestCase):
             n_inference=5001,
             samp_rate=int(samp_rate),
             power_inference=True,
+            background=False,
         )
 
         self.tb.msg_connect((strobe, "strobe"), (source, "cmd"))
@@ -323,12 +324,15 @@ class qa_iq_inference(gr_unittest.TestCase):
         model_name = "testmodel"
         predictions_result = ["cant", "parse", {"this": 0}]
         fft_size = 1024
+        n_vlen = 2
         if self.pid == 0:
-            self.simulate_torchserve(port, model_name, predictions_result, fft_size * 2)
+            self.simulate_torchserve(
+                port, model_name, predictions_result, fft_size * n_vlen
+            )
             return
         samp_rate = 4e6
         with tempfile.TemporaryDirectory() as tmpdir:
-            self.run_flowgraph(tmpdir, fft_size, samp_rate, port, model_name)
+            self.run_flowgraph(tmpdir, n_vlen, fft_size, samp_rate, port, model_name)
 
     def test_good_predict(self):
         port = 11001
@@ -336,15 +340,18 @@ class qa_iq_inference(gr_unittest.TestCase):
         px = 100
         predictions_result = {"modulation": [{"conf": 0.9}]}
         fft_size = 1024
+        n_vlen = 2
         if self.pid == 0:
-            self.simulate_torchserve(port, model_name, predictions_result, fft_size * 2)
+            self.simulate_torchserve(
+                port, model_name, predictions_result, fft_size * n_vlen
+            )
             return
         samp_rate = 4e6
         # added by inference client.
         predictions_result["modulation"][0]["model"] = model_name
         with tempfile.TemporaryDirectory() as tmpdir:
             test_file = self.run_flowgraph(
-                tmpdir, fft_size, samp_rate, port, model_name
+                tmpdir, n_vlen, fft_size, samp_rate, port, model_name
             )
             self.assertTrue(os.stat(test_file).st_size)
             with open(test_file) as f:
@@ -367,7 +374,7 @@ class qa_iq_inference(gr_unittest.TestCase):
                 ts = float(result["metadata"]["ts"])
                 sc = float(result["metadata"]["sample_clock"])
                 count = float(result["metadata"]["sample_count"])
-                self.assertEqual(count, fft_size * 2)
+                self.assertEqual(count, fft_size * n_vlen)
                 self.assertGreater(rx_freq, last_rx_freq)
                 self.assertGreater(ts, last_ts)
                 self.assertGreater(sc, last_sc)
