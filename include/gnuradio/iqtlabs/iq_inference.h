@@ -232,7 +232,8 @@ public:
                    uint64_t sample_buffer, double min_peak_points,
                    const std::string &model_server,
                    const std::string &model_names, double confidence,
-                   uint64_t n_inference, int samp_rate, bool power_inference);
+                   uint64_t n_inference, int samp_rate, bool power_inference,
+                   bool background);
 };
 
 } // namespace iqtlabs

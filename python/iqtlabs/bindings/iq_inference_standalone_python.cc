@@ -13,7 +13,7 @@
 /* If manual edits are made, the following tags should be modified accordingly.    */
 /* BINDTOOL_GEN_AUTOMATIC(0)                                                       */
 /* BINDTOOL_USE_PYGCCXML(0)                                                        */
-/* BINDTOOL_HEADER_FILE(iq_inference_standalone.h) */
+/* BINDTOOL_HEADER_FILE(iq_inference_standalone.h)                                        */
 /* BINDTOOL_HEADER_FILE_HASH(47123aeae5b97ed6fca1be996559bbcb)                     */
 /***********************************************************************************/
 
@@ -30,22 +30,33 @@ namespace py = pybind11;
 void bind_iq_inference_standalone(py::module& m)
 {
 
-    using iq_inference_standalone = ::gr::iqtlabs::iq_inference_standalone;
+    using iq_inference_standalone    = ::gr::iqtlabs::iq_inference_standalone;
 
 
-    py::class_<iq_inference_standalone,
-               gr::sync_block,
-               gr::block,
-               gr::basic_block,
-               std::shared_ptr<iq_inference_standalone>>(
-        m, "iq_inference_standalone", D(iq_inference_standalone))
+    py::class_<iq_inference_standalone, gr::sync_block, gr::block, gr::basic_block,
+        std::shared_ptr<iq_inference_standalone>>(m, "iq_inference_standalone", D(iq_inference_standalone))
 
         .def(py::init(&iq_inference_standalone::make),
-             py::arg("vlen"),
-             py::arg("model_server"),
-             py::arg("model_names"),
-             D(iq_inference_standalone, make))
+           py::arg("vlen"),
+           py::arg("model_server"),
+           py::arg("model_names"),
+           D(iq_inference_standalone,make)
+        )
+        
+
 
 
         ;
+
+
+
+
 }
+
+
+
+
+
+
+
+

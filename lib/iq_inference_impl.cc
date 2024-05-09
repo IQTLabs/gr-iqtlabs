@@ -211,28 +211,25 @@
 namespace gr {
 namespace iqtlabs {
 
-iq_inference::sptr iq_inference::make(const std::string &tag, COUNT_T vlen,
-                                      COUNT_T n_vlen, COUNT_T sample_buffer,
-                                      double min_peak_points,
-                                      const std::string &model_server,
-                                      const std::string &model_names,
-                                      double confidence, COUNT_T n_inference,
-                                      int samp_rate, bool power_inference) {
+iq_inference::sptr iq_inference::make(
+    const std::string &tag, COUNT_T vlen, COUNT_T n_vlen, COUNT_T sample_buffer,
+    double min_peak_points, const std::string &model_server,
+    const std::string &model_names, double confidence, COUNT_T n_inference,
+    int samp_rate, bool power_inference, bool background) {
   return gnuradio::make_block_sptr<iq_inference_impl>(
       tag, vlen, n_vlen, sample_buffer, min_peak_points, model_server,
-      model_names, confidence, n_inference, samp_rate, power_inference);
+      model_names, confidence, n_inference, samp_rate, power_inference,
+      background);
 }
 
 /*
  * The private constructor
  */
-iq_inference_impl::iq_inference_impl(const std::string &tag, COUNT_T vlen,
-                                     COUNT_T n_vlen, COUNT_T sample_buffer,
-                                     double min_peak_points,
-                                     const std::string &model_server,
-                                     const std::string &model_names,
-                                     double confidence, COUNT_T n_inference,
-                                     int samp_rate, bool power_inference)
+iq_inference_impl::iq_inference_impl(
+    const std::string &tag, COUNT_T vlen, COUNT_T n_vlen, COUNT_T sample_buffer,
+    double min_peak_points, const std::string &model_server,
+    const std::string &model_names, double confidence, COUNT_T n_inference,
+    int samp_rate, bool power_inference, bool background)
     : gr::block("iq_inference",
                 gr::io_signature::makev(
                     2 /* min inputs */, 2 /* min inputs */,
@@ -244,9 +241,9 @@ iq_inference_impl::iq_inference_impl(const std::string &tag, COUNT_T vlen,
       sample_buffer_(sample_buffer), min_peak_points_(min_peak_points),
       model_server_(model_server), confidence_(confidence),
       n_inference_(n_inference), samp_rate_(samp_rate),
-      power_inference_(power_inference), inference_count_(0), running_(true),
-      last_rx_freq_(0), last_rx_time_(0), samples_since_tag_(0),
-      sample_clock_(0), last_full_time_(0) {
+      power_inference_(power_inference), background_(background),
+      inference_count_(0), running_(true), last_rx_freq_(0), last_rx_time_(0),
+      samples_since_tag_(0), sample_clock_(0), last_full_time_(0) {
   batch_ = vlen_ * n_vlen_;
   samples_lookback_.reset(new gr_complex[batch_ * sample_buffer]);
   unsigned int alignment = volk_get_alignment();
@@ -265,8 +262,10 @@ iq_inference_impl::iq_inference_impl(const std::string &tag, COUNT_T vlen,
       d_logger->error("missing model name(s)");
     }
   }
-  inference_thread_.reset(
-      new std::thread(&iq_inference_impl::background_run_inference_, this));
+  if (background_) {
+    inference_thread_.reset(
+        new std::thread(&iq_inference_impl::background_run_inference_, this));
+  }
   torchserve_client_.reset(new torchserve_client(host_, port_));
   set_output_multiple(n_vlen_);
   message_port_register_out(INFERENCE_KEY);
@@ -293,7 +292,9 @@ void iq_inference_impl::background_run_inference_() {
 bool iq_inference_impl::stop() {
   d_logger->info("stopping");
   running_ = false;
-  inference_thread_->join();
+  if (inference_thread_) {
+    inference_thread_->join();
+  }
   run_inference_();
   return true;
 }
@@ -385,15 +386,16 @@ void iq_inference_impl::run_inference_() {
 void iq_inference_impl::forecast(int noutput_items,
                                  gr_vector_int &ninput_items_required) {
   ninput_items_required[0] = 1;
+  ninput_items_required[1] = 1;
 }
 
 void iq_inference_impl::process_items_(COUNT_T power_in_count,
                                        COUNT_T &power_read,
                                        const float *&power_in,
                                        COUNT_T &consumed) {
-  for (COUNT_T i = 0; i < power_in_count; i += n_vlen_, power_in += batch_,
-               samples_since_tag_ += batch_, sample_clock_ += batch_,
-               consumed += n_vlen_) {
+  for (COUNT_T i = 0; i < power_in_count; i += n_vlen_, consumed += n_vlen_,
+               power_in += batch_, samples_since_tag_ += batch_,
+               sample_clock_ += batch_) {
     COUNT_T j = (power_read + i) % sample_buffer_;
     // Gate on average power.
     volk_32f_accumulator_s32f(power_total_.get(), power_in, batch_);
@@ -410,9 +412,6 @@ void iq_inference_impl::process_items_(COUNT_T power_in_count,
     if (n_inference_ > 0 && ++inference_count_ % n_inference_) {
       continue;
     }
-    if (!last_rx_freq_) {
-      continue;
-    }
     // TODO: we select one slice in time (samples and power),
     // where at least one sample exceeded the minimum. We could
     // potentially select more samples either side for example.
@@ -427,13 +426,25 @@ void iq_inference_impl::process_items_(COUNT_T power_in_count,
     memcpy(output_item.samples, (void *)&samples_lookback_[j * batch_],
            batch_ * sizeof(gr_complex));
     memcpy(output_item.power, (void *)power_in, batch_ * sizeof(float));
-    if (!inference_q_.push(output_item)) {
-      delete_output_item_(output_item);
-      if (host_now_() - last_full_time_ > 5) {
-        d_logger->error("inference queue full (increase inference dB threshold "
-                        "to admit fewer signals?)");
-        last_full_time_ = host_now_();
+    if (background_) {
+      if (!last_rx_freq_) {
+
+        continue;
       }
+      if (!inference_q_.push(output_item)) {
+        delete_output_item_(output_item);
+        if (host_now_() - last_full_time_ > 5) {
+          d_logger->error(
+              "inference queue full (increase inference dB threshold "
+              "to admit fewer signals?)");
+          last_full_time_ = host_now_();
+        }
+      }
+    } else {
+      d_logger->info("inference attempt at sample_clock {}",
+                     output_item.sample_clock);
+      inference_q_.push(output_item);
+      run_inference_();
     }
   }
 }
@@ -452,6 +463,11 @@ int iq_inference_impl::general_work(int noutput_items,
   std::vector<TIME_T> rx_times;
   COUNT_T consumed = 0;
   COUNT_T leftover = 0;
+
+  // Ensure we stay in power/samples sync.
+  samples_in_count =
+      int(std::min(samples_in_count, power_in_count) / n_vlen_) * n_vlen_;
+  power_in_count = samples_in_count;
 
   while (!json_q_.empty()) {
     std::string json;
@@ -508,7 +524,7 @@ int iq_inference_impl::general_work(int noutput_items,
   }
 
   consume(0, samples_in_count);
-  consume(1, power_in_count);
+  consume(1, consumed);
   return leftover;
 }
 

@@ -32,6 +32,7 @@ documentation: |-
     n_inference: if > 0, only run inference on 1/n_inference images.
     samp_rate: sample rate.
     power_inference: if True, infer on power as well as samples.
+    background: if True, do inference in the background.
 
 templates:
   imports: from gnuradio import iqtlabs
@@ -39,7 +40,7 @@ templates:
     iqtlabs.iq_inference(
     ${tag}, ${vlen}, ${n_vlen}, ${sample_buffer}, ${min_peak_points},
     ${model_server}, ${model_names}, ${confidence}, ${n_inference},
-    ${samp_rate}, ${power_inference})
+    ${samp_rate}, ${power_inference}, ${background})
 
 cpp_templates:
   includes: ['#include <gnuradio/iqtlabs/iq_inference.h>']
@@ -48,7 +49,7 @@ cpp_templates:
     this->${id} = gr::iqtlabs::iq_inference::make(
     ${tag}, ${vlen}, ${n_vlen}, ${sample_buffer, ${min_peak_points},
     ${model_server}, ${model_names}, ${confidence}, ${n_inference},
-    ${samp_rate}, ${power_inference});
+    ${samp_rate}, ${power_inference}, ${background});
   link: ['libgnuradio-iqtlabs.so']
 
 parameters:
@@ -74,6 +75,8 @@ parameters:
   - id: samp_rate
     dtype: int
   - id: power_inference
+    dtype: bool
+  - id: background
     dtype: bool
 
 asserts:

@@ -14,7 +14,7 @@
 /* BINDTOOL_GEN_AUTOMATIC(0)                                                       */
 /* BINDTOOL_USE_PYGCCXML(0)                                                        */
 /* BINDTOOL_HEADER_FILE(iq_inference.h)                                        */
-/* BINDTOOL_HEADER_FILE_HASH(bda97b811b8010b3e26c61b90e9144ce)                     */
+/* BINDTOOL_HEADER_FILE_HASH(e9be2dc8c2985cc44c5e04e576515eea)                     */
 /***********************************************************************************/
 
 #include <pybind11/complex.h>
@@ -30,26 +30,42 @@ namespace py = pybind11;
 void bind_iq_inference(py::module& m)
 {
 
-    using iq_inference = ::gr::iqtlabs::iq_inference;
+    using iq_inference    = ::gr::iqtlabs::iq_inference;
 
 
-    py::class_<iq_inference, gr::block, gr::basic_block, std::shared_ptr<iq_inference>>(
-        m, "iq_inference", D(iq_inference))
+    py::class_<iq_inference, gr::block, gr::basic_block,
+        std::shared_ptr<iq_inference>>(m, "iq_inference", D(iq_inference))
 
         .def(py::init(&iq_inference::make),
-             py::arg("tag"),
-             py::arg("vlen"),
-             py::arg("n_vlen"),
-             py::arg("sample_buffer"),
-             py::arg("min_peak_points"),
-             py::arg("model_server"),
-             py::arg("model_names"),
-             py::arg("confidence"),
-             py::arg("n_inference"),
-             py::arg("samp_rate"),
-             py::arg("power_inference"),
-             D(iq_inference, make))
+           py::arg("tag"),
+           py::arg("vlen"),
+           py::arg("n_vlen"),
+           py::arg("sample_buffer"),
+           py::arg("min_peak_points"),
+           py::arg("model_server"),
+           py::arg("model_names"),
+           py::arg("confidence"),
+           py::arg("n_inference"),
+           py::arg("samp_rate"),
+           py::arg("power_inference"),
+           py::arg("background"),
+           D(iq_inference,make)
+        )
+        
+
 
 
         ;
+
+
+
+
 }
+
+
+
+
+
+
+
+
