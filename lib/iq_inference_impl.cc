@@ -439,7 +439,7 @@ void iq_inference_impl::process_items_(COUNT_T power_in_count,
         last_full_time_ = host_now_();
       }
     }
-    if (!inference_thread_) {
+    if (1 || !inference_thread_) {
       d_logger->info("inference attempt at sample position {}", output_item.sample_clock);
       run_inference_();
     }
@@ -465,11 +465,11 @@ int iq_inference_impl::general_work(int noutput_items,
   COUNT_T power_available = nitems_read(1) + power_in_count;
   // power data got ahead of sample data.
   if (samples_available < power_available) {
-    if (samples_available > nitems_read(1)) {
-      power_in_count = samples_available - nitems_read(1);
-    } else {
+    //if (samples_available > nitems_read(1)) {
+    //  power_in_count = samples_available - nitems_read(1);
+    //} else {
       return 0;
-    }
+    //}
   }
 
   while (!json_q_.empty()) {
