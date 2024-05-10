@@ -215,11 +215,11 @@ iq_inference::sptr iq_inference::make(
     const std::string &tag, COUNT_T vlen, COUNT_T n_vlen, COUNT_T sample_buffer,
     double min_peak_points, const std::string &model_server,
     const std::string &model_names, double confidence, COUNT_T n_inference,
-    int samp_rate, bool power_inference, bool background) {
+    int samp_rate, bool power_inference, bool background, COUNT_T batch) {
   return gnuradio::make_block_sptr<iq_inference_impl>(
       tag, vlen, n_vlen, sample_buffer, min_peak_points, model_server,
       model_names, confidence, n_inference, samp_rate, power_inference,
-      background);
+      background, batch);
 }
 
 /*
@@ -229,7 +229,7 @@ iq_inference_impl::iq_inference_impl(
     const std::string &tag, COUNT_T vlen, COUNT_T n_vlen, COUNT_T sample_buffer,
     double min_peak_points, const std::string &model_server,
     const std::string &model_names, double confidence, COUNT_T n_inference,
-    int samp_rate, bool power_inference, bool background)
+    int samp_rate, bool power_inference, bool background, COUNT_T batch)
     : gr::block("iq_inference",
                 gr::io_signature::makev(
                     2 /* min inputs */, 2 /* min inputs */,
@@ -242,9 +242,9 @@ iq_inference_impl::iq_inference_impl(
       model_server_(model_server), confidence_(confidence),
       n_inference_(n_inference), samp_rate_(samp_rate),
       power_inference_(power_inference), background_(background),
-      inference_count_(n_inference), running_(true), last_rx_freq_(0),
-      last_rx_time_(0), samples_since_tag_(0), sample_clock_(0),
-      last_full_time_(0), predictions_(0) {
+      inference_count_(n_inference), batch_inference_(batch), running_(true),
+      last_rx_freq_(0), last_rx_time_(0), samples_since_tag_(0),
+      sample_clock_(0), last_full_time_(0), predictions_(0) {
   batch_ = vlen_ * n_vlen_;
   samples_lookback_.reset(new gr_complex[batch_ * sample_buffer]);
   unsigned int alignment = volk_get_alignment();

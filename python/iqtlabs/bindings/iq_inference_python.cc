@@ -14,7 +14,7 @@
 /* BINDTOOL_GEN_AUTOMATIC(0)                                                       */
 /* BINDTOOL_USE_PYGCCXML(0)                                                        */
 /* BINDTOOL_HEADER_FILE(iq_inference.h)                                        */
-/* BINDTOOL_HEADER_FILE_HASH(e9be2dc8c2985cc44c5e04e576515eea)                     */
+/* BINDTOOL_HEADER_FILE_HASH(105751a43ba66b5556ad29393252d39b)                     */
 /***********************************************************************************/
 
 #include <pybind11/complex.h>
@@ -49,6 +49,7 @@ void bind_iq_inference(py::module& m)
            py::arg("samp_rate"),
            py::arg("power_inference"),
            py::arg("background"),
+           py::arg("batch"),
            D(iq_inference,make)
         )
         
