@@ -244,7 +244,7 @@ iq_inference_impl::iq_inference_impl(
       power_inference_(power_inference), background_(background),
       inference_count_(n_inference), running_(true), last_rx_freq_(0),
       last_rx_time_(0), samples_since_tag_(0), sample_clock_(0),
-      last_full_time_(0) {
+      last_full_time_(0), predictions_(0) {
   batch_ = vlen_ * n_vlen_;
   samples_lookback_.reset(new gr_complex[batch_ * sample_buffer]);
   unsigned int alignment = volk_get_alignment();
@@ -296,6 +296,7 @@ bool iq_inference_impl::stop() {
     inference_thread_->join();
   }
   run_inference_();
+  d_logger->info("published {} predictions", predictions_);
   return true;
 }
 
@@ -378,6 +379,7 @@ void iq_inference_impl::run_inference_() {
       const std::string output_json_str = output_json.dump();
       json_q_.push(output_json_str + "\n\n");
       message_port_pub(INFERENCE_KEY, string_to_pmt(output_json_str));
+      ++predictions_;
     }
     delete_output_item_(output_item);
   }

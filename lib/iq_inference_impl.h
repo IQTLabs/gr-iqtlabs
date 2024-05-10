@@ -259,6 +259,7 @@ private:
   std::string host_, port_;
   boost::scoped_ptr<std::thread> inference_thread_;
   bool background_;
+  COUNT_T predictions_;
 
   void process_items_(COUNT_T power_in_count, COUNT_T &power_read,
                       const float *&power_in, COUNT_T &consumed);
