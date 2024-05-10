@@ -294,6 +294,12 @@ void write_freq_samples_impl::recv_inference_(const pmt::pmt_t msg) {
 }
 
 bool write_freq_samples_impl::stop() {
+  if (nmsgs(INFERENCE_KEY)) {
+    d_logger->info("flushing inference messages");
+    while (nmsgs(INFERENCE_KEY)) {
+      delete_head_nowait(INFERENCE_KEY);
+    }
+  }
   close_();
   return true;
 }
