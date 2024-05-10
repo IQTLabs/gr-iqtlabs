@@ -338,6 +338,7 @@ void write_freq_samples_impl::close_() {
                        last_rx_freq_, gain_);
       // TODO: handle annotations for the rotate case.
       boost::lock_guard<boost::mutex> guard(queue_lock_);
+      COUNT_T annotations = 0;
       while (!inference_q_.empty()) {
         inference_item_type inference_item = inference_q_.front();
         inference_q_.pop();
@@ -356,10 +357,12 @@ void write_freq_samples_impl::close_() {
         anno.access<sigmf::core::AnnotationT>().generator = "GamutRF";
         record.annotations.emplace_back(anno);
       }
+      d_logger->info("wrote {} annotations", annotations);
       std::string sigmf_filename = final_samples_path_base + ".sigmf-meta";
       std::string dotfilename = get_dotfile_(sigmf_filename);
       std::ofstream jsonfile(dotfilename);
-      jsonfile << record.to_json();
+      nlohmann::json meta_json(record.to_json());
+      jsonfile << std::setw(4) << meta_json;
       jsonfile.close();
       rename(dotfilename.c_str(), sigmf_filename.c_str());
     }
