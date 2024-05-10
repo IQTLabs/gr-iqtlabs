@@ -356,6 +356,7 @@ void write_freq_samples_impl::close_() {
         anno.access<sigmf::core::AnnotationT>().label = inference_item.label;
         anno.access<sigmf::core::AnnotationT>().generator = "GamutRF";
         record.annotations.emplace_back(anno);
+        ++annotations;
       }
       d_logger->info("wrote {} annotations", annotations);
       std::string sigmf_filename = final_samples_path_base + ".sigmf-meta";
