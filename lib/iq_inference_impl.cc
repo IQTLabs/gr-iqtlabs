@@ -349,6 +349,8 @@ void iq_inference_impl::run_inference_() {
               for (auto &prediction_ref : prediction_class.value().items()) {
                 auto prediction = prediction_ref.value();
                 prediction["model"] = model_name;
+                // TODO: estimate actual frequency.
+                prediction["freq"] = output_item.rx_freq;
                 // TODO: gate on minimum confidence.
                 // float conf = prediction["conf"];
                 results_json[prediction_class.key()].emplace_back(prediction);
