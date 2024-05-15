@@ -224,21 +224,7 @@ except ImportError:
     from gnuradio.iqtlabs import iq_inference_standalone, tuneable_test_source
 
 
-class pdu_decoder(gr.sync_block):
-    def __init__(self):
-        gr.sync_block.__init__(
-            self,
-            name="pdu_decoder",
-            in_sig=[],
-            out_sig=[],
-        )
-        self.message_port_register_in(pmt.intern("pdu"))
-        self.set_msg_handler(pmt.intern("pdu"), self.receive_pdu)
-        self.json_output = []
-
-    def receive_pdu(self, pdu):
-        pdu_decoded = pmt.to_python(pmt.cdr(pdu)).tobytes().decode("utf8")
-        self.json_output.append(json.loads(pdu_decoded))
+from pdu_logger import pdu_logger_block
 
 
 class qa_iq_inference_standalone(gr_unittest.TestCase):
@@ -285,22 +271,22 @@ class qa_iq_inference_standalone(gr_unittest.TestCase):
             self.simulate_torchserve(port, model_name, predictions_result, fft_size)
             return
         instance = iq_inference_standalone(1024, "localhost:11003", "testmodel")
-        pdu_decoder_0 = pdu_decoder()
+        pdu_logger = pdu_logger_block()
         source = tuneable_test_source(0, freq_divisor)
         throttle = blocks.throttle(gr.sizeof_gr_complex, samp_rate, True)
         stream2vector_samples = blocks.stream_to_vector(gr.sizeof_gr_complex, fft_size)
         self.tb.connect((source, 0), (throttle, 0))
         self.tb.connect((throttle, 0), (stream2vector_samples, 0))
         self.tb.connect((stream2vector_samples, 0), (instance, 0))
-        self.tb.msg_connect((instance, "inference"), (pdu_decoder_0, "pdu"))
+        self.tb.msg_connect((instance, "inference"), (pdu_logger, "pdu"))
 
         self.tb.start()
         time.sleep(5)
         self.tb.stop()
         self.tb.wait()
-        self.assertTrue(pdu_decoder_0.json_output)
-        for result in pdu_decoder_0.json_output:
-            self.assertEqual(predictions_result, result)
+        self.assertTrue(pdu_logger.pdu_log)
+        for result in pdu_logger.pdu_log:
+            self.assertEqual(predictions_result, json.loads(result))
 
 
 if __name__ == "__main__":

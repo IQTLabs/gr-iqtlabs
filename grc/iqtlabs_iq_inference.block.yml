@@ -99,10 +99,6 @@ inputs:
     vlen: ${ vlen }
 
 outputs:
-  - label: inference json
-    domain: stream
-    dtype: byte
-    vlen: 1
   - id: inference
     domain: message
 

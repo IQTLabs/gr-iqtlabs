@@ -6,4 +6,4 @@ bin/check_blocks.py && \
   black python/iqtlabs/qa_* && \
   ./bin/clonedeps.sh && \
   rm -rf build && mkdir build && cd build && cmake .. && make -j $(nproc) && sudo make install && sudo ldconfig && sudo make test ARGS="--verbose --timeout 180" && cd .. && \
-  pytype -d attribute-error python/iqtlabs/qa_*
+  PYTHONPATH=python/iqtlabs pytype -d attribute-error python/iqtlabs/qa_*

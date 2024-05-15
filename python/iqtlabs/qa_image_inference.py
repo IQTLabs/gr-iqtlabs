@@ -203,14 +203,14 @@
 #    limitations under the License.
 #
 
-import concurrent.futures
-import imghdr
+
 import json
 import glob
 import os
-import pmt
-import time
 import tempfile
+import time
+import pmt
+import imghdr
 from flask import Flask
 from gnuradio import gr, gr_unittest
 from gnuradio import analog, blocks
@@ -224,6 +224,8 @@ except ImportError:
     dirname, filename = os.path.split(os.path.abspath(__file__))
     sys.path.append(os.path.join(dirname, "bindings"))
     from gnuradio.iqtlabs import image_inference, tuneable_test_source
+
+from pdu_logger import pdu_logger_block
 
 
 class qa_image_inference(gr_unittest.TestCase):
@@ -250,7 +252,6 @@ class qa_image_inference(gr_unittest.TestCase):
             return
 
     def run_flowgraph(self, tmpdir, x, y, fft_size, samp_rate, port, model_name):
-        test_file = os.path.join(tmpdir, "samples")
         freq_divisor = 1e9
         new_freq = 1e9 / 2
         delay = 500
@@ -283,20 +284,20 @@ class qa_image_inference(gr_unittest.TestCase):
         c2r = blocks.complex_to_real(1)
         stream2vector = blocks.stream_to_vector(gr.sizeof_float, fft_size)
         throttle = blocks.throttle(gr.sizeof_float, samp_rate, True)
-        fs = blocks.file_sink(gr.sizeof_char, os.path.join(tmpdir, test_file), False)
+        pdu_logger = pdu_logger_block()
 
         self.tb.msg_connect((strobe, "strobe"), (source, "cmd"))
+        self.tb.msg_connect((image_inf, "inference"), (pdu_logger, "pdu"))
         self.tb.connect((source, 0), (c2r, 0))
         self.tb.connect((c2r, 0), (throttle, 0))
         self.tb.connect((throttle, 0), (stream2vector, 0))
         self.tb.connect((stream2vector, 0), (image_inf, 0))
-        self.tb.connect((image_inf, 0), (fs, 0))
         self.tb.start()
         test_time = 10
         time.sleep(test_time)
         self.tb.stop()
         self.tb.wait()
-        return test_file
+        return pdu_logger.pdu_log
 
     def test_bad_instance(self):
         port = 11002
@@ -325,7 +326,7 @@ class qa_image_inference(gr_unittest.TestCase):
         fft_size = 1024
         samp_rate = 4e6
         with tempfile.TemporaryDirectory() as tmpdir:
-            test_file = self.run_flowgraph(
+            json_raw_all = self.run_flowgraph(
                 tmpdir, x, y, fft_size, samp_rate, port, model_name
             )
             image_files = [f for f in glob.glob(f"{tmpdir}/**/*image*png")]
@@ -334,10 +335,6 @@ class qa_image_inference(gr_unittest.TestCase):
                 stat = os.stat(image_file)
                 self.assertTrue(stat.st_size)
                 self.assertEqual(imghdr.what(image_file), "png")
-            self.assertTrue(os.stat(test_file).st_size)
-            with open(test_file) as f:
-                content = f.read()
-            json_raw_all = [json_raw for json_raw in content.split("\n\n") if json_raw]
             self.assertTrue(json_raw_all)
             for json_raw in json_raw_all:
                 result = json.loads(json_raw)
