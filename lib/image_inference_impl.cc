@@ -245,8 +245,7 @@ image_inference_impl::image_inference_impl(
     : gr::block("image_inference",
                 gr::io_signature::make(1 /* min inputs */, 1 /* max inputs */,
                                        vlen * sizeof(input_type)),
-                gr::io_signature::make(1 /* min outputs */, 1 /*max outputs */,
-                                       sizeof(output_type))),
+                gr::io_signature::make(0, 0, 0)),
       tag_(pmt::intern(tag)), x_(x), y_(y), vlen_(vlen), last_rx_freq_(0),
       last_rx_time_(0), image_dir_(image_dir), convert_alpha_(convert_alpha),
       norm_alpha_(norm_alpha), norm_beta_(norm_beta), norm_type_(norm_type),
@@ -590,13 +589,10 @@ void image_inference_impl::run_inference_() {
             secs_image_dir, "predictions_image", output_item, encoded_buffer);
       }
     }
-    // double new line to facilitate json parsing, since prediction may
-    // contain new lines.
     output_json["metadata"] = metadata_json;
     const std::string output_json_str = output_json.dump();
-    json_q_.push(output_json_str + "\n\n");
+    json_q_.push(output_json_str);
     delete_output_item_(output_item);
-    message_port_pub(INFERENCE_KEY, string_to_pmt(output_json_str));
   }
 }
 
@@ -607,22 +603,12 @@ int image_inference_impl::general_work(int noutput_items,
   const input_type *in = static_cast<const input_type *>(input_items[0]);
   COUNT_T in_count = ninput_items[0];
   COUNT_T in_first = nitems_read(0);
-  COUNT_T leftover = 0;
   COUNT_T consumed = 0;
 
   while (!json_q_.empty()) {
     std::string json;
     json_q_.pop(json);
-    out_buf_.insert(out_buf_.end(), json.begin(), json.end());
-  }
-
-  if (!out_buf_.empty()) {
-    auto out = static_cast<output_type *>(output_items[0]);
-    leftover = std::min(out_buf_.size(), (COUNT_T)noutput_items);
-    auto from = out_buf_.begin();
-    auto to = from + leftover;
-    std::copy(from, to, out);
-    out_buf_.erase(from, to);
+    message_port_pub(INFERENCE_KEY, string_to_pmt(json));
   }
 
   std::vector<tag_t> all_tags, rx_freq_tags;
@@ -656,7 +642,7 @@ int image_inference_impl::general_work(int noutput_items,
   }
 
   consume_each(in_count);
-  return leftover;
+  return 0;
 }
 
 void image_inference_impl::forecast(int noutput_items,

@@ -251,7 +251,6 @@ private:
   cv::Mat *points_buffer_;
   std::string image_dir_;
   pmt::pmt_t tag_;
-  std::deque<output_type> out_buf_;
   std::string host_, port_;
   std::vector<std::string> model_names_;
   bool running_;

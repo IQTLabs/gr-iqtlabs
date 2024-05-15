@@ -255,7 +255,6 @@ private:
   TIME_T last_full_time_;
   TIME_T last_rx_time_;
   FREQ_T last_rx_freq_;
-  std::deque<char> out_buf_;
   std::string host_, port_;
   boost::scoped_ptr<std::thread> inference_thread_;
   bool background_;

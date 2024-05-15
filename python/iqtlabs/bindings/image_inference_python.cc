@@ -30,39 +30,52 @@ namespace py = pybind11;
 void bind_image_inference(py::module& m)
 {
 
-    using image_inference = ::gr::iqtlabs::image_inference;
+    using image_inference    = ::gr::iqtlabs::image_inference;
 
 
-    py::class_<image_inference,
-               gr::block,
-               gr::basic_block,
-               std::shared_ptr<image_inference>>(m, "image_inference", D(image_inference))
+    py::class_<image_inference, gr::block, gr::basic_block,
+        std::shared_ptr<image_inference>>(m, "image_inference", D(image_inference))
 
         .def(py::init(&image_inference::make),
-             py::arg("tag"),
-             py::arg("vlen"),
-             py::arg("x"),
-             py::arg("y"),
-             py::arg("image_dir"),
-             py::arg("convert_alpha"),
-             py::arg("norm_alpha"),
-             py::arg("norm_beta"),
-             py::arg("norm_type"),
-             py::arg("colormap"),
-             py::arg("interpolation"),
-             py::arg("flip"),
-             py::arg("min_peak_points"),
-             py::arg("model_server"),
-             py::arg("model_names"),
-             py::arg("confidence"),
-             py::arg("max_rows"),
-             py::arg("rotate_secs"),
-             py::arg("n_image"),
-             py::arg("n_inference"),
-             py::arg("samp_rate"),
-             py::arg("text_color"),
-             D(image_inference, make))
+           py::arg("tag"),
+           py::arg("vlen"),
+           py::arg("x"),
+           py::arg("y"),
+           py::arg("image_dir"),
+           py::arg("convert_alpha"),
+           py::arg("norm_alpha"),
+           py::arg("norm_beta"),
+           py::arg("norm_type"),
+           py::arg("colormap"),
+           py::arg("interpolation"),
+           py::arg("flip"),
+           py::arg("min_peak_points"),
+           py::arg("model_server"),
+           py::arg("model_names"),
+           py::arg("confidence"),
+           py::arg("max_rows"),
+           py::arg("rotate_secs"),
+           py::arg("n_image"),
+           py::arg("n_inference"),
+           py::arg("samp_rate"),
+           py::arg("text_color"),
+           D(image_inference,make)
+        )
+        
+
 
 
         ;
+
+
+
+
 }
+
+
+
+
+
+
+
+

@@ -235,8 +235,7 @@ iq_inference_impl::iq_inference_impl(
                     2 /* min inputs */, 2 /* min inputs */,
                     std::vector<int>{(int)(vlen * sizeof(gr_complex)),
                                      (int)(vlen * sizeof(float))}),
-                gr::io_signature::make(1 /* min outputs */, 1 /* max outputs */,
-                                       sizeof(char))),
+                gr::io_signature::make(0, 0, 0)),
       tag_(pmt::intern(tag)), vlen_(vlen), n_vlen_(n_vlen),
       sample_buffer_(sample_buffer), min_peak_points_(min_peak_points),
       model_server_(model_server), confidence_(confidence),
@@ -269,6 +268,7 @@ iq_inference_impl::iq_inference_impl(
   }
   torchserve_client_.reset(new torchserve_client(host_, port_));
   message_port_register_out(INFERENCE_KEY);
+  set_output_multiple(n_vlen_);
 }
 
 void iq_inference_impl::delete_output_item_(output_item_type &output_item) {
@@ -377,8 +377,7 @@ void iq_inference_impl::run_inference_() {
     if (signal_predictions) {
       output_json["metadata"] = metadata_json;
       const std::string output_json_str = output_json.dump();
-      json_q_.push(output_json_str + "\n\n");
-      message_port_pub(INFERENCE_KEY, string_to_pmt(output_json_str));
+      json_q_.push(output_json_str);
       ++predictions_;
     }
     delete_output_item_(output_item);
@@ -465,7 +464,6 @@ int iq_inference_impl::general_work(int noutput_items,
   std::vector<tag_t> all_tags, rx_freq_tags;
   std::vector<TIME_T> rx_times;
   COUNT_T consumed = 0;
-  COUNT_T leftover = 0;
 
   // Ensure we stay in power/samples sync.
   samples_in_count =
@@ -517,16 +515,7 @@ int iq_inference_impl::general_work(int noutput_items,
   while (!json_q_.empty()) {
     std::string json;
     json_q_.pop(json);
-    out_buf_.insert(out_buf_.end(), json.begin(), json.end());
-  }
-
-  if (!out_buf_.empty()) {
-    auto out = static_cast<char *>(output_items[0]);
-    leftover = std::min(out_buf_.size(), (COUNT_T)noutput_items);
-    auto from = out_buf_.begin();
-    auto to = from + leftover;
-    std::copy(from, to, out);
-    out_buf_.erase(from, to);
+    message_port_pub(INFERENCE_KEY, string_to_pmt(json));
   }
 
   if (consumed != samples_in_count) {
@@ -534,7 +523,7 @@ int iq_inference_impl::general_work(int noutput_items,
                     samples_in_count);
   }
 
-  return leftover;
+  return 0;
 }
 
 } /* namespace iqtlabs */
