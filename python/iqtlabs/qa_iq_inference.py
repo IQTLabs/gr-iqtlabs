@@ -362,6 +362,7 @@ class qa_iq_inference(gr_unittest.TestCase):
                     result["predictions"]["modulation"][0]["sample_value"]
                 )
                 del result["predictions"]["modulation"][0]["sample_value"]
+                del result["predictions"]["modulation"][0]["freq"]
                 self.assertEqual(result["predictions"], predictions_result)
                 self.assertEqual(result.get("error", None), None)
                 rx_freq = float(result["metadata"]["rx_freq"])

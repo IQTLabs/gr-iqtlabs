@@ -277,11 +277,12 @@ void write_freq_samples_impl::recv_inference_(const pmt::pmt_t msg) {
         for (auto &prediction : prediction_class.value()) {
           boost::lock_guard<boost::mutex> guard(queue_lock_);
           // TODO: add confidence and model to description.
+          const FREQ_T freq = std::stod((std::string)prediction["freq"]);
           inference_item_type inference_item;
           inference_item.sample_start = sample_clock;
           inference_item.sample_count = sample_count;
-          inference_item.freq_lower_edge = last_rx_freq_ - (sample_rate / 2);
-          inference_item.freq_upper_edge = last_rx_freq_ + (sample_rate / 2);
+          inference_item.freq_lower_edge = freq - (sample_rate / 2);
+          inference_item.freq_upper_edge = freq + (sample_rate / 2);
           inference_item.description = prediction_class.key();
           inference_item.label = inference_item.description;
           inference_q_.push(inference_item);
