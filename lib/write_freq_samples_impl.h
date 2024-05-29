@@ -225,6 +225,8 @@ typedef struct inference_item {
   FREQ_T freq_upper_edge;
   std::string description;
   std::string label;
+  COUNT_T last_rx_freq_sample_clock;
+  FREQ_T rx_freq;
 } inference_item_type;
 
 class write_freq_samples_impl : public write_freq_samples, base_impl {
