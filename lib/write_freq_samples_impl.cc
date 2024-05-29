@@ -264,9 +264,14 @@ void write_freq_samples_impl::recv_inference_(const pmt::pmt_t msg) {
     nlohmann::json inference_results = nlohmann::json::parse(msg_str);
     const auto metadata = inference_results["metadata"];
     const TIME_T sample_clock =
-        std::stod((std::string)metadata["sample_clock"]);
-    const int sample_count = std::stoi((std::string)metadata["sample_count"]);
+        std::stoul((std::string)metadata["sample_clock"]);
+    const int sample_count = std::stoul((std::string)metadata["sample_count"]);
     const FREQ_T sample_rate = std::stod((std::string)metadata["sample_rate"]);
+    COUNT_T last_rx_freq_sample_clock = 0;
+    if (metadata.contains("rx_freq_sample_clock")) {
+      last_rx_freq_sample_clock =
+          std::stoul((std::string)metadata["last_rx_freq_sample_clock"]);
+    }
     if (inference_results.contains("predictions")) {
       auto predictions = inference_results["predictions"];
       for (auto &prediction_class : predictions.items()) {
@@ -277,14 +282,22 @@ void write_freq_samples_impl::recv_inference_(const pmt::pmt_t msg) {
         for (auto &prediction : prediction_class.value()) {
           boost::lock_guard<boost::mutex> guard(queue_lock_);
           // TODO: add confidence and model to description.
-          const FREQ_T freq = std::stod((std::string)prediction["freq"]);
+          const FREQ_T rx_freq = std::stod((std::string)prediction["freq"]);
           inference_item_type inference_item;
           inference_item.sample_start = sample_clock;
           inference_item.sample_count = sample_count;
-          inference_item.freq_lower_edge = freq - (sample_rate / 2);
-          inference_item.freq_upper_edge = freq + (sample_rate / 2);
+          inference_item.freq_lower_edge = rx_freq - (sample_rate / 2);
+          inference_item.freq_upper_edge = rx_freq + (sample_rate / 2);
           inference_item.description = prediction_class.key();
           inference_item.label = inference_item.description;
+          if (last_rx_freq_sample_clock) {
+            inference_item.rx_freq = rx_freq;
+            inference_item.last_rx_freq_sample_clock =
+                last_rx_freq_sample_clock;
+          } else {
+            inference_item.rx_freq = 0;
+            inference_item.last_rx_freq_sample_clock = 0;
+          }
           inference_q_.push(inference_item);
         }
       }
@@ -340,6 +353,7 @@ void write_freq_samples_impl::close_() {
       // TODO: handle annotations for the rotate case.
       boost::lock_guard<boost::mutex> guard(queue_lock_);
       COUNT_T annotations = 0;
+      FREQ_T last_rx_freq = 0;
       while (!inference_q_.empty()) {
         inference_item_type inference_item = inference_q_.front();
         inference_q_.pop();
@@ -358,6 +372,16 @@ void write_freq_samples_impl::close_() {
         anno.access<sigmf::core::AnnotationT>().generator = "GamutRF";
         record.annotations.emplace_back(anno);
         ++annotations;
+        if (last_rx_freq != inference_item.rx_freq && inference_item.rx_freq) {
+          auto cap = sigmf::Capture<sigmf::core::DescrT,
+                                    sigmf::capture_details::DescrT>();
+          cap.access<sigmf::core::CaptureT>().frequency =
+              inference_item.rx_freq;
+          cap.access<sigmf::core::CaptureT>().sample_start =
+              inference_item.last_rx_freq_sample_clock;
+          record.captures.emplace_back(cap);
+          last_rx_freq = inference_item.rx_freq;
+        }
       }
       d_logger->info("wrote {} annotations", annotations);
       std::string sigmf_filename = final_samples_path_base + ".sigmf-meta";

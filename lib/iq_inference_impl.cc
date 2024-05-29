@@ -243,7 +243,8 @@ iq_inference_impl::iq_inference_impl(
       power_inference_(power_inference), background_(background),
       inference_count_(n_inference), batch_inference_(batch), running_(true),
       last_rx_freq_(0), last_rx_time_(0), samples_since_tag_(0),
-      sample_clock_(0), last_full_time_(0), predictions_(0) {
+      sample_clock_(0), last_full_time_(0), predictions_(0),
+      last_rx_freq_sample_clock_(0) {
   batch_ = vlen_ * n_vlen_;
   samples_lookback_.reset(new gr_complex[batch_ * sample_buffer]);
   unsigned int alignment = volk_get_alignment();
@@ -311,6 +312,8 @@ void iq_inference_impl::run_inference_() {
     metadata_json["sample_count"] = std::to_string(output_item.sample_count);
     metadata_json["rx_freq"] = std::to_string(output_item.rx_freq);
     metadata_json["sample_rate"] = std::to_string(samp_rate_);
+    metadata_json["rx_freq_sample_clock"] =
+        std::to_string(output_item.rx_freq_sample_clock);
     nlohmann::json output_json;
     COUNT_T signal_predictions = 0;
 
@@ -424,6 +427,7 @@ void iq_inference_impl::process_items_(COUNT_T power_in_count,
         last_rx_time_ + (samples_since_tag_ / TIME_T(samp_rate_));
     output_item.sample_clock = sample_clock_;
     output_item.rx_freq = last_rx_freq_;
+    output_item.rx_freq_sample_clock = last_rx_freq_sample_clock_;
     output_item.sample_count = batch_;
     output_item.samples = new gr_complex[output_item.sample_count];
     output_item.power = new float[output_item.sample_count];
@@ -504,6 +508,7 @@ int iq_inference_impl::general_work(int noutput_items,
       d_logger->debug("new rx_freq tag: {}", rx_freq);
       last_rx_freq_ = rx_freq;
       last_rx_time_ = rx_time;
+      last_rx_freq_sample_clock_ = sample_clock_;
       samples_since_tag_ = 0;
     }
     if (consumed < samples_in_count) {

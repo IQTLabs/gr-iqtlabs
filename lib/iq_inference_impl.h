@@ -227,6 +227,7 @@ typedef struct output_item {
   COUNT_T sample_clock;
   gr_complex *samples;
   float *power;
+  COUNT_T rx_freq_sample_clock;
 } output_item_type;
 
 class iq_inference_impl : public iq_inference, base_impl {
@@ -240,6 +241,7 @@ private:
   COUNT_T batch_;
   COUNT_T sample_buffer_;
   COUNT_T sample_clock_;
+  COUNT_T last_rx_freq_sample_clock_;
   double min_peak_points_;
   std::string model_server_;
   std::vector<std::string> model_names_;
