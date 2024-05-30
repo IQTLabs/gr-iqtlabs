@@ -231,7 +231,23 @@ class qa_write_freq_samples(gr_unittest.TestCase):
     def run_flowgraph(
         self, freq, tune_freq, samp_rate, points, samples_write_count, rotate, tmpdir
     ):
-        strobe = blocks.message_strobe(pmt.to_pmt({"freq": tune_freq}), 1000)
+        tune_strobe = blocks.message_strobe(pmt.to_pmt({"freq": tune_freq}), 1000)
+        message = json.dumps(
+            {
+                "metadata": {
+                    "sample_clock": "1",
+                    "sample_count": "1",
+                    "sample_rate": str(samp_rate),
+                    "rx_freq_sample_clock": "1",
+                },
+                "predictions": {"1": [{"freq": str(tune_freq)}]},
+            }
+        ).encode("utf8")
+        tune_annotate_strobe = blocks.message_strobe(
+            pmt.cons(pmt.make_dict(), pmt.init_u8vector(len(message), list(message))),
+            1000,
+        )
+
         iqtlabs_tuneable_test_source_0 = tuneable_test_source(0, freq)
         write_freq_samples_0 = write_freq_samples(
             "rx_freq",
@@ -254,7 +270,10 @@ class qa_write_freq_samples(gr_unittest.TestCase):
             gr.sizeof_gr_complex, points
         )
         tb = gr.top_block()
-        tb.msg_connect((strobe, "strobe"), (iqtlabs_tuneable_test_source_0, "cmd"))
+        tb.msg_connect((tune_strobe, "strobe"), (iqtlabs_tuneable_test_source_0, "cmd"))
+        tb.msg_connect(
+            (tune_annotate_strobe, "strobe"), (write_freq_samples_0, "inference")
+        )
         tb.connect((iqtlabs_tuneable_test_source_0, 0), (blocks_throttle_0, 0))
         tb.connect((blocks_throttle_0, 0), (blocks_stream_to_vector_0, 0))
         tb.connect((blocks_stream_to_vector_0, 0), (write_freq_samples_0, 0))
@@ -271,6 +290,7 @@ class qa_write_freq_samples(gr_unittest.TestCase):
         freq = int(1.1e9 / samp_rate) * samp_rate
         tune_freq = freq + 1e9
         samples_write_count = int(1e9)
+        total_annotations = 0
 
         with tempfile.TemporaryDirectory() as tmpdir:
             input_samples = self.run_flowgraph(
@@ -294,6 +314,8 @@ class qa_write_freq_samples(gr_unittest.TestCase):
                     sigmf = json.loads(f.read())
                     sigmf_global = sigmf["global"]
                     sigmf_capture = sigmf["captures"][0]
+                    annotations = sigmf.get("annotations", [])
+                    total_annotations += len(annotations)
                     self.assertEqual(samp_rate, sigmf_global["core:sample_rate"], sigmf)
                     self.assertEqual("1.0.0", sigmf_global["core:version"], sigmf)
                     self.assertTrue(sigmf_global["core:datatype"])
@@ -312,6 +334,8 @@ class qa_write_freq_samples(gr_unittest.TestCase):
                 total_samples += samples
             self.assertTrue(total_samples)
             self.assertEqual(input_samples, total_samples)
+            if not rotate:
+                self.assertGreater(total_annotations, 0)
 
     def test_rotate(self):
         self.write_freq_samples(True)

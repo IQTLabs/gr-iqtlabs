@@ -66,9 +66,8 @@ set(VERSION_ABI 0)
 set(VERSION_PATCH 0)
 execute_process(COMMAND bash -c "git describe --abbrev=0 --tags | cut -f 3 -d ." OUTPUT_VARIABLE VERSION_PATCH ERROR_VARIABLE VERSION_ERROR OUTPUT_STRIP_TRAILING_WHITESPACE)
 if(VERSION_ERROR)
-  message(FATAL_ERROR "cannot determine version")
+  message(WARNING "cannot determine git version")
 endif()
-
 
 cmake_policy(SET CMP0011 NEW)
 
