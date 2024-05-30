@@ -353,7 +353,7 @@ void iq_inference_impl::run_inference_() {
                 auto prediction = prediction_ref.value();
                 prediction["model"] = model_name;
                 // TODO: estimate actual frequency.
-                prediction["freq"] = output_item.rx_freq;
+                prediction["freq"] = std::to_string(output_item.rx_freq);
                 // TODO: gate on minimum confidence.
                 // float conf = prediction["conf"];
                 results_json[prediction_class.key()].emplace_back(prediction);

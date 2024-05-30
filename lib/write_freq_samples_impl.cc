@@ -265,12 +265,13 @@ void write_freq_samples_impl::recv_inference_(const pmt::pmt_t msg) {
     const auto metadata = inference_results["metadata"];
     const TIME_T sample_clock =
         std::stoul((std::string)metadata["sample_clock"]);
-    const int sample_count = std::stoul((std::string)metadata["sample_count"]);
+    const COUNT_T sample_count =
+        std::stoul((std::string)metadata["sample_count"]);
     const FREQ_T sample_rate = std::stod((std::string)metadata["sample_rate"]);
     COUNT_T last_rx_freq_sample_clock = 0;
     if (metadata.contains("rx_freq_sample_clock")) {
       last_rx_freq_sample_clock =
-          std::stoul((std::string)metadata["last_rx_freq_sample_clock"]);
+          std::stoul((std::string)metadata["rx_freq_sample_clock"]);
     }
     if (inference_results.contains("predictions")) {
       auto predictions = inference_results["predictions"];
@@ -304,6 +305,7 @@ void write_freq_samples_impl::recv_inference_(const pmt::pmt_t msg) {
     }
   } catch (std::exception &ex) {
     std::string error = "invalid json: " + std::string(ex.what());
+    d_logger->error(error);
   }
 }
 
