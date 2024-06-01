@@ -264,8 +264,7 @@ std::string base_impl::secs_dir(const std::string &dir, COUNT_T rotate_secs) {
 sigmf_record_t base_impl::create_sigmf(const std::string &source_file,
                                        double timestamp,
                                        const std::string &datatype,
-                                       double sample_rate, double frequency,
-                                       double gain) {
+                                       double sample_rate, double gain) {
   sigmf_record_t record;
   record.global.access<sigmf::core::GlobalT>().datatype = datatype;
   record.global.access<sigmf::core::GlobalT>().sample_rate = sample_rate;
@@ -274,7 +273,6 @@ sigmf_record_t base_impl::create_sigmf(const std::string &source_file,
       sigmf::Capture<sigmf::core::DescrT, sigmf::capture_details::DescrT>();
   capture.get<sigmf::core::DescrT>().sample_start = 0;
   capture.get<sigmf::core::DescrT>().global_index = 0;
-  capture.get<sigmf::core::DescrT>().frequency = frequency;
   std::ostringstream ts_ss;
   time_t timestamp_t = static_cast<time_t>(timestamp);
   ts_ss << std::put_time(gmtime(&timestamp_t), "%FT%TZ");
@@ -284,19 +282,6 @@ sigmf_record_t base_impl::create_sigmf(const std::string &source_file,
   capture.get<sigmf::capture_details::DescrT>().gain = gain;
   record.captures.emplace_back(capture);
   return record;
-}
-
-void base_impl::write_sigmf(const std::string &filename,
-                            const std::string &source_file, double timestamp,
-                            const std::string &datatype, double sample_rate,
-                            double frequency, double gain) {
-  sigmf_record_t record = create_sigmf(source_file, timestamp, datatype,
-                                       sample_rate, frequency, gain);
-  std::string dotfilename = get_dotfile_(filename);
-  std::ofstream jsonfile(dotfilename);
-  jsonfile << record.to_json();
-  jsonfile.close();
-  rename(dotfilename.c_str(), filename.c_str());
 }
 
 void base_impl::get_tags(const pmt::pmt_t want_tag,

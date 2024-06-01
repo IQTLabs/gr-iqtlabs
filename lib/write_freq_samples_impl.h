@@ -225,9 +225,12 @@ typedef struct inference_item {
   FREQ_T freq_upper_edge;
   std::string description;
   std::string label;
-  COUNT_T last_rx_freq_sample_clock;
-  FREQ_T rx_freq;
 } inference_item_type;
+
+typedef struct capture_item {
+  FREQ_T rx_freq;
+  COUNT_T sample_clock;
+} capture_item_type;
 
 class write_freq_samples_impl : public write_freq_samples, base_impl {
 private:
@@ -246,6 +249,8 @@ private:
   COUNT_T write_step_samples_;
   COUNT_T skip_tune_step_samples_;
   COUNT_T samp_rate_;
+  COUNT_T sample_clock_;
+  COUNT_T open_sample_clock_;
   double gain_;
   bool sigmf_;
   bool zstd_;
@@ -258,6 +263,7 @@ private:
   TIME_T open_time_;
 
   std::queue<inference_item_type> inference_q_;
+  std::queue<capture_item_type> capture_q_;
   boost::mutex queue_lock_;
   boost::scoped_ptr<boost::iostreams::filtering_ostream> outbuf_p;
   std::string outfile_;

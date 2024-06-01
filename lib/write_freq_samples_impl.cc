@@ -240,8 +240,9 @@ write_freq_samples_impl::write_freq_samples_impl(
       write_step_samples_(write_step_samples),
       skip_tune_step_samples_(skip_tune_step_samples), samp_rate_(samp_rate),
       write_step_samples_count_(0), skip_tune_step_samples_count_(0),
-      last_rx_freq_(0), rotate_secs_(rotate_secs), gain_(gain), sigmf_(sigmf),
-      zstd_(zstd), rotate_(rotate) {
+      last_rx_freq_(0), sample_clock_(0), open_sample_clock_(0),
+      rotate_secs_(rotate_secs), gain_(gain), sigmf_(sigmf), zstd_(zstd),
+      rotate_(rotate) {
   outbuf_p.reset(new boost::iostreams::filtering_ostream());
   open_(1);
   message_port_register_in(INFERENCE_KEY);
@@ -252,10 +253,7 @@ write_freq_samples_impl::write_freq_samples_impl(
 write_freq_samples_impl::~write_freq_samples_impl() {}
 
 void write_freq_samples_impl::recv_inference_(const pmt::pmt_t msg) {
-  // TODO: non-rotate not supported.
-  // Among other things, need to delineate inference results for current
-  // window and adjust sample clock.
-  if (rotate_) {
+  if (!sigmf_) {
     return;
   }
   const std::string msg_str = pmt_to_string(msg);
@@ -268,11 +266,6 @@ void write_freq_samples_impl::recv_inference_(const pmt::pmt_t msg) {
     const COUNT_T sample_count =
         std::stoul((std::string)metadata["sample_count"]);
     const FREQ_T sample_rate = std::stod((std::string)metadata["sample_rate"]);
-    COUNT_T last_rx_freq_sample_clock = 0;
-    if (metadata.contains("rx_freq_sample_clock")) {
-      last_rx_freq_sample_clock =
-          std::stoul((std::string)metadata["rx_freq_sample_clock"]);
-    }
     if (inference_results.contains("predictions")) {
       auto predictions = inference_results["predictions"];
       for (auto &prediction_class : predictions.items()) {
@@ -291,14 +284,6 @@ void write_freq_samples_impl::recv_inference_(const pmt::pmt_t msg) {
           inference_item.freq_upper_edge = rx_freq + (sample_rate / 2);
           inference_item.description = prediction_class.key();
           inference_item.label = inference_item.description;
-          if (last_rx_freq_sample_clock) {
-            inference_item.rx_freq = rx_freq;
-            inference_item.last_rx_freq_sample_clock =
-                last_rx_freq_sample_clock;
-          } else {
-            inference_item.rx_freq = 0;
-            inference_item.last_rx_freq_sample_clock = 0;
-          }
           inference_q_.push(inference_item);
         }
       }
@@ -324,6 +309,7 @@ void write_freq_samples_impl::open_(COUNT_T zlevel) {
   close_();
   skip_tune_step_samples_count_ = skip_tune_step_samples_;
   write_step_samples_count_ = write_step_samples_;
+  open_sample_clock_ = sample_clock_;
   double now = host_now_();
   outfile_ = secs_dir(sdir_, rotate_secs_) + "." + prefix_ + "_" +
              std::to_string(now) + "_" + std::to_string(COUNT_T(samp_rate_)) +
@@ -349,19 +335,19 @@ void write_freq_samples_impl::close_() {
       final_samples_path += ".zst";
     }
     if (sigmf_) {
-      sigmf_record_t record =
-          create_sigmf(final_samples_path, open_time_, datatype_, samp_rate_,
-                       last_rx_freq_, gain_);
-      // TODO: handle annotations for the rotate case.
+      sigmf_record_t record = create_sigmf(final_samples_path, open_time_,
+                                           datatype_, samp_rate_, gain_);
       boost::lock_guard<boost::mutex> guard(queue_lock_);
       COUNT_T annotations = 0;
-      FREQ_T last_rx_freq = 0;
       while (!inference_q_.empty()) {
         inference_item_type inference_item = inference_q_.front();
+        if (inference_item.sample_start > sample_clock_) {
+          break;
+        }
         inference_q_.pop();
         auto anno = sigmf::Annotation<sigmf::core::DescrT>();
         anno.access<sigmf::core::AnnotationT>().sample_start =
-            inference_item.sample_start;
+            inference_item.sample_start - open_sample_clock_;
         anno.access<sigmf::core::AnnotationT>().sample_count =
             inference_item.sample_count;
         anno.access<sigmf::core::AnnotationT>().freq_lower_edge =
@@ -374,18 +360,21 @@ void write_freq_samples_impl::close_() {
         anno.access<sigmf::core::AnnotationT>().generator = "GamutRF";
         record.annotations.emplace_back(anno);
         ++annotations;
-        if (last_rx_freq != inference_item.rx_freq && inference_item.rx_freq) {
-          auto cap = sigmf::Capture<sigmf::core::DescrT,
-                                    sigmf::capture_details::DescrT>();
-          cap.access<sigmf::core::CaptureT>().frequency =
-              inference_item.rx_freq;
-          cap.access<sigmf::core::CaptureT>().sample_start =
-              inference_item.last_rx_freq_sample_clock;
-          record.captures.emplace_back(cap);
-          last_rx_freq = inference_item.rx_freq;
-        }
       }
       d_logger->info("wrote {} annotations", annotations);
+      COUNT_T captures = 0;
+      while (!capture_q_.empty()) {
+        capture_item_type capture_item = capture_q_.front();
+        capture_q_.pop();
+        auto cap = sigmf::Capture<sigmf::core::DescrT,
+                                  sigmf::capture_details::DescrT>();
+        cap.access<sigmf::core::CaptureT>().frequency = capture_item.rx_freq;
+        cap.access<sigmf::core::CaptureT>().sample_start =
+            capture_item.sample_clock - open_sample_clock_;
+        record.captures.emplace_back(cap);
+        ++captures;
+      }
+      d_logger->info("wrote {} captures", captures);
       std::string sigmf_filename = final_samples_path_base + ".sigmf-meta";
       std::string dotfilename = get_dotfile_(sigmf_filename);
       std::ofstream jsonfile(dotfilename);
@@ -400,7 +389,8 @@ void write_freq_samples_impl::close_() {
 
 void write_freq_samples_impl::write_samples_(COUNT_T c, const char *&in,
                                              COUNT_T &consumed) {
-  for (COUNT_T i = 0; i < c; ++i, in += itemsize_ * vlen_, ++consumed) {
+  for (COUNT_T i = 0; i < c;
+       ++i, in += itemsize_ * vlen_, ++consumed, sample_clock_ += vlen_) {
     if (skip_tune_step_samples_count_) {
       --skip_tune_step_samples_count_;
       continue;
@@ -441,6 +431,12 @@ int write_freq_samples_impl::general_work(
       d_logger->debug("new rx_freq tag: {}, last {}", rx_freq, last_rx_freq_);
       if (rotate_) {
         open_(1);
+      }
+      if (sigmf_) {
+        capture_item_type capture_item;
+        capture_item.rx_freq = rx_freq;
+        capture_item.sample_clock = sample_clock_;
+        capture_q_.push(capture_item);
       }
       last_rx_freq_ = rx_freq;
     }
