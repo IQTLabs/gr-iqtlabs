@@ -302,7 +302,7 @@ class qa_write_freq_samples(gr_unittest.TestCase):
                 self.assertGreater(len(zst_files), 1)
             else:
                 self.assertEqual(len(zst_files), 1)
-            for zst_file in zst_files:
+            for i, zst_file in enumerate(zst_files):
                 sigmf_file = zst_file.replace("zst", "sigmf-meta")
                 bin_file = zst_file.replace(".zst", "")
                 self.assertTrue(os.path.exists(sigmf_file), sigmf_file)
@@ -313,29 +313,34 @@ class qa_write_freq_samples(gr_unittest.TestCase):
                 with open(sigmf_file, "r", encoding="utf8") as f:
                     sigmf = json.loads(f.read())
                     sigmf_global = sigmf["global"]
-                    sigmf_capture = sigmf["captures"][0]
                     annotations = sigmf.get("annotations", [])
                     total_annotations += len(annotations)
                     self.assertEqual(samp_rate, sigmf_global["core:sample_rate"], sigmf)
                     self.assertEqual("1.0.0", sigmf_global["core:version"], sigmf)
                     self.assertTrue(sigmf_global["core:datatype"])
-                    self.assertEqual(
-                        expected_tune_freq, sigmf_capture["core:frequency"], sigmf
-                    )
-                    source_file = sigmf_capture["capture_details:source_file"]
+                    global_sigmf_capture = sigmf["captures"][0]
+                    source_file = global_sigmf_capture["capture_details:source_file"]
                     self.assertEqual(
                         source_file,
                         os.path.basename(sigmf_file.replace("sigmf-meta", "zst")),
                         sigmf,
                     )
-                    self.assertEqual(25, sigmf_capture["capture_details:gain"], sigmf)
+                    self.assertEqual(
+                        25, global_sigmf_capture["capture_details:gain"], sigmf
+                    )
+                    if i or not rotate:
+                        freq_sigmf_capture = sigmf["captures"][1]
+                        self.assertEqual(
+                            expected_tune_freq,
+                            freq_sigmf_capture["core:frequency"],
+                            sigmf,
+                        )
                 subprocess.check_call(["zstd", "-d", zst_file])
                 samples = len(np.fromfile(bin_file, dtype=np.complex64))
                 total_samples += samples
             self.assertTrue(total_samples)
             self.assertEqual(input_samples, total_samples)
-            if not rotate:
-                self.assertGreater(total_annotations, 0)
+            self.assertGreater(total_annotations, 0)
 
     def test_rotate(self):
         self.write_freq_samples(True)
