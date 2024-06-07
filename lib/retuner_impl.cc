@@ -204,6 +204,7 @@
 
 #include "retuner_impl.h"
 #include <boost/algorithm/string.hpp>
+#include <sstream>
 
 namespace gr {
 namespace iqtlabs {
@@ -241,6 +242,16 @@ void retuner_impl::add_range_(COUNT_T freq_start, COUNT_T freq_end) {
     ++steps;
   }
   tuning_ranges_.push_back({freq_start, freq_end, steps});
+}
+
+std::string retuner_impl::describe_ranges_() {
+  std::vector<std::string> tuning_range_str;
+  for (auto &tuning_range : tuning_ranges_) {
+    std::stringstream ss("", std::ios_base::app | std::ios_base::out);
+    ss << tuning_range.freq_start << "-" << tuning_range.freq_end;
+    tuning_range_str.push_back(ss.str());
+  }
+  return boost::algorithm::join(tuning_range_str, ",");
 }
 
 bool retuner_impl::need_retune_(COUNT_T n) {

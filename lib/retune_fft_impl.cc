@@ -458,6 +458,7 @@ void retune_fft_impl::write_buckets_(TIME_T host_now, FREQ_T rx_freq) {
      << ", \"sweep_start\": " << host_now_str_(last_sweep_start_)
      << ", \"total_tune_count\": " << total_tune_count_ << ", \"config\": {"
      << "\"description\": \"" << description_ << "\""
+     << ", \"tuning_ranges\": \"" << describe_ranges_() << "\""
      << ", \"tuning_range\": " << last_tuning_range_
      << ", \"tuning_range_freq_start\": " << last_range.freq_start
      << ", \"tuning_range_freq_end\": " << last_range.freq_end
