@@ -209,8 +209,8 @@ import pmt
 import re
 import subprocess
 import time
+import queue
 import tempfile
-import zstandard
 from collections import defaultdict
 import numpy as np
 import pandas as pd
@@ -248,18 +248,11 @@ class pdu_decoder(gr.sync_block):
         )
         self.message_port_register_in(pmt.intern("pdu"))
         self.set_msg_handler(pmt.intern("pdu"), self.receive_pdu)
-        self.decompressor = zstandard.ZstdDecompressor()
-        self.json_output = []
-        self.compressed_received = 0
-        self.decompressed_received = 0
+        self.json_output = queue.Queue()
 
     def receive_pdu(self, pdu):
-        compressed_payload = bytes(pmt.to_python(pmt.cdr(pdu)))
-        self.compressed_received += len(compressed_payload)
-        with self.decompressor.stream_reader(compressed_payload) as reader:
-            decompressed_payload = reader.read().decode("utf-8")
-            self.decompressed_received += len(decompressed_payload)
-            self.json_output.append(json.loads(decompressed_payload))
+        str_pdu = pmt.to_python(pmt.cdr(pdu)).tobytes().decode("utf8")
+        self.json_output.put(json.loads(str_pdu))
 
 
 class qa_retune_fft_base:
@@ -287,7 +280,6 @@ class qa_retune_fft_base:
         fft_batch_size = 1
 
         with tempfile.TemporaryDirectory() as tmpdir:
-            test_file = os.path.join(tmpdir, "samples.csv")
             iqtlabs_tuneable_test_source_0 = tuneable_test_source(0, freq_end)
             iqtlabs_retune_pre_fft_0 = retune_pre_fft(
                 nfft=points,
@@ -347,8 +339,6 @@ class qa_retune_fft_base:
             blocks_throttle_0 = blocks.throttle(
                 gr.sizeof_gr_complex * 1, samp_rate, True
             )
-            blocks_file_sink_0 = blocks.file_sink(gr.sizeof_char * 1, test_file, False)
-            blocks_file_sink_0.set_unbuffered(False)
             blocks_null_sink_0 = blocks.null_sink(gr.sizeof_float * points)
 
             blocks_complex_to_mag_0 = blocks.complex_to_mag(points)
@@ -371,8 +361,7 @@ class qa_retune_fft_base:
                 # double roll, is a no-op
                 self.tb.connect((fft_vxx_0, 0), (vr1, 0))
                 self.tb.connect((vr1, 0), (blocks_complex_to_mag_0, 0))
-            self.tb.connect((iqtlabs_retune_fft_0, 0), (blocks_file_sink_0, 0))
-            self.tb.connect((iqtlabs_retune_fft_0, 1), (blocks_null_sink_0, 0))
+            self.tb.connect((iqtlabs_retune_fft_0, 0), (blocks_null_sink_0, 0))
             self.tb.connect((iqtlabs_retune_pre_fft_0, 0), (window, 0))
             self.tb.connect((window, 0), (fft_vxx_0, 0))
             self.tb.connect((blocks_throttle_0, 0), (iqtlabs_retune_pre_fft_0, 0))
@@ -388,83 +377,77 @@ class qa_retune_fft_base:
 
             startup_timeout = 1
             for _ in range(10):
-                if os.path.exists(test_file):
+                if pdu_decoder_0.json_output.qsize():
                     break
                 time.sleep(startup_timeout)
-            self.assertTrue(os.path.exists(test_file))
+            self.assertTrue(pdu_decoder_0.json_output.qsize())
 
-            with open(test_file, encoding="utf8") as f:
-                try:
-                    linebuffer = ""
-                    last_data = time.time()
-                    last_ts = 0
-                    last_buckets = None
-                    last_tuning_range = None
-                    file_poll_timeout = 0.001
-                    while (stare and len(records) < 1000) or (
-                        not stare and tuning_range_changes < 5
-                    ):
-                        self.assertLess(time.time() - last_data, 5)
-                        line = f.readline()
-                        linebuffer = linebuffer + line
-                        if not linebuffer.endswith("\n"):
-                            time.sleep(file_poll_timeout)
-                            continue
+            try:
+                last_data = time.time()
+                last_ts = 0
+                last_buckets = None
+                last_tuning_range = None
+                file_poll_timeout = 0.001
+                while (stare and len(records) < 1000) or (
+                    not stare and tuning_range_changes < 5
+                ):
+                    self.assertLess(time.time() - last_data, 5)
+                    try:
+                        record = pdu_decoder_0.json_output.get_nowait()
                         last_data = time.time()
-                        line = linebuffer.strip()
-                        linebuffer = ""
-                        record = json.loads(line)
-                        ts = round(record["ts"])
-                        self.assertGreaterEqual(ts, last_ts)
-                        last_ts = ts
-                        config = record["config"]
-                        self.assertEqual("a text description", config["description"]),
-                        tuning_range_freq_start = config["tuning_range_freq_start"]
-                        tuning_range_freq_end = config["tuning_range_freq_end"]
-                        tuning_range = int(config["tuning_range"])
-                        if tuning_range != last_tuning_range:
-                            tuning_range_changes += 1
-                            print("tuning_range_changes:", tuning_range_changes)
-                        last_tuning_range = tuning_range
-                        if not stare:
-                            self.assertTrue(
-                                (
-                                    tuning_range_freq_start == freq_start
-                                    and tuning_range_freq_end == freq_mid
-                                )
-                                or (
-                                    tuning_range_freq_start == freq_mid + samp_rate
-                                    and tuning_range_freq_end == freq_end
-                                )
+                    except queue.Empty:
+                        time.sleep(file_poll_timeout)
+                        continue
+                    ts = round(record["ts"])
+                    self.assertGreaterEqual(ts, last_ts)
+                    last_ts = ts
+                    config = record["config"]
+                    self.assertEqual("a text description", config["description"]),
+                    tuning_range_freq_start = config["tuning_range_freq_start"]
+                    tuning_range_freq_end = config["tuning_range_freq_end"]
+                    tuning_range = int(config["tuning_range"])
+                    if tuning_range != last_tuning_range:
+                        tuning_range_changes += 1
+                        print("tuning_range_changes:", tuning_range_changes)
+                    last_tuning_range = tuning_range
+                    if not stare:
+                        self.assertTrue(
+                            (
+                                tuning_range_freq_start == freq_start
+                                and tuning_range_freq_end == freq_mid
                             )
-                        self.assertEqual(config["freq_start"], freq_start)
-                        self.assertEqual(config["freq_end"], freq_end)
-                        self.assertEqual(config["sample_rate"], samp_rate)
-                        self.assertEqual(config["nfft"], points)
-                        buckets = record["buckets"]
-                        self.assertTrue(buckets, (last_buckets, buckets))
-                        bucket_counts[len(buckets)] += 1
-                        fs = [int(f) for f in buckets.keys()]
-                        self.assertGreaterEqual(min(fs), tuning_range_freq_start)
-                        self.assertLessEqual(max(fs), tuning_range_freq_end)
-                        new_records = [
-                            {
-                                "ts": ts,
-                                "f": int(freq),
-                                "v": float(value),
-                                "t": int(tuning_range),
-                            }
-                            for freq, value in buckets.items()
-                        ]
-                        records.extend(new_records)
-                        last_buckets = buckets
-                except Exception:
-                    self.tb.stop()
-                    raise
+                            or (
+                                tuning_range_freq_start == freq_mid + samp_rate
+                                and tuning_range_freq_end == freq_end
+                            )
+                        )
+                    self.assertEqual(config["freq_start"], freq_start)
+                    self.assertEqual(config["freq_end"], freq_end)
+                    self.assertEqual(config["sample_rate"], samp_rate)
+                    self.assertEqual(config["nfft"], points)
+                    buckets = record["buckets"]
+                    self.assertTrue(buckets, (last_buckets, buckets))
+                    bucket_counts[len(buckets)] += 1
+                    fs = [int(f) for f in buckets.keys()]
+                    self.assertGreaterEqual(min(fs), tuning_range_freq_start)
+                    self.assertLessEqual(max(fs), tuning_range_freq_end)
+                    new_records = [
+                        {
+                            "ts": ts,
+                            "f": int(freq),
+                            "v": float(value),
+                            "t": int(tuning_range),
+                        }
+                        for freq, value in buckets.items()
+                    ]
+                    records.extend(new_records)
+                    last_buckets = buckets
+            except Exception:
+                self.tb.stop()
+                raise
 
             self.tb.stop()
             self.tb.wait()
-            os.remove(test_file)
 
             top_count = sorted(bucket_counts.items(), key=lambda x: x[1], reverse=True)[
                 0
@@ -531,11 +514,6 @@ class qa_retune_fft_base:
 
             remaining_files = glob.glob(os.path.join(tmpdir, "*/*"))
             print(f"remaining {remaining_files}")
-
-            self.assertTrue(pdu_decoder_0.json_output)
-            self.assertGreater(
-                pdu_decoder_0.decompressed_received, pdu_decoder_0.compressed_received
-            )
 
 
 class qa_retune_fft_no_roll(gr_unittest.TestCase, qa_retune_fft_base):

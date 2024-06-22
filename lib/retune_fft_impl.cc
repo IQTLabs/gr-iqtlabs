@@ -248,10 +248,8 @@ retune_fft_impl::retune_fft_impl(
     : gr::block("retune_fft",
                 gr::io_signature::make(1 /* min inputs */, 1 /* max inputs */,
                                        nfft * sizeof(input_type)),
-                gr::io_signature::makev(
-                    2 /* min outputs */, 2 /* max outputs */,
-                    std::vector<int>{(int)sizeof(output_type),
-                                     (int)(nfft * sizeof(input_type))})),
+                gr::io_signature::make(1 /* min outputs */, 1 /* max outputs */,
+                                       nfft * sizeof(input_type))),
       retuner_impl(samp_rate, tune_jitter_hz, freq_start, freq_end,
                    tune_step_hz, tune_step_fft, skip_tune_step_fft,
                    tuning_ranges, tag_now, low_power_hold_down, slew_rx_time),
@@ -353,7 +351,7 @@ void retune_fft_impl::sum_items_(const input_type *in) {
 
 void retune_fft_impl::add_output_tags_(TIME_T rx_time, FREQ_T rx_freq,
                                        COUNT_T rel) {
-  OUTPUT_TAGS(apply_rx_time_slew_(rx_time), rx_freq, 1, rel);
+  OUTPUT_TAGS(apply_rx_time_slew_(rx_time), rx_freq, 0, rel);
 }
 
 void retune_fft_impl::process_items_(COUNT_T c, const input_type *&in,
@@ -400,12 +398,6 @@ void retune_fft_impl::process_items_(COUNT_T c, const input_type *&in,
       }
     }
   }
-}
-
-void retune_fft_impl::forecast(int noutput_items,
-                               gr_vector_int &ninput_items_required) {
-  ninput_items_required[0] = 1;
-  ninput_items_required[1] = noutput_items * nfft_;
 }
 
 void retune_fft_impl::output_buckets_(
@@ -469,22 +461,7 @@ void retune_fft_impl::write_buckets_(TIME_T host_now, FREQ_T rx_freq) {
   output_buckets_("buckets", buckets, ss);
   ss << "}" << std::endl;
   const std::string s = ss.str();
-  out_buf_.insert(out_buf_.end(), s.begin(), s.end());
-  // TODO: migrate to PMT if/when PMT supports compressed payloads.
-  // TODO: compressing multiple messages together if latency not a concern.
-  std::stringstream uncompressed_ss(s);
-  std::stringstream compressed_ss;
-  boost::iostreams::filtering_streambuf<boost::iostreams::input> zstd_out;
-  zstd_out.push(boost::iostreams::zstd_compressor(zstd_params));
-  zstd_out.push(uncompressed_ss);
-  uncompressed_ss.flush();
-  boost::iostreams::copy(zstd_out, compressed_ss);
-  const std::string compressed_s = compressed_ss.str();
-  auto pdu =
-      pmt::cons(pmt::make_dict(),
-                pmt::init_u8vector(compressed_s.length(),
-                                   (const uint8_t *)compressed_s.c_str()));
-  message_port_pub(JSON_KEY, pdu);
+  message_port_pub(JSON_KEY, string_to_pmt(s));
 }
 
 void retune_fft_impl::process_buckets_(FREQ_T rx_freq, TIME_T rx_time) {
@@ -540,30 +517,17 @@ void retune_fft_impl::process_tags_(const input_type *in, COUNT_T in_count,
       process_items_(in_count - consumed, in, fft_output, consumed, produced);
     }
   }
-  produce(1, produced);
+  produce(0, produced);
 }
 
 int retune_fft_impl::general_work(int noutput_items,
                                   gr_vector_int &ninput_items,
                                   gr_vector_const_void_star &input_items,
                                   gr_vector_void_star &output_items) {
-  if (!out_buf_.empty()) {
-    auto out = static_cast<output_type *>(output_items[0]);
-    const COUNT_T leftover = std::min(out_buf_.size(), (COUNT_T)noutput_items);
-    auto from = out_buf_.begin();
-    auto to = from + leftover;
-    std::copy(from, to, out);
-    out_buf_.erase(from, to);
-    produce(0, leftover);
-    return WORK_CALLED_PRODUCE;
-  }
-
   const input_type *fft_output =
-      static_cast<const input_type *>(output_items[1]);
+      static_cast<const input_type *>(output_items[0]);
   const input_type *in = static_cast<const input_type *>(input_items[0]);
-
-  float max_input_items = noutput_items;
-  COUNT_T in_count = std::min(ninput_items[0], int(max_input_items));
+  COUNT_T in_count = ninput_items[0];
   COUNT_T in_first = nitems_read(0);
   process_tags_(in, in_count, in_first, fft_output);
   consume_each(in_count);
