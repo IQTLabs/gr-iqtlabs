@@ -537,7 +537,7 @@ void image_inference_impl::run_inference_() {
 
     nlohmann::json output_json;
 
-    if ((host_.size() && port_.size()) && (model_names_.size() > 0) &&
+    if (model_names_.size() > 0 &&
         (n_inference_ == 0 || ++inference_count_ % n_inference_ == 0)) {
       if (flip_ == -1 || flip_ == 0 || flip_ == 1) {
         cv::flip(*output_item.points_buffer, *output_item.points_buffer, flip_);

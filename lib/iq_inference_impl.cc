@@ -392,7 +392,7 @@ void iq_inference_impl::process_items_(COUNT_T power_in_count,
       continue;
     }
     inference_count_ = n_inference_;
-    if (!((host_.size() && port_.size()) && (model_names_.size() > 0))) {
+    if (!model_names_.size()) {
       continue;
     }
     // TODO: we select one slice in time (samples and power),
@@ -439,7 +439,7 @@ int iq_inference_impl::general_work(int noutput_items,
                                     gr_vector_void_star &output_items) {
   COUNT_T samples_in_count = ninput_items[0];
   COUNT_T in_count = ninput_items[1];
-  COUNT_T power_read_first = nitems_read(1);
+  COUNT_T in_first = nitems_read(1);
   const gr_complex *samples_in =
       static_cast<const gr_complex *>(input_items[0]);
   const float *power_in = static_cast<const float *>(input_items[1]);
@@ -459,7 +459,6 @@ int iq_inference_impl::general_work(int noutput_items,
            sizeof(gr_complex) * batch_);
   }
 
-  COUNT_T in_first = nitems_read(1);
   if (rx_freq_tags.empty()) {
     process_items_(in_count, in_first, power_in, consumed);
   } else {
@@ -487,11 +486,6 @@ int iq_inference_impl::general_work(int noutput_items,
     std::string json;
     json_q_.pop(json);
     message_port_pub(INFERENCE_KEY, string_to_pmt(json));
-  }
-
-  if (consumed != samples_in_count) {
-    d_logger->error("mismatch consumed {} versus in count {}", consumed,
-                    samples_in_count);
   }
 
   return 0;
