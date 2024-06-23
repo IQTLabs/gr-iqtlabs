@@ -642,11 +642,5 @@ int image_inference_impl::general_work(int noutput_items,
   consume_each(in_count);
   return 0;
 }
-
-void image_inference_impl::forecast(int noutput_items,
-                                    gr_vector_int &ninput_items_required) {
-  ninput_items_required[0] = 1;
-}
-
 } /* namespace iqtlabs */
 } /* namespace gr */

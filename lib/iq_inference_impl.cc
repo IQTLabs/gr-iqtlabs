@@ -317,63 +317,61 @@ void iq_inference_impl::run_inference_() {
     nlohmann::json output_json;
     COUNT_T signal_predictions = 0;
 
-    if ((host_.size() && port_.size()) && (model_names_.size() > 0)) {
-      std::string error;
-      nlohmann::json results_json;
-      COUNT_T rendered_predictions = 0;
+    std::string error;
+    nlohmann::json results_json;
+    COUNT_T rendered_predictions = 0;
 
-      for (auto model_name : model_names_) {
-        const std::string_view body(
-            reinterpret_cast<char const *>(output_item.samples),
-            output_item.sample_count * sizeof(gr_complex));
-        const std::string_view power_body(
-            reinterpret_cast<char const *>(output_item.power),
-            output_item.sample_count * sizeof(float));
-        if (power_inference_) {
-          const std::string samples_power_body =
-              std::string(body) + std::string(power_body);
-          torchserve_client_->make_inference_request(
-              model_name, samples_power_body, "application/octet-stream");
-        } else {
-          torchserve_client_->make_inference_request(
-              model_name, body, "application/octet-stream");
-        }
-        nlohmann::json original_results_json;
-        // TODO: troubleshoot test flask server hang after one request.
-        if (torchserve_client_->send_inference_request(original_results_json,
-                                                       error)) {
-          try {
-            for (auto &prediction_class : original_results_json.items()) {
-              if (!results_json.contains(prediction_class.key())) {
-                results_json[prediction_class.key()] = nlohmann::json::array();
-              }
-              for (auto &prediction_ref : prediction_class.value().items()) {
-                auto prediction = prediction_ref.value();
-                prediction["model"] = model_name;
-                // TODO: estimate actual frequency.
-                prediction["freq"] = std::to_string(output_item.rx_freq);
-                // TODO: gate on minimum confidence.
-                // float conf = prediction["conf"];
-                results_json[prediction_class.key()].emplace_back(prediction);
-                if (prediction_class.key() != INFERENCE_NO_SIGNAL) {
-                  ++signal_predictions;
-                }
+    for (auto model_name : model_names_) {
+      const std::string_view body(
+          reinterpret_cast<char const *>(output_item.samples),
+          output_item.sample_count * sizeof(gr_complex));
+      const std::string_view power_body(
+          reinterpret_cast<char const *>(output_item.power),
+          output_item.sample_count * sizeof(float));
+      if (power_inference_) {
+        const std::string samples_power_body =
+            std::string(body) + std::string(power_body);
+        torchserve_client_->make_inference_request(
+            model_name, samples_power_body, "application/octet-stream");
+      } else {
+        torchserve_client_->make_inference_request(model_name, body,
+                                                   "application/octet-stream");
+      }
+      nlohmann::json original_results_json;
+      // TODO: troubleshoot test flask server hang after one request.
+      if (torchserve_client_->send_inference_request(original_results_json,
+                                                     error)) {
+        try {
+          for (auto &prediction_class : original_results_json.items()) {
+            if (!results_json.contains(prediction_class.key())) {
+              results_json[prediction_class.key()] = nlohmann::json::array();
+            }
+            for (auto &prediction_ref : prediction_class.value().items()) {
+              auto prediction = prediction_ref.value();
+              prediction["model"] = model_name;
+              // TODO: estimate actual frequency.
+              prediction["freq"] = std::to_string(output_item.rx_freq);
+              // TODO: gate on minimum confidence.
+              // float conf = prediction["conf"];
+              results_json[prediction_class.key()].emplace_back(prediction);
+              if (prediction_class.key() != INFERENCE_NO_SIGNAL) {
+                ++signal_predictions;
               }
             }
-          } catch (std::exception &ex) {
-            error = "invalid json (missing/invalid fields): " +
-                    std::string(ex.what());
           }
-        }
-
-        if (error.size()) {
-          d_logger->error(error);
-          output_json["error"] = error;
+        } catch (std::exception &ex) {
+          error = "invalid json (missing/invalid fields): " +
+                  std::string(ex.what());
         }
       }
 
-      output_json["predictions"] = results_json;
+      if (error.size()) {
+        d_logger->error(error);
+        output_json["error"] = error;
+      }
     }
+
+    output_json["predictions"] = results_json;
     // double new line to facilitate json parsing, since prediction may
     // contain new lines.
     if (signal_predictions) {
@@ -384,12 +382,6 @@ void iq_inference_impl::run_inference_() {
     }
     delete_output_item_(output_item);
   }
-}
-
-void iq_inference_impl::forecast(int noutput_items,
-                                 gr_vector_int &ninput_items_required) {
-  ninput_items_required[0] = 1;
-  ninput_items_required[1] = 1;
 }
 
 void iq_inference_impl::process_items_(COUNT_T power_in_count,
@@ -416,6 +408,9 @@ void iq_inference_impl::process_items_(COUNT_T power_in_count,
       continue;
     }
     inference_count_ = n_inference_;
+    if (!((host_.size() && port_.size()) && (model_names_.size() > 0))) {
+      continue;
+    }
     // TODO: we select one slice in time (samples and power),
     // where at least one sample exceeded the minimum. We could
     // potentially select more samples either side for example.
