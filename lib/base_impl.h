@@ -235,6 +235,16 @@ typedef sigmf::SigMF<
                        pmt::from_double((double)rx_freq), _id);                \
   }
 
+#define PROCESS_TAGS(X)                                                        \
+  for (COUNT_T t = 0; t < rx_freq_tags.size(); ++t) {                          \
+    const auto &tag = rx_freq_tags[t];                                         \
+    const TIME_T rx_time = rx_times[t];                                        \
+    const FREQ_T rx_freq = GET_FREQ(tag);                                      \
+    d_logger->debug("new rx_freq tag: {}", rx_freq);                           \
+    {X} last_rx_freq_ = rx_freq;                                               \
+    last_rx_time_ = rx_time;                                                   \
+  }
+
 // A driver block might give us float style (e.g. 2.5e9) or unsigned lon.
 #define GET_FREQ(tag) (FREQ_T) pmt::to_double(tag.value)
 

@@ -617,9 +617,7 @@ int image_inference_impl::general_work(int noutput_items,
   if (rx_freq_tags.empty()) {
     process_items_(in_count, consumed, in);
   } else {
-    for (COUNT_T t = 0; t < rx_freq_tags.size(); ++t) {
-      const auto &tag = rx_freq_tags[t];
-      const TIME_T rx_time = rx_times[t];
+    PROCESS_TAGS({
       const auto rel = tag.offset - in_first;
       in_first += rel;
 
@@ -627,13 +625,10 @@ int image_inference_impl::general_work(int noutput_items,
         process_items_(rel, consumed, in);
       }
 
-      FREQ_T rx_freq = GET_FREQ(tag);
       if (rx_freq != last_rx_freq_) {
         create_image_(true);
       }
-      last_rx_freq_ = rx_freq;
-      last_rx_time_ = rx_time;
-    }
+    })
     if (consumed < in_count) {
       process_items_(in_count - consumed, consumed, in);
     }

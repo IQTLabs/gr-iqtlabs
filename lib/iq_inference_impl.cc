@@ -479,9 +479,7 @@ int iq_inference_impl::general_work(int noutput_items,
   if (rx_freq_tags.empty()) {
     process_items_(power_in_count, power_read, power_in, consumed);
   } else {
-    for (COUNT_T t = 0; t < rx_freq_tags.size(); ++t) {
-      const auto &tag = rx_freq_tags[t];
-      const TIME_T rx_time = rx_times[t];
+    PROCESS_TAGS({
       const auto rel = tag.offset - power_read;
 
       // TODO: in theory we might have a vector with more than one frequency's
@@ -493,13 +491,9 @@ int iq_inference_impl::general_work(int noutput_items,
         power_read += rel;
       }
 
-      const FREQ_T rx_freq = GET_FREQ(tag);
-      d_logger->debug("new rx_freq tag: {}", rx_freq);
-      last_rx_freq_ = rx_freq;
-      last_rx_time_ = rx_time;
       last_rx_freq_sample_clock_ = sample_clock_;
       samples_since_tag_ = 0;
-    }
+    })
     if (consumed < samples_in_count) {
       process_items_(samples_in_count - consumed, power_read, power_in,
                      consumed);
