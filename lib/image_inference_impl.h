@@ -275,6 +275,7 @@ private:
                  int pos, int cx, int cy);
   void volk_min_max_mean(const cv::Mat &mat, float &min, float &max,
                          float &mean);
+  void process_tags_(COUNT_T in_count, COUNT_T in_first, const input_type *in);
 
 public:
   image_inference_impl(const std::string &tag, int vlen, int x, int y,

@@ -582,20 +582,9 @@ void image_inference_impl::run_inference_() {
   }
 }
 
-int image_inference_impl::general_work(int noutput_items,
-                                       gr_vector_int &ninput_items,
-                                       gr_vector_const_void_star &input_items,
-                                       gr_vector_void_star &output_items) {
-  const input_type *in = static_cast<const input_type *>(input_items[0]);
-  COUNT_T in_count = ninput_items[0];
-  COUNT_T in_first = nitems_read(0);
+void image_inference_impl::process_tags_(COUNT_T in_count, COUNT_T in_first,
+                                         const input_type *in) {
   COUNT_T consumed = 0;
-
-  while (!json_q_.empty()) {
-    std::string json;
-    json_q_.pop(json);
-    message_port_pub(INFERENCE_KEY, string_to_pmt(json));
-  }
 
   FIND_TAGS
 
@@ -617,7 +606,23 @@ int image_inference_impl::general_work(int noutput_items,
       process_items_(in_count - consumed, consumed, in);
     }
   }
+}
 
+int image_inference_impl::general_work(int noutput_items,
+                                       gr_vector_int &ninput_items,
+                                       gr_vector_const_void_star &input_items,
+                                       gr_vector_void_star &output_items) {
+  const input_type *in = static_cast<const input_type *>(input_items[0]);
+  COUNT_T in_count = ninput_items[0];
+  COUNT_T in_first = nitems_read(0);
+
+  while (!json_q_.empty()) {
+    std::string json;
+    json_q_.pop(json);
+    message_port_pub(INFERENCE_KEY, string_to_pmt(json));
+  }
+
+  process_tags_(in_count, in_first, in);
   consume_each(in_count);
   return 0;
 }
