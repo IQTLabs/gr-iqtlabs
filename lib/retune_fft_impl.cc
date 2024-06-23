@@ -490,7 +490,6 @@ void retune_fft_impl::process_tags_(const input_type *in, COUNT_T in_count,
     process_items_(in_count, in, fft_output, consumed, produced);
   } else {
     PROCESS_TAGS({
-      const auto rel = tag.offset - in_first;
       in_first += rel;
 
       if (rel > 0) {

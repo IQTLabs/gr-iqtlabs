@@ -259,6 +259,7 @@ private:
   COUNT_T write_step_samples_count_;
   COUNT_T skip_tune_step_samples_count_;
   FREQ_T last_rx_freq_;
+  TIME_T last_rx_time_;
   COUNT_T rotate_secs_;
   TIME_T open_time_;
 

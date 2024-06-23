@@ -263,7 +263,7 @@ private:
   COUNT_T predictions_;
   COUNT_T batch_inference_;
 
-  void process_items_(COUNT_T power_in_count, COUNT_T &power_read,
+  void process_items_(COUNT_T power_in_count, COUNT_T &in_first,
                       const float *&power_in, COUNT_T &consumed);
   void delete_output_item_(output_item_type &output_item);
   void delete_inference_();

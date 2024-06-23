@@ -238,6 +238,7 @@ typedef sigmf::SigMF<
 #define PROCESS_TAGS(X)                                                        \
   for (COUNT_T t = 0; t < rx_freq_tags.size(); ++t) {                          \
     const auto &tag = rx_freq_tags[t];                                         \
+    auto rel = tag.offset - in_first;                                          \
     const TIME_T rx_time = rx_times[t];                                        \
     const FREQ_T rx_freq = GET_FREQ(tag);                                      \
     d_logger->debug("new rx_freq tag: {}", rx_freq);                           \

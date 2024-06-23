@@ -618,7 +618,6 @@ int image_inference_impl::general_work(int noutput_items,
     process_items_(in_count, consumed, in);
   } else {
     PROCESS_TAGS({
-      const auto rel = tag.offset - in_first;
       in_first += rel;
 
       if (rel > 0) {

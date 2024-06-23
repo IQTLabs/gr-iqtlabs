@@ -345,7 +345,6 @@ int retune_pre_fft_impl::general_work(int noutput_items,
     // TODO: deprecate fft_batch_size, gr-wavelearner could use set_multiple
     // abstraction like VkFFT
     PROCESS_TAGS({
-      auto rel = tag.offset - in_first;
       in_first += rel;
       rel /= nfft_;
 

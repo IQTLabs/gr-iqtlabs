@@ -382,13 +382,13 @@ void iq_inference_impl::run_inference_() {
 }
 
 void iq_inference_impl::process_items_(COUNT_T power_in_count,
-                                       COUNT_T &power_read,
+                                       COUNT_T &in_first,
                                        const float *&power_in,
                                        COUNT_T &consumed) {
   for (COUNT_T i = 0; i < power_in_count; i += n_vlen_, consumed += n_vlen_,
                power_in += batch_, samples_since_tag_ += batch_,
                sample_clock_ += batch_) {
-    COUNT_T j = (power_read + i) % sample_buffer_;
+    COUNT_T j = (in_first + i) % sample_buffer_;
     // Gate on average power.
     volk_32f_accumulator_s32f(power_total_.get(), power_in, batch_);
     if (*power_total_ / batch_ < min_peak_points_) {
@@ -475,27 +475,25 @@ int iq_inference_impl::general_work(int noutput_items,
            sizeof(gr_complex) * batch_);
   }
 
-  COUNT_T power_read = nitems_read(1);
+  COUNT_T in_first = nitems_read(1);
   if (rx_freq_tags.empty()) {
-    process_items_(power_in_count, power_read, power_in, consumed);
+    process_items_(power_in_count, in_first, power_in, consumed);
   } else {
     PROCESS_TAGS({
-      const auto rel = tag.offset - power_read;
-
       // TODO: in theory we might have a vector with more than one frequency's
       // samples, as the SDR probably isn't vector aligned. In practice this
       // should not happen in the most common Ettus low power workaround state,
       // because tags are delayed until after re-tuning has been verified.
       if (rel > 0) {
-        process_items_(rel, power_read, power_in, consumed);
-        power_read += rel;
+        process_items_(rel, in_first, power_in, consumed);
+        in_first += rel;
       }
 
       last_rx_freq_sample_clock_ = sample_clock_;
       samples_since_tag_ = 0;
     })
     if (consumed < samples_in_count) {
-      process_items_(samples_in_count - consumed, power_read, power_in,
+      process_items_(samples_in_count - consumed, in_first, power_in,
                      consumed);
     }
   }
