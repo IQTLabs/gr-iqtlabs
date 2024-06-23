@@ -451,22 +451,19 @@ int iq_inference_impl::general_work(int noutput_items,
                                     gr_vector_const_void_star &input_items,
                                     gr_vector_void_star &output_items) {
   COUNT_T samples_in_count = ninput_items[0];
-  COUNT_T power_in_count = ninput_items[1];
+  COUNT_T in_count = ninput_items[1];
   COUNT_T power_read_first = nitems_read(1);
   const gr_complex *samples_in =
       static_cast<const gr_complex *>(input_items[0]);
   const float *power_in = static_cast<const float *>(input_items[1]);
-  std::vector<tag_t> all_tags, rx_freq_tags;
-  std::vector<TIME_T> rx_times;
   COUNT_T consumed = 0;
 
   // Ensure we stay in power/samples sync.
   samples_in_count =
-      int(std::min(samples_in_count, power_in_count) / n_vlen_) * n_vlen_;
-  power_in_count = samples_in_count;
+      int(std::min(samples_in_count, in_count) / n_vlen_) * n_vlen_;
+  in_count = samples_in_count;
 
-  get_tags_in_window(all_tags, 1, 0, power_in_count);
-  get_tags(tag_, all_tags, rx_freq_tags, rx_times, power_in_count);
+  FIND_TAGS
 
   for (COUNT_T i = 0; i < samples_in_count;
        i += n_vlen_, samples_in += batch_) {
@@ -477,7 +474,7 @@ int iq_inference_impl::general_work(int noutput_items,
 
   COUNT_T in_first = nitems_read(1);
   if (rx_freq_tags.empty()) {
-    process_items_(power_in_count, in_first, power_in, consumed);
+    process_items_(in_count, in_first, power_in, consumed);
   } else {
     PROCESS_TAGS({
       // TODO: in theory we might have a vector with more than one frequency's
@@ -493,8 +490,7 @@ int iq_inference_impl::general_work(int noutput_items,
       samples_since_tag_ = 0;
     })
     if (consumed < samples_in_count) {
-      process_items_(samples_in_count - consumed, in_first, power_in,
-                     consumed);
+      process_items_(samples_in_count - consumed, in_first, power_in, consumed);
     }
   }
 

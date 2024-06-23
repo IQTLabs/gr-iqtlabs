@@ -412,10 +412,7 @@ int write_freq_samples_impl::general_work(
   COUNT_T in_first = nitems_read(0);
   COUNT_T consumed = 0;
 
-  std::vector<tag_t> all_tags, rx_freq_tags;
-  std::vector<TIME_T> rx_times;
-  get_tags_in_window(all_tags, 0, 0, in_count);
-  get_tags(tag_, all_tags, rx_freq_tags, rx_times, in_count);
+  FIND_TAGS
 
   if (all_tags.empty()) {
     write_samples_(in_count, in, consumed);

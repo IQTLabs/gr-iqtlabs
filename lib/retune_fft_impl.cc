@@ -480,11 +480,8 @@ void retune_fft_impl::process_buckets_(FREQ_T rx_freq, TIME_T rx_time) {
 void retune_fft_impl::process_tags_(const input_type *in, COUNT_T in_count,
                                     COUNT_T in_first, COUNT_T &produced,
                                     const input_type *fft_output) {
-  std::vector<tag_t> all_tags, rx_freq_tags;
-  std::vector<TIME_T> rx_times;
   COUNT_T consumed = 0;
-  get_tags_in_window(all_tags, 0, 0, in_count);
-  get_tags(tag_, all_tags, rx_freq_tags, rx_times, in_count);
+  FIND_TAGS
 
   if (rx_freq_tags.empty()) {
     process_items_(in_count, in, fft_output, consumed, produced);

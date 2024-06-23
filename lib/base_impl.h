@@ -246,6 +246,12 @@ typedef sigmf::SigMF<
     last_rx_time_ = rx_time;                                                   \
   }
 
+#define FIND_TAGS                                                              \
+  std::vector<tag_t> all_tags, rx_freq_tags;                                   \
+  std::vector<TIME_T> rx_times;                                                \
+  get_tags_in_window(all_tags, 0, 0, in_count);                                \
+  get_tags(tag_, all_tags, rx_freq_tags, rx_times, in_count);
+
 // A driver block might give us float style (e.g. 2.5e9) or unsigned lon.
 #define GET_FREQ(tag) (FREQ_T) pmt::to_double(tag.value)
 

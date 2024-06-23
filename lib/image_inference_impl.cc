@@ -609,10 +609,7 @@ int image_inference_impl::general_work(int noutput_items,
     message_port_pub(INFERENCE_KEY, string_to_pmt(json));
   }
 
-  std::vector<tag_t> all_tags, rx_freq_tags;
-  std::vector<TIME_T> rx_times;
-  get_tags_in_window(all_tags, 0, 0, in_count);
-  get_tags(tag_, all_tags, rx_freq_tags, rx_times, in_count);
+  FIND_TAGS
 
   if (rx_freq_tags.empty()) {
     process_items_(in_count, consumed, in);

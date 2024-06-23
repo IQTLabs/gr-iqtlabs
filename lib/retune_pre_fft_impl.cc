@@ -332,12 +332,10 @@ int retune_pre_fft_impl::general_work(int noutput_items,
 
   const block_type *in = static_cast<const block_type *>(input_items[0]);
   const block_type *out = static_cast<const block_type *>(output_items[0]);
-  std::vector<tag_t> all_tags, rx_freq_tags;
-  std::vector<TIME_T> rx_times;
-  get_tags_in_window(all_tags, 0, 0, in_count);
-  get_tags(tag_, all_tags, rx_freq_tags, rx_times, in_count);
   COUNT_T consumed = 0;
   COUNT_T produced = 0;
+
+  FIND_TAGS
 
   if (rx_freq_tags.empty()) {
     process_items_(in_nffts, in, out, consumed, produced);
