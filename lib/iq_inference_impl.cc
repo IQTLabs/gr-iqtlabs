@@ -433,31 +433,20 @@ void iq_inference_impl::process_items_(COUNT_T power_in_count,
   }
 }
 
-int iq_inference_impl::general_work(int noutput_items,
-                                    gr_vector_int &ninput_items,
-                                    gr_vector_const_void_star &input_items,
-                                    gr_vector_void_star &output_items) {
-  COUNT_T samples_in_count = ninput_items[0];
-  COUNT_T in_count = ninput_items[1];
-  COUNT_T in_first = nitems_read(1);
-  const gr_complex *samples_in =
-      static_cast<const gr_complex *>(input_items[0]);
-  const float *power_in = static_cast<const float *>(input_items[1]);
+void iq_inference_impl::process_tags_(COUNT_T in_first,
+                                      COUNT_T samples_in_first,
+                                      COUNT_T in_count,
+                                      const gr_complex *samples_in,
+                                      const float *power_in) {
   COUNT_T consumed = 0;
 
-  // Ensure we stay in power/samples sync.
-  samples_in_count =
-      int(std::min(samples_in_count, in_count) / n_vlen_) * n_vlen_;
-  in_count = samples_in_count;
-
-  FIND_TAGS
-
-  for (COUNT_T i = 0; i < samples_in_count;
-       i += n_vlen_, samples_in += batch_) {
-    COUNT_T j = (nitems_read(0) + i) % sample_buffer_;
+  for (COUNT_T i = 0; i < in_count; i += n_vlen_, samples_in += batch_) {
+    COUNT_T j = (samples_in_first + i) % sample_buffer_;
     memcpy((void *)&samples_lookback_[j * batch_], samples_in,
            sizeof(gr_complex) * batch_);
   }
+
+  FIND_TAGS
 
   if (rx_freq_tags.empty()) {
     process_items_(in_count, in_first, power_in, consumed);
@@ -475,12 +464,27 @@ int iq_inference_impl::general_work(int noutput_items,
       last_rx_freq_sample_clock_ = sample_clock_;
       samples_since_tag_ = 0;
     })
-    if (consumed < samples_in_count) {
-      process_items_(samples_in_count - consumed, in_first, power_in, consumed);
+    if (consumed < in_count) {
+      process_items_(in_count - consumed, in_first, power_in, consumed);
     }
   }
+}
 
-  consume_each(consumed);
+int iq_inference_impl::general_work(int noutput_items,
+                                    gr_vector_int &ninput_items,
+                                    gr_vector_const_void_star &input_items,
+                                    gr_vector_void_star &output_items) {
+  const gr_complex *samples_in =
+      static_cast<const gr_complex *>(input_items[0]);
+  const float *power_in = static_cast<const float *>(input_items[1]);
+  COUNT_T samples_in_first = nitems_read(0);
+  COUNT_T in_first = nitems_read(1);
+  // Ensure we stay in power/samples sync.
+  COUNT_T in_count =
+      int(std::min(ninput_items[0], ninput_items[1]) / n_vlen_) * n_vlen_;
+
+  process_tags_(in_first, samples_in_first, in_count, samples_in, power_in);
+  consume_each(in_count);
 
   while (!json_q_.empty()) {
     std::string json;
