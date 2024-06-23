@@ -516,7 +516,6 @@ void retune_fft_impl::process_tags_(const input_type *in, COUNT_T in_count,
       process_items_(in_count - consumed, in, fft_output, consumed, produced);
     }
   }
-  produce(0, produced);
 }
 
 int retune_fft_impl::general_work(int noutput_items,
