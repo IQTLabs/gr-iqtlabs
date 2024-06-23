@@ -314,12 +314,9 @@ void iq_inference_impl::run_inference_() {
     metadata_json["sample_rate"] = std::to_string(samp_rate_);
     metadata_json["rx_freq_sample_clock"] =
         std::to_string(output_item.rx_freq_sample_clock);
-    nlohmann::json output_json;
+    nlohmann::json output_json, results_json;
     COUNT_T signal_predictions = 0;
-
     std::string error;
-    nlohmann::json results_json;
-    COUNT_T rendered_predictions = 0;
 
     for (auto model_name : model_names_) {
       const std::string_view body(
