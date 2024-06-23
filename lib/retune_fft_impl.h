@@ -235,8 +235,8 @@ private:
   void reopen_(TIME_T host_now, FREQ_T rx_freq);
   void process_buckets_(FREQ_T rx_freq, TIME_T rx_time);
   void write_buckets_(TIME_T host_now, FREQ_T rx_freq);
-  void process_tags_(const input_type *in, COUNT_T in_count, COUNT_T in_first, COUNT_T &produced,
-                     const input_type *fft_output);
+  void process_tags_(const input_type *in, COUNT_T in_count, COUNT_T in_first,
+                     COUNT_T &produced, const input_type *fft_output);
   void write_(const char *data, COUNT_T len);
   void open_(const std::string &file);
   void close_();
