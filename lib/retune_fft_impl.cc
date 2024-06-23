@@ -480,12 +480,11 @@ void retune_fft_impl::process_buckets_(FREQ_T rx_freq, TIME_T rx_time) {
 }
 
 void retune_fft_impl::process_tags_(const input_type *in, COUNT_T in_count,
-                                    COUNT_T in_first,
+                                    COUNT_T in_first, COUNT_T &produced,
                                     const input_type *fft_output) {
   std::vector<tag_t> all_tags, rx_freq_tags;
   std::vector<TIME_T> rx_times;
   COUNT_T consumed = 0;
-  COUNT_T produced = 0;
   get_tags_in_window(all_tags, 0, 0, in_count);
   get_tags(tag_, all_tags, rx_freq_tags, rx_times, in_count);
 
@@ -529,10 +528,10 @@ int retune_fft_impl::general_work(int noutput_items,
   const input_type *in = static_cast<const input_type *>(input_items[0]);
   COUNT_T in_count = ninput_items[0];
   COUNT_T in_first = nitems_read(0);
-  process_tags_(in, in_count, in_first, fft_output);
+  COUNT_T produced = 0;
+  process_tags_(in, in_count, in_first, produced, fft_output);
   consume_each(in_count);
-
-  return WORK_CALLED_PRODUCE;
+  return produced;
 }
 } /* namespace iqtlabs */
 } /* namespace gr */
