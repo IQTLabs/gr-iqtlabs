@@ -251,8 +251,6 @@ private:
   cv::Mat *points_buffer_;
   std::string image_dir_;
   pmt::pmt_t tag_;
-  std::string host_, port_;
-  std::vector<std::string> model_names_;
   bool running_;
   boost::scoped_ptr<std::thread> inference_thread_;
   cv::Scalar text_color_;

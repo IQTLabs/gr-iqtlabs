@@ -328,5 +328,25 @@ std::string base_impl::pmt_to_string(const pmt::pmt_t &msg) {
   return std::string(reinterpret_cast<const char *>(pmt::blob_data(blob)),
                      pmt::blob_length(blob));
 }
+
+void base_impl::parse_models(const std::string &model_server,
+                             const std::string &model_names) {
+  // TODO: IPv6 IP addresses
+  std::vector<std::string> model_server_parts_;
+  boost::split(model_server_parts_, model_server, boost::is_any_of(":"),
+               boost::token_compress_on);
+  if (model_server_parts_.size() == 2) {
+    host_ = model_server_parts_[0];
+    port_ = model_server_parts_[1];
+  } else {
+    std::cerr << "incomplete/missing model server" << std::endl;
+    return;
+  }
+  boost::split(model_names_, model_names, boost::is_any_of(","),
+               boost::token_compress_on);
+  if (model_names_.size() == 0) {
+    std::cerr << "missing model name(s)" << std::endl;
+  }
+}
 } /* namespace iqtlabs */
 } /* namespace gr */

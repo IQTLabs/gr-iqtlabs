@@ -238,8 +238,7 @@ iq_inference_impl::iq_inference_impl(
                 gr::io_signature::make(0, 0, 0)),
       tag_(pmt::intern(tag)), vlen_(vlen), n_vlen_(n_vlen),
       sample_buffer_(sample_buffer), min_peak_points_(min_peak_points),
-      model_server_(model_server), confidence_(confidence),
-      n_inference_(n_inference), samp_rate_(samp_rate),
+      confidence_(confidence), n_inference_(n_inference), samp_rate_(samp_rate),
       power_inference_(power_inference), background_(background),
       inference_count_(n_inference), batch_inference_(batch), running_(true),
       last_rx_freq_(0), last_rx_time_(0), samples_since_tag_(0),
@@ -250,19 +249,7 @@ iq_inference_impl::iq_inference_impl(
   unsigned int alignment = volk_get_alignment();
   samples_total_.reset((float *)volk_malloc(sizeof(float), alignment));
   power_total_.reset((float *)volk_malloc(sizeof(float), alignment));
-  std::vector<std::string> model_server_parts_;
-  std::vector<std::string> text_color_parts_;
-  boost::split(model_server_parts_, model_server, boost::is_any_of(":"),
-               boost::token_compress_on);
-  boost::split(model_names_, model_names, boost::is_any_of(","),
-               boost::token_compress_on);
-  if (model_server_parts_.size() == 2) {
-    host_ = model_server_parts_[0];
-    port_ = model_server_parts_[1];
-    if (model_names_.size() == 0) {
-      d_logger->error("missing model name(s)");
-    }
-  }
+  parse_models(model_server, model_names);
   if (background_) {
     inference_thread_.reset(
         new std::thread(&iq_inference_impl::background_run_inference_, this));

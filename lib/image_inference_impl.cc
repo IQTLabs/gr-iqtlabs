@@ -263,22 +263,10 @@ image_inference_impl::image_inference_impl(
       new cv::Mat(cv::Size(x_, y_), CV_8UC3, cv::Scalar::all(0)));
   // we will output our own metadata tags.
   set_tag_propagation_policy(TPP_DONT);
-  // TODO: IPv6 IP addresses
-  std::vector<std::string> model_server_parts_;
+  parse_models(model_server, model_names);
   std::vector<std::string> text_color_parts_;
-  boost::split(model_server_parts_, model_server, boost::is_any_of(":"),
-               boost::token_compress_on);
-  boost::split(model_names_, model_names, boost::is_any_of(","),
-               boost::token_compress_on);
   boost::split(text_color_parts_, text_color, boost::is_any_of(","),
                boost::token_compress_on);
-  if (model_server_parts_.size() == 2) {
-    host_ = model_server_parts_[0];
-    port_ = model_server_parts_[1];
-    if (model_names_.size() == 0) {
-      d_logger->error("missing model name(s)");
-    }
-  }
   text_color_ = cv::Scalar(255, 255, 255);
   if (text_color_parts_.size() == 3) {
     try {

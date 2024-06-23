@@ -243,8 +243,6 @@ private:
   COUNT_T sample_clock_;
   COUNT_T last_rx_freq_sample_clock_;
   double min_peak_points_;
-  std::string model_server_;
-  std::vector<std::string> model_names_;
   double confidence_;
   COUNT_T n_inference_;
   int samp_rate_;
@@ -257,7 +255,6 @@ private:
   TIME_T last_full_time_;
   TIME_T last_rx_time_;
   FREQ_T last_rx_freq_;
-  std::string host_, port_;
   boost::scoped_ptr<std::thread> inference_thread_;
   bool background_;
   COUNT_T predictions_;
