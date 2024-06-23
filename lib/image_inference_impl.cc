@@ -454,16 +454,15 @@ void image_inference_impl::bbox_text(const output_item_type &output_item,
 }
 
 COUNT_T image_inference_impl::parse_inference_(
-    const output_item_type &output_item, const std::string &results,
-    const std::string &model_name, nlohmann::json &results_json,
-    std::string &error) {
+    const output_item_type &output_item,
+    const nlohmann::json &original_results_json, const std::string &model_name,
+    nlohmann::json &results_json, std::string &error) {
   COUNT_T rendered_predictions = 0;
   const float xf = float(output_item.points_buffer->cols) /
                    float(output_item.image_buffer->cols);
   const float yf = float(output_item.points_buffer->rows) /
                    float(output_item.image_buffer->rows);
   try {
-    nlohmann::json original_results_json = nlohmann::json::parse(results);
     double min_rx_freq = output_item.rx_freq - (samp_rate_ / 2);
     for (auto &prediction_class : original_results_json.items()) {
       if (!results_json.contains(prediction_class.key())) {
@@ -514,7 +513,6 @@ COUNT_T image_inference_impl::parse_inference_(
       }
     }
   } catch (std::exception &ex) {
-    d_logger->error("invalid json: " + std::string(ex.what()) + " " + results);
     error = "invalid json: " + std::string(ex.what());
   }
   return rendered_predictions;
@@ -571,12 +569,12 @@ void image_inference_impl::run_inference_() {
             encoded_buffer->size());
         torchserve_client_->make_inference_request(model_name, body,
                                                    "image/" + IMAGE_TYPE);
-        std::string results;
-        torchserve_client_->send_inference_request(results, error);
-
-        if (error.size() == 0) {
-          rendered_predictions += parse_inference_(
-              output_item, results, model_name, results_json, error);
+        nlohmann::json original_results_json;
+        if (torchserve_client_->send_inference_request(original_results_json,
+                                                       error)) {
+          rendered_predictions +=
+              parse_inference_(output_item, original_results_json, model_name,
+                               results_json, error);
         }
 
         if (error.size()) {

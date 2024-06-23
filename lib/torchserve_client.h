@@ -209,6 +209,7 @@
 #include <boost/beast/http.hpp>
 #include <boost/beast/version.hpp>
 #include <boost/scoped_ptr.hpp>
+#include <nlohmann/json.hpp>
 
 namespace gr {
 namespace iqtlabs {
@@ -219,7 +220,7 @@ public:
   void make_inference_request(const std::string &model_name,
                               const std::string_view &body,
                               const std::string &content_type);
-  void send_inference_request(std::string &results, std::string &error);
+  bool send_inference_request(nlohmann::json &results_json, std::string &error);
   void connect();
   void disconnect();
 

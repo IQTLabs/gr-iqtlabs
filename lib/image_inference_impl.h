@@ -270,7 +270,7 @@ private:
                output_item_type &output_item,
                boost::scoped_ptr<std::vector<unsigned char>> &encoded_buffer);
   COUNT_T parse_inference_(const output_item_type &output_item,
-                           const std::string &results,
+                           const nlohmann::json &original_results_json,
                            const std::string &model_names,
                            nlohmann::json &results_json, std::string &error);
   void bbox_text(const output_item_type &output_item, const std::string &text,

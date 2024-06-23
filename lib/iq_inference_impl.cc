@@ -338,13 +338,11 @@ void iq_inference_impl::run_inference_() {
           torchserve_client_->make_inference_request(
               model_name, body, "application/octet-stream");
         }
-        std::string results;
-        torchserve_client_->send_inference_request(results, error);
+        nlohmann::json original_results_json;
         // TODO: troubleshoot test flask server hang after one request.
-        if (error.size() == 0) {
+        if (torchserve_client_->send_inference_request(original_results_json,
+                                                       error)) {
           try {
-            nlohmann::json original_results_json =
-                nlohmann::json::parse(results);
             for (auto &prediction_class : original_results_json.items()) {
               if (!results_json.contains(prediction_class.key())) {
                 results_json[prediction_class.key()] = nlohmann::json::array();
@@ -363,9 +361,8 @@ void iq_inference_impl::run_inference_() {
               }
             }
           } catch (std::exception &ex) {
-            d_logger->error("invalid json: " + std::string(ex.what()) + " " +
-                            results);
-            error = "invalid json: " + std::string(ex.what());
+            error = "invalid json (missing/invalid fields): " +
+                    std::string(ex.what());
           }
         }
 
