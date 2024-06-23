@@ -332,23 +332,17 @@ int retune_pre_fft_impl::general_work(int noutput_items,
 
   const block_type *in = static_cast<const block_type *>(input_items[0]);
   const block_type *out = static_cast<const block_type *>(output_items[0]);
-  std::vector<tag_t> all_tags, rx_freq_tags;
-  std::vector<TIME_T> rx_times;
-  get_tags_in_window(all_tags, 0, 0, in_count);
-  get_tags(tag_, all_tags, rx_freq_tags, rx_times, in_count);
   COUNT_T consumed = 0;
   COUNT_T produced = 0;
+
+  FIND_TAGS
 
   if (rx_freq_tags.empty()) {
     process_items_(in_nffts, in, out, consumed, produced);
   } else {
     // TODO: deprecate fft_batch_size, gr-wavelearner could use set_multiple
     // abstraction like VkFFT
-
-    for (COUNT_T t = 0; t < rx_freq_tags.size(); ++t) {
-      const auto &tag = rx_freq_tags[t];
-      const TIME_T rx_time = rx_times[t];
-      auto rel = tag.offset - in_first;
+    PROCESS_TAGS({
       in_first += rel;
       rel /= nfft_;
 
@@ -356,8 +350,6 @@ int retune_pre_fft_impl::general_work(int noutput_items,
         process_items_(rel, in, out, consumed, produced);
       }
 
-      const FREQ_T rx_freq = GET_FREQ(tag);
-      d_logger->debug("new rx_freq tag: {}, last {}", rx_freq, last_rx_freq_);
       if (!reset_tags_) {
         add_output_tags_(rx_time, rx_freq, produced);
       }
@@ -365,10 +357,8 @@ int retune_pre_fft_impl::general_work(int noutput_items,
         --pending_retune_;
         fft_count_ = 0;
         skip_fft_count_ = skip_tune_step_fft_;
-        last_rx_freq_ = rx_freq;
-        last_rx_time_ = rx_time;
       }
-    }
+    })
     if (consumed < in_nffts) {
       process_items_(in_nffts - consumed, in, out, consumed, produced);
     }

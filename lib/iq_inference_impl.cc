@@ -314,69 +314,61 @@ void iq_inference_impl::run_inference_() {
     metadata_json["sample_rate"] = std::to_string(samp_rate_);
     metadata_json["rx_freq_sample_clock"] =
         std::to_string(output_item.rx_freq_sample_clock);
-    nlohmann::json output_json;
+    nlohmann::json output_json, results_json;
     COUNT_T signal_predictions = 0;
+    std::string error;
 
-    if ((host_.size() && port_.size()) && (model_names_.size() > 0)) {
-      std::string error;
-      nlohmann::json results_json;
-      COUNT_T rendered_predictions = 0;
-
-      for (auto model_name : model_names_) {
-        const std::string_view body(
-            reinterpret_cast<char const *>(output_item.samples),
-            output_item.sample_count * sizeof(gr_complex));
-        const std::string_view power_body(
-            reinterpret_cast<char const *>(output_item.power),
-            output_item.sample_count * sizeof(float));
-        if (power_inference_) {
-          const std::string samples_power_body =
-              std::string(body) + std::string(power_body);
-          torchserve_client_->make_inference_request(
-              model_name, samples_power_body, "application/octet-stream");
-        } else {
-          torchserve_client_->make_inference_request(
-              model_name, body, "application/octet-stream");
-        }
-        std::string results;
-        torchserve_client_->send_inference_request(results, error);
-        // TODO: troubleshoot test flask server hang after one request.
-        if (error.size() == 0) {
-          try {
-            nlohmann::json original_results_json =
-                nlohmann::json::parse(results);
-            for (auto &prediction_class : original_results_json.items()) {
-              if (!results_json.contains(prediction_class.key())) {
-                results_json[prediction_class.key()] = nlohmann::json::array();
-              }
-              for (auto &prediction_ref : prediction_class.value().items()) {
-                auto prediction = prediction_ref.value();
-                prediction["model"] = model_name;
-                // TODO: estimate actual frequency.
-                prediction["freq"] = std::to_string(output_item.rx_freq);
-                // TODO: gate on minimum confidence.
-                // float conf = prediction["conf"];
-                results_json[prediction_class.key()].emplace_back(prediction);
-                if (prediction_class.key() != INFERENCE_NO_SIGNAL) {
-                  ++signal_predictions;
-                }
+    for (auto model_name : model_names_) {
+      const std::string_view body(
+          reinterpret_cast<char const *>(output_item.samples),
+          output_item.sample_count * sizeof(gr_complex));
+      const std::string_view power_body(
+          reinterpret_cast<char const *>(output_item.power),
+          output_item.sample_count * sizeof(float));
+      if (power_inference_) {
+        const std::string samples_power_body =
+            std::string(body) + std::string(power_body);
+        torchserve_client_->make_inference_request(
+            model_name, samples_power_body, "application/octet-stream");
+      } else {
+        torchserve_client_->make_inference_request(model_name, body,
+                                                   "application/octet-stream");
+      }
+      nlohmann::json original_results_json;
+      // TODO: troubleshoot test flask server hang after one request.
+      if (torchserve_client_->send_inference_request(original_results_json,
+                                                     error)) {
+        try {
+          for (auto &prediction_class : original_results_json.items()) {
+            if (!results_json.contains(prediction_class.key())) {
+              results_json[prediction_class.key()] = nlohmann::json::array();
+            }
+            for (auto &prediction_ref : prediction_class.value().items()) {
+              auto prediction = prediction_ref.value();
+              prediction["model"] = model_name;
+              // TODO: estimate actual frequency.
+              prediction["freq"] = std::to_string(output_item.rx_freq);
+              // TODO: gate on minimum confidence.
+              // float conf = prediction["conf"];
+              results_json[prediction_class.key()].emplace_back(prediction);
+              if (prediction_class.key() != INFERENCE_NO_SIGNAL) {
+                ++signal_predictions;
               }
             }
-          } catch (std::exception &ex) {
-            d_logger->error("invalid json: " + std::string(ex.what()) + " " +
-                            results);
-            error = "invalid json: " + std::string(ex.what());
           }
-        }
-
-        if (error.size()) {
-          d_logger->error(error);
-          output_json["error"] = error;
+        } catch (std::exception &ex) {
+          error = "invalid json (missing/invalid fields): " +
+                  std::string(ex.what());
         }
       }
 
-      output_json["predictions"] = results_json;
+      if (error.size()) {
+        d_logger->error(error);
+        output_json["error"] = error;
+      }
     }
+
+    output_json["predictions"] = results_json;
     // double new line to facilitate json parsing, since prediction may
     // contain new lines.
     if (signal_predictions) {
@@ -389,20 +381,14 @@ void iq_inference_impl::run_inference_() {
   }
 }
 
-void iq_inference_impl::forecast(int noutput_items,
-                                 gr_vector_int &ninput_items_required) {
-  ninput_items_required[0] = 1;
-  ninput_items_required[1] = 1;
-}
-
 void iq_inference_impl::process_items_(COUNT_T power_in_count,
-                                       COUNT_T &power_read,
+                                       COUNT_T &in_first,
                                        const float *&power_in,
                                        COUNT_T &consumed) {
   for (COUNT_T i = 0; i < power_in_count; i += n_vlen_, consumed += n_vlen_,
                power_in += batch_, samples_since_tag_ += batch_,
                sample_clock_ += batch_) {
-    COUNT_T j = (power_read + i) % sample_buffer_;
+    COUNT_T j = (in_first + i) % sample_buffer_;
     // Gate on average power.
     volk_32f_accumulator_s32f(power_total_.get(), power_in, batch_);
     if (*power_total_ / batch_ < min_peak_points_) {
@@ -419,6 +405,9 @@ void iq_inference_impl::process_items_(COUNT_T power_in_count,
       continue;
     }
     inference_count_ = n_inference_;
+    if (!((host_.size() && port_.size()) && (model_names_.size() > 0))) {
+      continue;
+    }
     // TODO: we select one slice in time (samples and power),
     // where at least one sample exceeded the minimum. We could
     // potentially select more samples either side for example.
@@ -462,22 +451,19 @@ int iq_inference_impl::general_work(int noutput_items,
                                     gr_vector_const_void_star &input_items,
                                     gr_vector_void_star &output_items) {
   COUNT_T samples_in_count = ninput_items[0];
-  COUNT_T power_in_count = ninput_items[1];
+  COUNT_T in_count = ninput_items[1];
   COUNT_T power_read_first = nitems_read(1);
   const gr_complex *samples_in =
       static_cast<const gr_complex *>(input_items[0]);
   const float *power_in = static_cast<const float *>(input_items[1]);
-  std::vector<tag_t> all_tags, rx_freq_tags;
-  std::vector<TIME_T> rx_times;
   COUNT_T consumed = 0;
 
   // Ensure we stay in power/samples sync.
   samples_in_count =
-      int(std::min(samples_in_count, power_in_count) / n_vlen_) * n_vlen_;
-  power_in_count = samples_in_count;
+      int(std::min(samples_in_count, in_count) / n_vlen_) * n_vlen_;
+  in_count = samples_in_count;
 
-  get_tags_in_window(all_tags, 1, 0, power_in_count);
-  get_tags(tag_, all_tags, rx_freq_tags, rx_times, power_in_count);
+  FIND_TAGS
 
   for (COUNT_T i = 0; i < samples_in_count;
        i += n_vlen_, samples_in += batch_) {
@@ -486,34 +472,25 @@ int iq_inference_impl::general_work(int noutput_items,
            sizeof(gr_complex) * batch_);
   }
 
-  COUNT_T power_read = nitems_read(1);
+  COUNT_T in_first = nitems_read(1);
   if (rx_freq_tags.empty()) {
-    process_items_(power_in_count, power_read, power_in, consumed);
+    process_items_(in_count, in_first, power_in, consumed);
   } else {
-    for (COUNT_T t = 0; t < rx_freq_tags.size(); ++t) {
-      const auto &tag = rx_freq_tags[t];
-      const TIME_T rx_time = rx_times[t];
-      const auto rel = tag.offset - power_read;
-
+    PROCESS_TAGS({
       // TODO: in theory we might have a vector with more than one frequency's
       // samples, as the SDR probably isn't vector aligned. In practice this
       // should not happen in the most common Ettus low power workaround state,
       // because tags are delayed until after re-tuning has been verified.
       if (rel > 0) {
-        process_items_(rel, power_read, power_in, consumed);
-        power_read += rel;
+        process_items_(rel, in_first, power_in, consumed);
+        in_first += rel;
       }
 
-      const FREQ_T rx_freq = GET_FREQ(tag);
-      d_logger->debug("new rx_freq tag: {}", rx_freq);
-      last_rx_freq_ = rx_freq;
-      last_rx_time_ = rx_time;
       last_rx_freq_sample_clock_ = sample_clock_;
       samples_since_tag_ = 0;
-    }
+    })
     if (consumed < samples_in_count) {
-      process_items_(samples_in_count - consumed, power_read, power_in,
-                     consumed);
+      process_items_(samples_in_count - consumed, in_first, power_in, consumed);
     }
   }
 

@@ -263,7 +263,7 @@ private:
   COUNT_T predictions_;
   COUNT_T batch_inference_;
 
-  void process_items_(COUNT_T power_in_count, COUNT_T &power_read,
+  void process_items_(COUNT_T power_in_count, COUNT_T &in_first,
                       const float *&power_in, COUNT_T &consumed);
   void delete_output_item_(output_item_type &output_item);
   void delete_inference_();
@@ -278,7 +278,6 @@ public:
                     const std::string &model_names, double confidence,
                     COUNT_T n_inference, int samp_rate, bool power_inference,
                     bool background, COUNT_T batch);
-  void forecast(int noutput_items, gr_vector_int &ninput_items_required);
   int general_work(int noutput_items, gr_vector_int &ninput_items,
                    gr_vector_const_void_star &input_items,
                    gr_vector_void_star &output_items);

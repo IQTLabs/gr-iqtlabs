@@ -454,16 +454,15 @@ void image_inference_impl::bbox_text(const output_item_type &output_item,
 }
 
 COUNT_T image_inference_impl::parse_inference_(
-    const output_item_type &output_item, const std::string &results,
-    const std::string &model_name, nlohmann::json &results_json,
-    std::string &error) {
+    const output_item_type &output_item,
+    const nlohmann::json &original_results_json, const std::string &model_name,
+    nlohmann::json &results_json, std::string &error) {
   COUNT_T rendered_predictions = 0;
   const float xf = float(output_item.points_buffer->cols) /
                    float(output_item.image_buffer->cols);
   const float yf = float(output_item.points_buffer->rows) /
                    float(output_item.image_buffer->rows);
   try {
-    nlohmann::json original_results_json = nlohmann::json::parse(results);
     double min_rx_freq = output_item.rx_freq - (samp_rate_ / 2);
     for (auto &prediction_class : original_results_json.items()) {
       if (!results_json.contains(prediction_class.key())) {
@@ -514,7 +513,6 @@ COUNT_T image_inference_impl::parse_inference_(
       }
     }
   } catch (std::exception &ex) {
-    d_logger->error("invalid json: " + std::string(ex.what()) + " " + results);
     error = "invalid json: " + std::string(ex.what());
   }
   return rendered_predictions;
@@ -571,12 +569,12 @@ void image_inference_impl::run_inference_() {
             encoded_buffer->size());
         torchserve_client_->make_inference_request(model_name, body,
                                                    "image/" + IMAGE_TYPE);
-        std::string results;
-        torchserve_client_->send_inference_request(results, error);
-
-        if (error.size() == 0) {
-          rendered_predictions += parse_inference_(
-              output_item, results, model_name, results_json, error);
+        nlohmann::json original_results_json;
+        if (torchserve_client_->send_inference_request(original_results_json,
+                                                       error)) {
+          rendered_predictions +=
+              parse_inference_(output_item, original_results_json, model_name,
+                               results_json, error);
         }
 
         if (error.size()) {
@@ -611,31 +609,22 @@ int image_inference_impl::general_work(int noutput_items,
     message_port_pub(INFERENCE_KEY, string_to_pmt(json));
   }
 
-  std::vector<tag_t> all_tags, rx_freq_tags;
-  std::vector<TIME_T> rx_times;
-  get_tags_in_window(all_tags, 0, 0, in_count);
-  get_tags(tag_, all_tags, rx_freq_tags, rx_times, in_count);
+  FIND_TAGS
 
   if (rx_freq_tags.empty()) {
     process_items_(in_count, consumed, in);
   } else {
-    for (COUNT_T t = 0; t < rx_freq_tags.size(); ++t) {
-      const auto &tag = rx_freq_tags[t];
-      const TIME_T rx_time = rx_times[t];
-      const auto rel = tag.offset - in_first;
+    PROCESS_TAGS({
       in_first += rel;
 
       if (rel > 0) {
         process_items_(rel, consumed, in);
       }
 
-      FREQ_T rx_freq = GET_FREQ(tag);
       if (rx_freq != last_rx_freq_) {
         create_image_(true);
       }
-      last_rx_freq_ = rx_freq;
-      last_rx_time_ = rx_time;
-    }
+    })
     if (consumed < in_count) {
       process_items_(in_count - consumed, consumed, in);
     }
@@ -644,11 +633,5 @@ int image_inference_impl::general_work(int noutput_items,
   consume_each(in_count);
   return 0;
 }
-
-void image_inference_impl::forecast(int noutput_items,
-                                    gr_vector_int &ninput_items_required) {
-  ninput_items_required[0] = 1;
-}
-
 } /* namespace iqtlabs */
 } /* namespace gr */

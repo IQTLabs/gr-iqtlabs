@@ -51,11 +51,13 @@ std::string torchserve_client::send_inference_request_() {
   return res.body().data();
 }
 
-void torchserve_client::send_inference_request(std::string &results,
+bool torchserve_client::send_inference_request(nlohmann::json &results_json,
                                                std::string &error) {
   // attempt to re-use existing connection. may fail if an http 1.1 server
   // has dropped the connection to use in the meantime.
   // TODO: handle case where model server is up but blocks us forever.
+  std::string results;
+
   if (inference_connected_) {
     try {
       results = send_inference_request_();
@@ -73,14 +75,20 @@ void torchserve_client::send_inference_request(std::string &results,
     }
   }
 
-  if (error.size() == 0 &&
-      (results.size() == 0 || !nlohmann::json::accept(results))) {
-    error = "invalid json: " + results;
+  if (error.size() == 0) {
+    if (results.size() == 0 || !nlohmann::json::accept(results)) {
+      error = "invalid json: " + results;
+    } else {
+      results_json = nlohmann::json::parse(results);
+      return true;
+    }
   }
 
   if (error.size()) {
     disconnect();
   }
+
+  return false;
 }
 
 } // namespace iqtlabs

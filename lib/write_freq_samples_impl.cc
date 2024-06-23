@@ -240,9 +240,9 @@ write_freq_samples_impl::write_freq_samples_impl(
       write_step_samples_(write_step_samples),
       skip_tune_step_samples_(skip_tune_step_samples), samp_rate_(samp_rate),
       write_step_samples_count_(0), skip_tune_step_samples_count_(0),
-      last_rx_freq_(0), sample_clock_(0), open_sample_clock_(0),
-      rotate_secs_(rotate_secs), gain_(gain), sigmf_(sigmf), zstd_(zstd),
-      rotate_(rotate) {
+      last_rx_freq_(0), last_rx_time_(0), sample_clock_(0),
+      open_sample_clock_(0), rotate_secs_(rotate_secs), gain_(gain),
+      sigmf_(sigmf), zstd_(zstd), rotate_(rotate) {
   outbuf_p.reset(new boost::iostreams::filtering_ostream());
   open_(1);
   message_port_register_in(INFERENCE_KEY);
@@ -412,23 +412,18 @@ int write_freq_samples_impl::general_work(
   COUNT_T in_first = nitems_read(0);
   COUNT_T consumed = 0;
 
-  std::vector<tag_t> tags;
-  get_tags_in_window(tags, 0, 0, in_count, tag_);
+  FIND_TAGS
 
-  if (tags.empty()) {
+  if (all_tags.empty()) {
     write_samples_(in_count, in, consumed);
   } else {
-    for (COUNT_T t = 0; t < tags.size(); ++t) {
-      const auto &tag = tags[t];
-      const auto rel = tag.offset - in_first;
+    PROCESS_TAGS({
       in_first += rel;
 
       if (rel > 0) {
         write_samples_(rel, in, consumed);
       }
 
-      const FREQ_T rx_freq = GET_FREQ(tag);
-      d_logger->debug("new rx_freq tag: {}, last {}", rx_freq, last_rx_freq_);
       if (rotate_) {
         open_(1);
       }
@@ -438,8 +433,7 @@ int write_freq_samples_impl::general_work(
         capture_item.sample_clock = sample_clock_;
         capture_q_.push(capture_item);
       }
-      last_rx_freq_ = rx_freq;
-    }
+    })
     if (consumed < in_count) {
       write_samples_(in_count - consumed, in, consumed);
     }

@@ -256,10 +256,13 @@ int iq_inference_standalone_impl::work(int noutput_items,
                                   vlen_ * sizeof(gr_complex));
       torchserve_client_->make_inference_request(model_name, body,
                                                  "application/octet-stream");
-      torchserve_client_->send_inference_request(results, error);
+      nlohmann::json original_results_json;
+      torchserve_client_->send_inference_request(original_results_json, error);
       torchserve_client_->disconnect();
-      d_logger->info("results {}, error {}", results, error);
-      message_port_pub(INFERENCE_KEY, string_to_pmt(results));
+      d_logger->info("results {}, error {}", original_results_json.dump(),
+                     error);
+      message_port_pub(INFERENCE_KEY,
+                       string_to_pmt(original_results_json.dump()));
     }
     in += vlen_;
   }

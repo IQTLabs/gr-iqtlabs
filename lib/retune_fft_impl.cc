@@ -475,49 +475,37 @@ void retune_fft_impl::process_buckets_(FREQ_T rx_freq, TIME_T rx_time) {
   reset_items_();
   skip_fft_count_ = skip_tune_step_fft_;
   write_step_fft_count_ = write_step_fft_;
-  last_rx_freq_ = rx_freq;
-  last_rx_time_ = rx_time;
 }
 
 void retune_fft_impl::process_tags_(const input_type *in, COUNT_T in_count,
-                                    COUNT_T in_first,
+                                    COUNT_T in_first, COUNT_T &produced,
                                     const input_type *fft_output) {
-  std::vector<tag_t> all_tags, rx_freq_tags;
-  std::vector<TIME_T> rx_times;
   COUNT_T consumed = 0;
-  COUNT_T produced = 0;
-  get_tags_in_window(all_tags, 0, 0, in_count);
-  get_tags(tag_, all_tags, rx_freq_tags, rx_times, in_count);
+  FIND_TAGS
 
   if (rx_freq_tags.empty()) {
     process_items_(in_count, in, fft_output, consumed, produced);
   } else {
-    for (COUNT_T t = 0; t < rx_freq_tags.size(); ++t) {
-      const auto &tag = rx_freq_tags[t];
-      const TIME_T rx_time = rx_times[t];
-      const auto rel = tag.offset - in_first;
+    PROCESS_TAGS({
       in_first += rel;
 
       if (rel > 0) {
         process_items_(rel, in, fft_output, consumed, produced);
       }
 
-      const FREQ_T rx_freq = GET_FREQ(tag);
       if (!reset_tags_) {
         add_output_tags_(rx_time, rx_freq, produced);
       }
 
-      d_logger->debug("new rx_freq tag: {}, last {}", rx_freq, last_rx_freq_);
       if (pending_retune_) {
         --pending_retune_;
       }
       process_buckets_(rx_freq, rx_time);
-    }
+    })
     if (consumed < in_count) {
       process_items_(in_count - consumed, in, fft_output, consumed, produced);
     }
   }
-  produce(0, produced);
 }
 
 int retune_fft_impl::general_work(int noutput_items,
@@ -529,10 +517,10 @@ int retune_fft_impl::general_work(int noutput_items,
   const input_type *in = static_cast<const input_type *>(input_items[0]);
   COUNT_T in_count = ninput_items[0];
   COUNT_T in_first = nitems_read(0);
-  process_tags_(in, in_count, in_first, fft_output);
+  COUNT_T produced = 0;
+  process_tags_(in, in_count, in_first, produced, fft_output);
   consume_each(in_count);
-
-  return WORK_CALLED_PRODUCE;
+  return produced;
 }
 } /* namespace iqtlabs */
 } /* namespace gr */
