@@ -214,10 +214,10 @@ vkfft::sptr vkfft::make(COUNT_T fft_batch_size, COUNT_T nfft, bool shift) {
 }
 
 vkfft_impl::vkfft_impl(COUNT_T fft_batch_size, COUNT_T nfft, bool shift)
-    : fft_batch_size_(fft_batch_size), nfft_(nfft),
-      gr::sync_block("vkfft",
+    : gr::sync_block("vkfft",
                      gr::io_signature::make(1, 1, sizeof(gr_complex) * nfft),
-                     gr::io_signature::make(1, 1, sizeof(gr_complex) * nfft)) {
+                     gr::io_signature::make(1, 1, sizeof(gr_complex) * nfft)),
+      nfft_(nfft), fft_batch_size_(fft_batch_size) {
   init_vkfft(fft_batch_size, nfft, sizeof(gr_complex), shift);
   set_output_multiple(fft_batch_size);
 }
@@ -226,12 +226,11 @@ vkfft_impl::~vkfft_impl() { free_vkfft(); }
 
 int vkfft_impl::work(int noutput_items, gr_vector_const_void_star &input_items,
                      gr_vector_void_star &output_items) {
-  const gr_complex *const in =
-      reinterpret_cast<const gr_complex *const>(input_items[0]);
-  gr_complex *const out = reinterpret_cast<gr_complex *const>(output_items[0]);
+  const gr_complex *in = static_cast<const gr_complex *>(input_items[0]);
+  gr_complex *out = static_cast<gr_complex *>(output_items[0]);
   COUNT_T buffer_index = 0;
 
-  for (int i = 0; i < noutput_items / fft_batch_size_;
+  for (COUNT_T i = 0; i < noutput_items / fft_batch_size_;
        ++i, buffer_index += (fft_batch_size_ * nfft_)) {
     vkfft_offload((char *)&in[buffer_index], (char *)&out[buffer_index]);
   }

@@ -25,6 +25,9 @@ list(
   vector_to_json_impl.cc
   write_freq_samples_impl.cc)
 
+set_source_files_properties(${iqtlabs_sources} PROPERTY COMPILE_FLAGS
+                            "-Wall -Wno-reorder")
+
 if(VKFFT)
   set(VKFFT_LIB
       -Wl,--whole-archive
@@ -51,6 +54,8 @@ if(VKFFT)
       $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/../VkFFT/benchmark_scripts/vkFFT_scripts/include>
   )
   list(APPEND iqtlabs_sources libvkfft.cc vkfft_impl.cc vkfft_short_impl.cc)
+  set_source_files_properties(vkfft_impl.cc vkfft_short_impl.cc PROPERTY
+                              COMPILE_FLAGS "-Wall -Wno-reorder")
 endif()
 
 set(iqtlabs_sources

@@ -608,6 +608,8 @@ void image_inference_impl::process_tags_(COUNT_T in_count, COUNT_T in_first,
   }
 }
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunused-parameter"
 int image_inference_impl::general_work(int noutput_items,
                                        gr_vector_int &ninput_items,
                                        gr_vector_const_void_star &input_items,
@@ -626,5 +628,6 @@ int image_inference_impl::general_work(int noutput_items,
   consume_each(in_count);
   return 0;
 }
+#pragma GCC diagnostic pop
 } /* namespace iqtlabs */
 } /* namespace gr */

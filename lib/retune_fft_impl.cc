@@ -268,8 +268,11 @@ retune_fft_impl::retune_fft_impl(
   message_port_register_out(TUNE_KEY);
   message_port_register_out(JSON_KEY);
   message_port_register_in(CMD_KEY);
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunused-parameter"
   set_msg_handler(CMD_KEY,
                   [this](const pmt::pmt_t &msg) { next_retune_(host_now_()); });
+#pragma GCC diagnostic pop
   set_tag_propagation_policy(TPP_DONT);
   reset_items_();
   // If the pre-FFT block is handling tuning, then it will have already sent
@@ -428,7 +431,7 @@ void retune_fft_impl::reopen_(TIME_T host_now, FREQ_T rx_freq) {
   }
 }
 
-void retune_fft_impl::write_buckets_(TIME_T host_now, FREQ_T rx_freq) {
+void retune_fft_impl::write_buckets_(TIME_T host_now) {
   std::list<std::pair<double, double>> buckets;
   const double bucket_size = samp_rate_ / nfft_;
   const double bucket_freq_start = last_rx_freq_ - (samp_rate_ / 2);
@@ -470,7 +473,7 @@ void retune_fft_impl::process_buckets_(FREQ_T rx_freq, TIME_T rx_time) {
     if (!peak_fft_range_) {
       calc_peaks_();
     }
-    write_buckets_(rx_time, rx_freq);
+    write_buckets_(rx_time);
   }
   reset_items_();
   skip_fft_count_ = skip_tune_step_fft_;
@@ -512,6 +515,8 @@ COUNT_T retune_fft_impl::process_tags_(const input_type *in, COUNT_T in_count,
   return produced;
 }
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunused-parameter"
 int retune_fft_impl::general_work(int noutput_items,
                                   gr_vector_int &ninput_items,
                                   gr_vector_const_void_star &input_items,
@@ -525,5 +530,6 @@ int retune_fft_impl::general_work(int noutput_items,
   consume_each(in_count);
   return produced;
 }
+#pragma GCC diagnostic pop
 } /* namespace iqtlabs */
 } /* namespace gr */

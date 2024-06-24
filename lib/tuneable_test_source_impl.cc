@@ -256,6 +256,8 @@ void tuneable_test_source_impl::recv_cmd(pmt::pmt_t msg) {
   }
 }
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunused-parameter"
 int tuneable_test_source_impl::work(int noutput_items,
                                     gr_vector_const_void_star &input_items,
                                     gr_vector_void_star &output_items) {
@@ -271,6 +273,6 @@ int tuneable_test_source_impl::work(int noutput_items,
   std::fill_n(out, noutput_items, last_sample);
   return noutput_items;
 }
-
+#pragma GCC diagnostic pop
 } /* namespace iqtlabs */
 } /* namespace gr */

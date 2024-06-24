@@ -215,7 +215,7 @@ namespace iqtlabs {
 template <class T>
 class vector_to_json_impl : public vector_to_json<T>, base_impl {
 private:
-  int vlen_;
+  COUNT_T vlen_;
   std::string item_str_(T item);
   std::deque<char> out_buf_;
 

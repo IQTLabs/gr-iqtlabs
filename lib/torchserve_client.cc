@@ -8,7 +8,7 @@ namespace gr {
 namespace iqtlabs {
 
 torchserve_client::torchserve_client(std::string &host, std::string &port)
-    : host_(host), port_(port), inference_connected_(false) {
+    : inference_connected_(false), host_(host), port_(port) {
   stream_.reset(new boost::beast::tcp_stream(ioc_));
 }
 
