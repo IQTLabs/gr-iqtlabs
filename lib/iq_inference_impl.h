@@ -232,35 +232,23 @@ typedef struct output_item {
 
 class iq_inference_impl : public iq_inference, base_impl {
 private:
-  boost::scoped_array<gr_complex> samples_lookback_;
-  boost::scoped_ptr<float> samples_total_;
-  boost::scoped_ptr<float> power_total_;
   pmt::pmt_t tag_;
-  COUNT_T vlen_;
-  COUNT_T n_vlen_;
-  COUNT_T batch_;
-  COUNT_T sample_buffer_;
-  COUNT_T sample_clock_;
-  COUNT_T last_rx_freq_sample_clock_;
-  double min_peak_points_;
-  double confidence_;
-  COUNT_T n_inference_;
+  COUNT_T vlen_, n_vlen_, batch_, sample_buffer_, sample_clock_,
+      last_rx_freq_sample_clock_, n_inference_, inference_count_,
+      samples_since_tag_, predictions_, batch_inference_;
   int samp_rate_;
-  bool power_inference_;
-  COUNT_T inference_count_;
-  COUNT_T samples_since_tag_;
-  boost::lockfree::spsc_queue<output_item_type> inference_q_{MAX_INFERENCE};
-  boost::lockfree::spsc_queue<std::string> json_q_{MAX_INFERENCE};
-  bool running_;
   TIME_T last_full_time_;
+  double min_peak_points_, confidence_;
+  bool power_inference_, background_, running_;
   TIME_T last_rx_time_;
   FREQ_T last_rx_freq_;
+  boost::scoped_array<gr_complex> samples_lookback_;
+  boost::scoped_ptr<float> samples_total_, power_total_;
+  boost::lockfree::spsc_queue<output_item_type> inference_q_{MAX_INFERENCE};
+  boost::lockfree::spsc_queue<std::string> json_q_{MAX_INFERENCE};
   boost::scoped_ptr<std::thread> inference_thread_;
-  bool background_;
-  COUNT_T predictions_;
-  COUNT_T batch_inference_;
 
-  void process_items_(COUNT_T power_in_count, COUNT_T &in_first,
+  void process_items_(COUNT_T power_in_count, COUNT_T in_first,
                       const float *&power_in, COUNT_T &consumed);
   void process_tags_(COUNT_T in_first, COUNT_T samples_in_first,
                      COUNT_T in_count, const gr_complex *samples_in,

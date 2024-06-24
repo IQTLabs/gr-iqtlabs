@@ -253,11 +253,11 @@ retune_fft_impl::retune_fft_impl(
       retuner_impl(samp_rate, tune_jitter_hz, freq_start, freq_end,
                    tune_step_hz, tune_step_fft, skip_tune_step_fft,
                    tuning_ranges, tag_now, low_power_hold_down, slew_rx_time),
-      tag_(pmt::intern(tag)), nfft_(nfft), fft_min_(fft_min), fft_max_(fft_max),
-      sample_count_(0), sdir_(sdir), write_step_fft_(write_step_fft),
-      write_step_fft_count_(write_step_fft), bucket_range_(bucket_range),
-      description_(description), rotate_secs_(rotate_secs), pre_fft_(pre_fft),
-      peak_fft_range_(peak_fft_range) {
+      tag_(pmt::intern(tag)), nfft_(nfft), peak_fft_range_(peak_fft_range),
+      write_step_fft_(write_step_fft), rotate_secs_(rotate_secs),
+      sample_count_(0), write_step_fft_count_(write_step_fft), sdir_(sdir),
+      description_(description), pre_fft_(pre_fft), bucket_range_(bucket_range),
+      fft_min_(fft_min), fft_max_(fft_max) {
   bucket_offset_ = round(float((nfft_ - round(bucket_range_ * nfft_)) / 2));
   unsigned int alignment = volk_get_alignment();
   sample_.reset((float *)volk_malloc(sizeof(float) * nfft_, alignment));

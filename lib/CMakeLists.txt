@@ -25,8 +25,7 @@ list(
   vector_to_json_impl.cc
   write_freq_samples_impl.cc)
 
-set_source_files_properties(${iqtlabs_sources} PROPERTY COMPILE_FLAGS
-                            "-Wall -Wno-reorder")
+set_source_files_properties(${iqtlabs_sources} PROPERTY COMPILE_FLAGS "-Wall")
 
 if(VKFFT)
   set(VKFFT_LIB
@@ -55,7 +54,7 @@ if(VKFFT)
   )
   list(APPEND iqtlabs_sources libvkfft.cc vkfft_impl.cc vkfft_short_impl.cc)
   set_source_files_properties(vkfft_impl.cc vkfft_short_impl.cc PROPERTY
-                              COMPILE_FLAGS "-Wall -Wno-reorder")
+                              COMPILE_FLAGS "-Wall")
 endif()
 
 set(iqtlabs_sources

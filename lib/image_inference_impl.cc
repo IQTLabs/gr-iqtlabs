@@ -246,14 +246,15 @@ image_inference_impl::image_inference_impl(
                 gr::io_signature::make(1 /* min inputs */, 1 /* max inputs */,
                                        vlen * sizeof(input_type)),
                 gr::io_signature::make(0, 0, 0)),
-      tag_(pmt::intern(tag)), x_(x), y_(y), vlen_(vlen), last_rx_freq_(0),
-      last_rx_time_(0), image_dir_(image_dir), convert_alpha_(convert_alpha),
-      norm_alpha_(norm_alpha), norm_beta_(norm_beta), norm_type_(norm_type),
-      colormap_(colormap), interpolation_(interpolation), flip_(flip),
-      min_peak_points_(min_peak_points), confidence_(confidence),
-      max_rows_(max_rows), rotate_secs_(rotate_secs), n_image_(n_image),
-      n_inference_(n_inference), samp_rate_(samp_rate), running_(true),
-      image_count_(0), inference_count_(0), last_image_start_item_(0) {
+      tag_(pmt::intern(tag)), image_dir_(image_dir), x_(x), y_(y),
+      norm_type_(norm_type), colormap_(colormap), interpolation_(interpolation),
+      flip_(flip), max_rows_(max_rows), vlen_(vlen), rotate_secs_(rotate_secs),
+      n_image_(n_image), n_inference_(n_inference), image_count_(0),
+      inference_count_(0), samp_rate_(samp_rate), last_image_start_item_(0),
+      convert_alpha_(convert_alpha), norm_alpha_(norm_alpha),
+      norm_beta_(norm_beta), min_peak_points_(min_peak_points),
+      confidence_(confidence), running_(true), last_rx_freq_(0),
+      last_rx_time_(0) {
   points_buffer_ = NULL;
   normalized_buffer_.reset(
       new cv::Mat(cv::Size(vlen_, 0), CV_32F, cv::Scalar::all(0)));
