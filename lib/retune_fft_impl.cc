@@ -477,10 +477,12 @@ void retune_fft_impl::process_buckets_(FREQ_T rx_freq, TIME_T rx_time) {
   write_step_fft_count_ = write_step_fft_;
 }
 
-void retune_fft_impl::process_tags_(const input_type *in, COUNT_T in_count,
-                                    COUNT_T in_first, COUNT_T &produced,
-                                    const input_type *fft_output) {
+COUNT_T retune_fft_impl::process_tags_(const input_type *in, COUNT_T in_count,
+                                       COUNT_T in_first,
+                                       const input_type *fft_output) {
   COUNT_T consumed = 0;
+  COUNT_T produced = 0;
+
   FIND_TAGS
 
   if (rx_freq_tags.empty()) {
@@ -506,6 +508,8 @@ void retune_fft_impl::process_tags_(const input_type *in, COUNT_T in_count,
       process_items_(in_count - consumed, in, fft_output, consumed, produced);
     }
   }
+
+  return produced;
 }
 
 int retune_fft_impl::general_work(int noutput_items,
@@ -517,8 +521,7 @@ int retune_fft_impl::general_work(int noutput_items,
   const input_type *in = static_cast<const input_type *>(input_items[0]);
   COUNT_T in_count = ninput_items[0];
   COUNT_T in_first = nitems_read(0);
-  COUNT_T produced = 0;
-  process_tags_(in, in_count, in_first, produced, fft_output);
+  COUNT_T produced = process_tags_(in, in_count, in_first, fft_output);
   consume_each(in_count);
   return produced;
 }

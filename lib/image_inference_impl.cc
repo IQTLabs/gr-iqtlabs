@@ -263,22 +263,10 @@ image_inference_impl::image_inference_impl(
       new cv::Mat(cv::Size(x_, y_), CV_8UC3, cv::Scalar::all(0)));
   // we will output our own metadata tags.
   set_tag_propagation_policy(TPP_DONT);
-  // TODO: IPv6 IP addresses
-  std::vector<std::string> model_server_parts_;
+  parse_models(model_server, model_names);
   std::vector<std::string> text_color_parts_;
-  boost::split(model_server_parts_, model_server, boost::is_any_of(":"),
-               boost::token_compress_on);
-  boost::split(model_names_, model_names, boost::is_any_of(","),
-               boost::token_compress_on);
   boost::split(text_color_parts_, text_color, boost::is_any_of(","),
                boost::token_compress_on);
-  if (model_server_parts_.size() == 2) {
-    host_ = model_server_parts_[0];
-    port_ = model_server_parts_[1];
-    if (model_names_.size() == 0) {
-      d_logger->error("missing model name(s)");
-    }
-  }
   text_color_ = cv::Scalar(255, 255, 255);
   if (text_color_parts_.size() == 3) {
     try {
@@ -549,7 +537,7 @@ void image_inference_impl::run_inference_() {
 
     nlohmann::json output_json;
 
-    if ((host_.size() && port_.size()) && (model_names_.size() > 0) &&
+    if (model_names_.size() > 0 &&
         (n_inference_ == 0 || ++inference_count_ % n_inference_ == 0)) {
       if (flip_ == -1 || flip_ == 0 || flip_ == 1) {
         cv::flip(*output_item.points_buffer, *output_item.points_buffer, flip_);
@@ -594,20 +582,9 @@ void image_inference_impl::run_inference_() {
   }
 }
 
-int image_inference_impl::general_work(int noutput_items,
-                                       gr_vector_int &ninput_items,
-                                       gr_vector_const_void_star &input_items,
-                                       gr_vector_void_star &output_items) {
-  const input_type *in = static_cast<const input_type *>(input_items[0]);
-  COUNT_T in_count = ninput_items[0];
-  COUNT_T in_first = nitems_read(0);
+void image_inference_impl::process_tags_(COUNT_T in_count, COUNT_T in_first,
+                                         const input_type *in) {
   COUNT_T consumed = 0;
-
-  while (!json_q_.empty()) {
-    std::string json;
-    json_q_.pop(json);
-    message_port_pub(INFERENCE_KEY, string_to_pmt(json));
-  }
 
   FIND_TAGS
 
@@ -629,7 +606,23 @@ int image_inference_impl::general_work(int noutput_items,
       process_items_(in_count - consumed, consumed, in);
     }
   }
+}
 
+int image_inference_impl::general_work(int noutput_items,
+                                       gr_vector_int &ninput_items,
+                                       gr_vector_const_void_star &input_items,
+                                       gr_vector_void_star &output_items) {
+  const input_type *in = static_cast<const input_type *>(input_items[0]);
+  COUNT_T in_count = ninput_items[0];
+  COUNT_T in_first = nitems_read(0);
+
+  while (!json_q_.empty()) {
+    std::string json;
+    json_q_.pop(json);
+    message_port_pub(INFERENCE_KEY, string_to_pmt(json));
+  }
+
+  process_tags_(in_count, in_first, in);
   consume_each(in_count);
   return 0;
 }

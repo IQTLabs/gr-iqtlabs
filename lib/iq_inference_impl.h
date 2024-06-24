@@ -243,8 +243,6 @@ private:
   COUNT_T sample_clock_;
   COUNT_T last_rx_freq_sample_clock_;
   double min_peak_points_;
-  std::string model_server_;
-  std::vector<std::string> model_names_;
   double confidence_;
   COUNT_T n_inference_;
   int samp_rate_;
@@ -257,7 +255,6 @@ private:
   TIME_T last_full_time_;
   TIME_T last_rx_time_;
   FREQ_T last_rx_freq_;
-  std::string host_, port_;
   boost::scoped_ptr<std::thread> inference_thread_;
   bool background_;
   COUNT_T predictions_;
@@ -265,6 +262,9 @@ private:
 
   void process_items_(COUNT_T power_in_count, COUNT_T &in_first,
                       const float *&power_in, COUNT_T &consumed);
+  void process_tags_(COUNT_T in_first, COUNT_T samples_in_first,
+                     COUNT_T in_count, const gr_complex *samples_in,
+                     const float *power_in);
   void delete_output_item_(output_item_type &output_item);
   void delete_inference_();
   void background_run_inference_();

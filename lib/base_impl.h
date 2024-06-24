@@ -257,6 +257,8 @@ typedef sigmf::SigMF<
 
 class base_impl {
 public:
+  std::string host_, port_;
+  std::vector<std::string> model_names_;
   std::string get_prefix_file_(const std::string &file,
                                const std::string &prefix);
   std::string get_dotfile_(const std::string &file);
@@ -274,6 +276,8 @@ public:
   pmt::pmt_t tune_rx_msg(COUNT_T tune_freq, bool tag_now);
   pmt::pmt_t string_to_pmt(const std::string &s);
   std::string pmt_to_string(const pmt::pmt_t &pmt);
+  void parse_models(const std::string &model_server,
+                    const std::string &model_names);
 };
 } /* namespace iqtlabs */
 } /* namespace gr */

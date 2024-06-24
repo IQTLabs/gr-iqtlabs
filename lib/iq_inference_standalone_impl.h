@@ -217,7 +217,6 @@ namespace iqtlabs {
 class iq_inference_standalone_impl : public iq_inference_standalone, base_impl {
 private:
   boost::scoped_ptr<torchserve_client> torchserve_client_;
-  std::vector<std::string> model_names_;
   COUNT_T vlen_;
 
 public:

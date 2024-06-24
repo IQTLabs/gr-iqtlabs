@@ -315,23 +315,10 @@ void retune_pre_fft_impl::process_items_(COUNT_T c, const block_type *&in,
   }
 }
 
-int retune_pre_fft_impl::general_work(int noutput_items,
-                                      gr_vector_int &ninput_items,
-                                      gr_vector_const_void_star &input_items,
-                                      gr_vector_void_star &output_items) {
-  COUNT_T in_count = ninput_items[0];
-  COUNT_T in_first = nitems_read(0);
-  COUNT_T in_nffts = in_count / nfft_;
-  COUNT_T in_batches = in_nffts / fft_batch_size_;
-  in_batches = std::min((int)in_batches, noutput_items);
-  if (!in_batches) {
-    return 0;
-  }
-  in_nffts = in_batches * fft_batch_size_;
-  in_count = in_nffts * nfft_;
-
-  const block_type *in = static_cast<const block_type *>(input_items[0]);
-  const block_type *out = static_cast<const block_type *>(output_items[0]);
+COUNT_T retune_pre_fft_impl::process_tags_(COUNT_T in_nffts, COUNT_T in_count,
+                                           COUNT_T in_first,
+                                           const block_type *in,
+                                           const block_type *out) {
   COUNT_T consumed = 0;
   COUNT_T produced = 0;
 
@@ -363,7 +350,26 @@ int retune_pre_fft_impl::general_work(int noutput_items,
       process_items_(in_nffts - consumed, in, out, consumed, produced);
     }
   }
+  return produced;
+}
 
+int retune_pre_fft_impl::general_work(int noutput_items,
+                                      gr_vector_int &ninput_items,
+                                      gr_vector_const_void_star &input_items,
+                                      gr_vector_void_star &output_items) {
+  const block_type *in = static_cast<const block_type *>(input_items[0]);
+  const block_type *out = static_cast<const block_type *>(output_items[0]);
+  COUNT_T in_count = ninput_items[0];
+  COUNT_T in_first = nitems_read(0);
+  COUNT_T in_nffts = in_count / nfft_;
+  COUNT_T in_batches = in_nffts / fft_batch_size_;
+  in_batches = std::min((int)in_batches, noutput_items);
+  if (!in_batches) {
+    return 0;
+  }
+  in_nffts = in_batches * fft_batch_size_;
+  in_count = in_nffts * nfft_;
+  COUNT_T produced = process_tags_(in_nffts, in_count, in_first, in, out);
   consume_each(in_count);
   return produced / fft_batch_size_;
 }

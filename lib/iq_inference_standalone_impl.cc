@@ -229,14 +229,8 @@ iq_inference_standalone_impl::iq_inference_standalone_impl(
                                             vlen * sizeof(gr_complex)),
                      gr::io_signature::make(0, 0, 0)),
       vlen_(vlen) {
-  std::vector<std::string> model_server_parts_;
-  boost::split(model_server_parts_, model_server, boost::is_any_of(":"),
-               boost::token_compress_on);
-  boost::split(model_names_, model_names, boost::is_any_of(","),
-               boost::token_compress_on);
-  std::string host = model_server_parts_[0];
-  std::string port = model_server_parts_[1];
-  torchserve_client_.reset(new torchserve_client(host, port));
+  parse_models(model_server, model_names);
+  torchserve_client_.reset(new torchserve_client(host_, port_));
   message_port_register_out(INFERENCE_KEY);
 }
 
