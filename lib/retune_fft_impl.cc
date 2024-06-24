@@ -268,11 +268,11 @@ retune_fft_impl::retune_fft_impl(
   message_port_register_out(TUNE_KEY);
   message_port_register_out(JSON_KEY);
   message_port_register_in(CMD_KEY);
-  #pragma GCC diagnostic push
-  #pragma GCC diagnostic ignored "-Wunused-parameter"
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunused-parameter"
   set_msg_handler(CMD_KEY,
                   [this](const pmt::pmt_t &msg) { next_retune_(host_now_()); });
-  #pragma GCC diagnostic pop
+#pragma GCC diagnostic pop
   set_tag_propagation_policy(TPP_DONT);
   reset_items_();
   // If the pre-FFT block is handling tuning, then it will have already sent
