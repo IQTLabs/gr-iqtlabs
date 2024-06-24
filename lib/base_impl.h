@@ -250,7 +250,7 @@ typedef sigmf::SigMF<
   std::vector<tag_t> all_tags, rx_freq_tags;                                   \
   std::vector<TIME_T> rx_times;                                                \
   get_tags_in_window(all_tags, 0, 0, in_count);                                \
-  get_tags(tag_, all_tags, rx_freq_tags, rx_times, in_count);
+  get_tags(tag_, all_tags, rx_freq_tags, rx_times);
 
 // A driver block might give us float style (e.g. 2.5e9) or unsigned lon.
 #define GET_FREQ(tag) (FREQ_T) pmt::to_double(tag.value)
@@ -271,8 +271,8 @@ public:
                               const std::string &datatype, double sample_rate,
                               double gain);
   void get_tags(const pmt::pmt_t want_tag, const std::vector<tag_t> &all_tags,
-                std::vector<tag_t> &rx_freq_tags, std::vector<TIME_T> &rx_times,
-                COUNT_T in_count);
+                std::vector<tag_t> &rx_freq_tags,
+                std::vector<TIME_T> &rx_times);
   pmt::pmt_t tune_rx_msg(COUNT_T tune_freq, bool tag_now);
   pmt::pmt_t string_to_pmt(const std::string &s);
   std::string pmt_to_string(const pmt::pmt_t &pmt);

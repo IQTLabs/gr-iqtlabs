@@ -234,7 +234,7 @@ private:
                        std::stringstream &ss);
   void reopen_(TIME_T host_now, FREQ_T rx_freq);
   void process_buckets_(FREQ_T rx_freq, TIME_T rx_time);
-  void write_buckets_(TIME_T host_now, FREQ_T rx_freq);
+  void write_buckets_(TIME_T host_now);
   COUNT_T process_tags_(const input_type *in, COUNT_T in_count,
                         COUNT_T in_first, const input_type *fft_output);
   void write_(const char *data, COUNT_T len);

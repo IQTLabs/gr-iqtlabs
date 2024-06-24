@@ -217,11 +217,11 @@ vkfft_short::sptr vkfft_short::make(COUNT_T fft_batch_size, COUNT_T nfft,
 
 vkfft_short_impl::vkfft_short_impl(COUNT_T fft_batch_size, COUNT_T nfft,
                                    bool shift)
-    : fft_batch_size_(fft_batch_size), nfft_(nfft),
-      gr::sync_block(
+    : gr::sync_block(
           "vkfft_short",
           gr::io_signature::make(1, 1, sizeof(std::int16_t) * nfft * 2),
-          gr::io_signature::make(1, 1, sizeof(gr_complex) * nfft)) {
+          gr::io_signature::make(1, 1, sizeof(gr_complex) * nfft)),
+      nfft_(nfft), fft_batch_size_(fft_batch_size) {
   init_converter_();
   input_buffer_.reset(new gr_complex[nfft * fft_batch_size]);
   init_vkfft(fft_batch_size, nfft, sizeof(gr_complex), shift);
@@ -242,15 +242,14 @@ vkfft_short_impl::~vkfft_short_impl() { free_vkfft(); }
 int vkfft_short_impl::work(int noutput_items,
                            gr_vector_const_void_star &input_items,
                            gr_vector_void_star &output_items) {
-  const std::int16_t *const in =
-      reinterpret_cast<const std::int16_t *const>(input_items[0]);
-  gr_complex *const out = reinterpret_cast<gr_complex *const>(output_items[0]);
+  const std::int16_t *in = static_cast<const std::int16_t *>(input_items[0]);
+  gr_complex *out = static_cast<gr_complex *>(output_items[0]);
   auto *buffer = input_buffer_.get();
   COUNT_T in_buffer_index = 0;
   COUNT_T out_buffer_index = 0;
   COUNT_T vlen = fft_batch_size_ * nfft_;
 
-  for (int i = 0; i < noutput_items / fft_batch_size_;
+  for (COUNT_T i = 0; i < noutput_items / fft_batch_size_;
        ++i, in_buffer_index += vlen * 2, out_buffer_index += vlen) {
     _converter->conv(&in[in_buffer_index], &buffer[0], vlen);
     vkfft_offload((char *)&buffer[0], (char *)&out[out_buffer_index]);

@@ -255,7 +255,6 @@ int vector_to_json_impl<T>::general_work(int noutput_items,
     return leftover;
   }
 
-  auto out = static_cast<u_char *>(output_items[0]);
   const T *in = static_cast<const T *>(input_items[0]);
   COUNT_T in_count = ninput_items[0];
   COUNT_T in_first = this->nitems_read(0);

@@ -287,7 +287,7 @@ sigmf_record_t base_impl::create_sigmf(const std::string &source_file,
 void base_impl::get_tags(const pmt::pmt_t want_tag,
                          const std::vector<tag_t> &all_tags,
                          std::vector<tag_t> &rx_freq_tags,
-                         std::vector<TIME_T> &rx_times, COUNT_T in_count) {
+                         std::vector<TIME_T> &rx_times) {
   for (COUNT_T t = 0; t < all_tags.size(); ++t) {
     const auto &tag = all_tags[t];
     if (tag.key == want_tag) {
