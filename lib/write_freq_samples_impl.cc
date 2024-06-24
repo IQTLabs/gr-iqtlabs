@@ -404,7 +404,8 @@ void write_freq_samples_impl::write_samples_(COUNT_T c, const char *&in,
   }
 }
 
-void write_freq_samples_impl::process_tags_(COUNT_T in_count, COUNT_T in_first, const char* in) {
+void write_freq_samples_impl::process_tags_(COUNT_T in_count, COUNT_T in_first,
+                                            const char *in) {
   COUNT_T consumed = 0;
 
   FIND_TAGS
