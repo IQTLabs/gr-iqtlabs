@@ -242,26 +242,14 @@ private:
   void process_tags_(COUNT_T in_count, COUNT_T in_first, const char *in);
 
   pmt::pmt_t tag_;
-  COUNT_T itemsize_;
-  COUNT_T vlen_;
-  std::string sdir_;
-  std::string prefix_;
-  std::string datatype_;
-  COUNT_T write_step_samples_;
-  COUNT_T skip_tune_step_samples_;
-  COUNT_T samp_rate_;
-  COUNT_T sample_clock_;
-  COUNT_T open_sample_clock_;
+  COUNT_T itemsize_, vlen_, write_step_samples_, skip_tune_step_samples_,
+      samp_rate_, sample_clock_, open_sample_clock_, rotate_secs_,
+      write_step_samples_count_, skip_tune_step_samples_count_;
+  std::string sdir_, prefix_, datatype_;
   double gain_;
-  bool sigmf_;
-  bool zstd_;
-  bool rotate_;
-
-  COUNT_T write_step_samples_count_;
-  COUNT_T skip_tune_step_samples_count_;
+  bool sigmf_, zstd_, rotate_;
   FREQ_T last_rx_freq_;
   TIME_T last_rx_time_;
-  COUNT_T rotate_secs_;
   TIME_T open_time_;
 
   std::queue<inference_item_type> inference_q_;

@@ -237,33 +237,16 @@ public:
   void next_retune_(TIME_T host_now);
   std::string describe_ranges_();
   TIME_T apply_rx_time_slew_(TIME_T rx_time);
-  COUNT_T samp_rate_;
-  COUNT_T tune_jitter_hz_;
-  COUNT_T freq_start_;
-  COUNT_T freq_end_;
-  COUNT_T tune_step_hz_;
-  COUNT_T tune_step_fft_;
-  COUNT_T skip_tune_step_fft_;
-  bool tag_now_;
-  bool low_power_hold_down_;
-  bool slew_rx_time_;
+  COUNT_T samp_rate_, tune_jitter_hz_, freq_start_, freq_end_, tune_step_hz_,
+      tune_step_fft_, skip_tune_step_fft_, skip_fft_count_, tuning_range_,
+      last_tuning_range_, tuning_range_step_, fft_count_, pending_retune_,
+      total_tune_count_, slew_samples_;
+  bool tag_now_, low_power_hold_down_, slew_rx_time_, stare_mode_,
+      in_hold_down_, reset_tags_;
+  FREQ_T tune_freq_, last_rx_freq_;
+  TIME_T last_rx_time_, last_sweep_start_;
 
-  COUNT_T skip_fft_count_;
-  FREQ_T tune_freq_;
-  FREQ_T last_rx_freq_;
-  TIME_T last_rx_time_;
-  TIME_T last_sweep_start_;
-  COUNT_T tuning_range_;
-  COUNT_T last_tuning_range_;
-  COUNT_T tuning_range_step_;
-  COUNT_T fft_count_;
-  COUNT_T pending_retune_;
-  COUNT_T total_tune_count_;
-  COUNT_T slew_samples_;
   std::vector<tuning_range_t> tuning_ranges_;
-  bool stare_mode_;
-  bool in_hold_down_;
-  bool reset_tags_;
   std::mt19937 rand_gen_;
   std::uniform_int_distribution<int> rand_dist_;
 };

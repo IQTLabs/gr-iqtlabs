@@ -242,28 +242,16 @@ private:
   void close_();
 
   pmt::pmt_t tag_;
-  COUNT_T nfft_;
-  COUNT_T peak_fft_range_;
-  COUNT_T write_step_fft_;
-  COUNT_T rotate_secs_;
-  double bucket_range_;
-  std::string sdir_;
-  std::string description_;
+  COUNT_T nfft_, peak_fft_range_, write_step_fft_, rotate_secs_, sample_count_,
+      write_step_fft_count_, bucket_offset_;
+  std::string sdir_, description_, file_;
   bool pre_fft_;
+  double bucket_range_;
+  float fft_min_, fft_max_;
 
-  float fft_min_;
-  float fft_max_;
-
-  COUNT_T sample_count_;
-  COUNT_T write_step_fft_count_;
-  COUNT_T bucket_offset_;
-
-  boost::scoped_array<float> sample_;
-  boost::scoped_array<float> mean_;
-  boost::scoped_array<float> peak_;
+  boost::scoped_array<float> sample_, mean_, peak_;
   boost::scoped_ptr<uint16_t> in_max_pos_;
   boost::scoped_ptr<boost::iostreams::filtering_ostream> outbuf_p;
-  std::string file_;
 
 public:
   retune_fft_impl(const std::string &tag, COUNT_T nfft, COUNT_T samp_rate,

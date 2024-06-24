@@ -237,24 +237,23 @@ typedef struct output_item {
 
 class image_inference_impl : public image_inference, base_impl {
 private:
-  int x_, y_, vlen_, norm_type_, colormap_, interpolation_, flip_, max_rows_,
-      rotate_secs_, n_image_, n_inference_, image_count_, inference_count_,
-      samp_rate_;
+  pmt::pmt_t tag_;
+  std::string image_dir_;
+  int x_, y_, norm_type_, colormap_, interpolation_, flip_, max_rows_;
+  COUNT_T vlen_, rotate_secs_, n_image_, n_inference_, image_count_,
+      inference_count_, samp_rate_, last_image_start_item_;
+  double convert_alpha_, norm_alpha_, norm_beta_, min_peak_points_, confidence_;
+  bool running_;
   FREQ_T last_rx_freq_;
-  COUNT_T last_image_start_item_;
-  double convert_alpha_, norm_alpha_, norm_beta_, last_rx_time_,
-      min_peak_points_, confidence_;
+  TIME_T last_rx_time_;
+  cv::Mat *points_buffer_;
+  cv::Scalar text_color_;
+  boost::scoped_ptr<std::thread> inference_thread_;
+  boost::scoped_ptr<torchserve_client> torchserve_client_;
   boost::lockfree::spsc_queue<output_item_type> inference_q_{MAX_INFERENCE};
   boost::lockfree::spsc_queue<std::string> json_q_{MAX_INFERENCE};
   boost::scoped_ptr<cv::Mat> cmapped_buffer_, resized_buffer_,
       normalized_buffer_;
-  cv::Mat *points_buffer_;
-  std::string image_dir_;
-  pmt::pmt_t tag_;
-  bool running_;
-  boost::scoped_ptr<std::thread> inference_thread_;
-  cv::Scalar text_color_;
-  boost::scoped_ptr<torchserve_client> torchserve_client_;
 
   void process_items_(COUNT_T c, COUNT_T &consumed, const input_type *&in);
   void create_image_(bool discard);

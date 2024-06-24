@@ -218,12 +218,12 @@ retuner_impl::retuner_impl(COUNT_T samp_rate, COUNT_T tune_jitter_hz,
     : samp_rate_(samp_rate), tune_jitter_hz_(tune_jitter_hz),
       freq_start_(freq_start), freq_end_(freq_end), tune_step_hz_(tune_step_hz),
       tune_step_fft_(tune_step_fft), skip_tune_step_fft_(skip_tune_step_fft),
-      tag_now_(tag_now), slew_rx_time_(slew_rx_time),
-      low_power_hold_down_(low_power_hold_down), tuning_range_(0),
-      last_tuning_range_(0), tuning_range_step_(0), last_rx_freq_(0),
-      last_rx_time_(0), last_sweep_start_(0), fft_count_(0), pending_retune_(0),
-      total_tune_count_(0), tune_freq_(0), skip_fft_count_(skip_tune_step_fft),
-      in_hold_down_(false), reset_tags_(false), slew_samples_(0) {
+      skip_fft_count_(skip_tune_step_fft), tuning_range_(0),
+      last_tuning_range_(0), tuning_range_step_(0), fft_count_(0),
+      pending_retune_(0), total_tune_count_(0), slew_samples_(0),
+      tag_now_(tag_now), low_power_hold_down_(low_power_hold_down),
+      slew_rx_time_(slew_rx_time), in_hold_down_(false), reset_tags_(false),
+      tune_freq_(0), last_rx_freq_(0), last_rx_time_(0), last_sweep_start_(0) {
   std::random_device rand_dev;
   // cppcheck-suppress useInitializationList
   rand_gen_ = std::mt19937(rand_dev());

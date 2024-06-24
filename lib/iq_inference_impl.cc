@@ -237,14 +237,13 @@ iq_inference_impl::iq_inference_impl(
                                      (int)(vlen * sizeof(float))}),
                 gr::io_signature::make(0, 0, 0)),
       tag_(pmt::intern(tag)), vlen_(vlen), n_vlen_(n_vlen),
-      sample_buffer_(sample_buffer), min_peak_points_(min_peak_points),
-      confidence_(confidence), n_inference_(n_inference), samp_rate_(samp_rate),
+      batch_(vlen_ * n_vlen_), sample_buffer_(sample_buffer), sample_clock_(0),
+      last_rx_freq_sample_clock_(0), n_inference_(n_inference),
+      inference_count_(n_inference), samples_since_tag_(0), predictions_(0),
+      batch_inference_(batch), samp_rate_(samp_rate), last_full_time_(0),
+      min_peak_points_(min_peak_points), confidence_(confidence),
       power_inference_(power_inference), background_(background),
-      inference_count_(n_inference), batch_inference_(batch), running_(true),
-      last_rx_freq_(0), last_rx_time_(0), samples_since_tag_(0),
-      sample_clock_(0), last_full_time_(0), predictions_(0),
-      last_rx_freq_sample_clock_(0) {
-  batch_ = vlen_ * n_vlen_;
+      running_(true), last_rx_time_(0), last_rx_freq_(0) {
   samples_lookback_.reset(new gr_complex[batch_ * sample_buffer]);
   unsigned int alignment = volk_get_alignment();
   samples_total_.reset((float *)volk_malloc(sizeof(float), alignment));
@@ -368,8 +367,7 @@ void iq_inference_impl::run_inference_() {
   }
 }
 
-void iq_inference_impl::process_items_(COUNT_T power_in_count,
-                                       COUNT_T &in_first,
+void iq_inference_impl::process_items_(COUNT_T power_in_count, COUNT_T in_first,
                                        const float *&power_in,
                                        COUNT_T &consumed) {
   for (COUNT_T i = 0; i < power_in_count; i += n_vlen_, consumed += n_vlen_,
