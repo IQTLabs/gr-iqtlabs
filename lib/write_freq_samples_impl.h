@@ -239,6 +239,7 @@ private:
   void close_();
   void write_samples_(COUNT_T c, const char *&in, COUNT_T &consumed);
   void recv_inference_(const pmt::pmt_t msg);
+  void process_tags_(COUNT_T in_count, COUNT_T in_first, const char* in);
 
   pmt::pmt_t tag_;
   COUNT_T itemsize_;

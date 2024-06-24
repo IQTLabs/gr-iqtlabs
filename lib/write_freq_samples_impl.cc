@@ -404,12 +404,7 @@ void write_freq_samples_impl::write_samples_(COUNT_T c, const char *&in,
   }
 }
 
-int write_freq_samples_impl::general_work(
-    int noutput_items, gr_vector_int &ninput_items,
-    gr_vector_const_void_star &input_items, gr_vector_void_star &output_items) {
-  auto in = static_cast<const char *>(input_items[0]);
-  const COUNT_T in_count = ninput_items[0];
-  COUNT_T in_first = nitems_read(0);
+void write_freq_samples_impl::process_tags_(COUNT_T in_count, COUNT_T in_first, const char* in) {
   COUNT_T consumed = 0;
 
   FIND_TAGS
@@ -438,7 +433,15 @@ int write_freq_samples_impl::general_work(
       write_samples_(in_count - consumed, in, consumed);
     }
   }
+}
 
+int write_freq_samples_impl::general_work(
+    int noutput_items, gr_vector_int &ninput_items,
+    gr_vector_const_void_star &input_items, gr_vector_void_star &output_items) {
+  const char *in = static_cast<const char *>(input_items[0]);
+  COUNT_T in_count = ninput_items[0];
+  COUNT_T in_first = nitems_read(0);
+  process_tags_(in_count, in_first, in);
   consume_each(in_count);
   return 0;
 }
