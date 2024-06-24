@@ -235,22 +235,29 @@ typedef sigmf::SigMF<
                        pmt::from_double((double)rx_freq), _id);                \
   }
 
-#define PROCESS_TAGS(X)                                                        \
+#define FIND_TAGS                                                              \
+  std::vector<tag_t> all_tags, rx_freq_tags;                                   \
+  std::vector<TIME_T> rx_times;                                                \
+  get_tags_in_window(all_tags, 0, 0, in_count);                                \
+  get_tags(tag_, all_tags, rx_freq_tags, rx_times);
+
+#define PROCESS_TAGS(X, ...)                                                   \
+  FIND_TAGS                                                                    \
+  COUNT_T consumed = 0;                                                        \
   for (COUNT_T t = 0; t < rx_freq_tags.size(); ++t) {                          \
     const auto &tag = rx_freq_tags[t];                                         \
     auto rel = tag.offset - in_first;                                          \
     const TIME_T rx_time = rx_times[t];                                        \
     const FREQ_T rx_freq = GET_FREQ(tag);                                      \
     d_logger->debug("new rx_freq tag: {}", rx_freq);                           \
+    process_items_(rel, consumed, __VA_ARGS__);                                \
     {X} last_rx_freq_ = rx_freq;                                               \
     last_rx_time_ = rx_time;                                                   \
+    in_first += rel;                                                           \
+  }                                                                            \
+  if (consumed < in_count) {                                                   \
+    process_items_(in_count - consumed, consumed, __VA_ARGS__);                \
   }
-
-#define FIND_TAGS                                                              \
-  std::vector<tag_t> all_tags, rx_freq_tags;                                   \
-  std::vector<TIME_T> rx_times;                                                \
-  get_tags_in_window(all_tags, 0, 0, in_count);                                \
-  get_tags(tag_, all_tags, rx_freq_tags, rx_times);
 
 // A driver block might give us float style (e.g. 2.5e9) or unsigned lon.
 #define GET_FREQ(tag) (FREQ_T) pmt::to_double(tag.value)

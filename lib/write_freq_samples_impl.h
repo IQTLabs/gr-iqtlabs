@@ -237,7 +237,7 @@ private:
   void write_(const char *data, COUNT_T len);
   void open_(COUNT_T zlevel);
   void close_();
-  void write_samples_(COUNT_T c, const char *&in, COUNT_T &consumed);
+  void process_items_(COUNT_T c, COUNT_T &consumed, const char *&in);
   void recv_inference_(const pmt::pmt_t msg);
   void process_tags_(COUNT_T in_count, COUNT_T in_first, const char *in);
 

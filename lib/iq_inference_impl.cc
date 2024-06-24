@@ -367,9 +367,9 @@ void iq_inference_impl::run_inference_() {
   }
 }
 
-void iq_inference_impl::process_items_(COUNT_T power_in_count, COUNT_T in_first,
-                                       const float *&power_in,
-                                       COUNT_T &consumed) {
+void iq_inference_impl::process_items_(COUNT_T power_in_count,
+                                       COUNT_T &consumed, COUNT_T in_first,
+                                       const float *&power_in) {
   for (COUNT_T i = 0; i < power_in_count; i += n_vlen_, consumed += n_vlen_,
                power_in += batch_, samples_since_tag_ += batch_,
                sample_clock_ += batch_) {
@@ -436,36 +436,23 @@ void iq_inference_impl::process_tags_(COUNT_T in_first,
                                       COUNT_T in_count,
                                       const gr_complex *samples_in,
                                       const float *power_in) {
-  COUNT_T consumed = 0;
-
   for (COUNT_T i = 0; i < in_count; i += n_vlen_, samples_in += batch_) {
     COUNT_T j = (samples_in_first + i) % sample_buffer_;
     memcpy((void *)&samples_lookback_[j * batch_], samples_in,
            sizeof(gr_complex) * batch_);
   }
 
-  FIND_TAGS
-
-  if (rx_freq_tags.empty()) {
-    process_items_(in_count, in_first, power_in, consumed);
-  } else {
-    PROCESS_TAGS({
-      // TODO: in theory we might have a vector with more than one frequency's
-      // samples, as the SDR probably isn't vector aligned. In practice this
-      // should not happen in the most common Ettus low power workaround state,
-      // because tags are delayed until after re-tuning has been verified.
-      if (rel > 0) {
-        process_items_(rel, in_first, power_in, consumed);
-        in_first += rel;
-      }
-
-      last_rx_freq_sample_clock_ = sample_clock_;
-      samples_since_tag_ = 0;
-    })
-    if (consumed < in_count) {
-      process_items_(in_count - consumed, in_first, power_in, consumed);
-    }
-  }
+  PROCESS_TAGS(
+      {
+        // TODO: in theory we might have a vector with more than one frequency's
+        // samples, as the SDR probably isn't vector aligned. In practice this
+        // should not happen in the most common Ettus low power workaround
+        // state, because tags are delayed until after re-tuning has been
+        // verified.
+        last_rx_freq_sample_clock_ = sample_clock_;
+        samples_since_tag_ = 0;
+      },
+      in_first, power_in)
 }
 
 #pragma GCC diagnostic push
