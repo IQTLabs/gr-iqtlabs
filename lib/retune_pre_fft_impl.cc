@@ -260,12 +260,13 @@ bool retune_pre_fft_impl::all_zeros_(const block_type *&in) {
   return *total_ == 0;
 }
 
-void retune_pre_fft_impl::process_items_(COUNT_T c, const block_type *&in,
+void retune_pre_fft_impl::process_items_(COUNT_T c, COUNT_T &consumed,
+                                         const block_type *&in,
                                          const block_type *&out,
-                                         COUNT_T &consumed, COUNT_T &produced) {
+                                         COUNT_T &produced) {
+  c /= nfft_;
   if (reset_tags_) {
-    for (COUNT_T i = 0; i < c; ++i, in += nfft_) {
-      ++consumed;
+    for (COUNT_T i = 0; i < c; ++i, in += nfft_, consumed += nfft_) {
       if (skip_fft_count_) {
         --skip_fft_count_;
         slew_samples_ += nfft_;
@@ -298,8 +299,7 @@ void retune_pre_fft_impl::process_items_(COUNT_T c, const block_type *&in,
       }
     }
   } else {
-    for (COUNT_T i = 0; i < c; ++i, in += nfft_) {
-      ++consumed;
+    for (COUNT_T i = 0; i < c; ++i, in += nfft_, consumed += nfft_) {
       if (skip_fft_count_) {
         --skip_fft_count_;
         slew_samples_ += nfft_;
@@ -315,41 +315,24 @@ void retune_pre_fft_impl::process_items_(COUNT_T c, const block_type *&in,
   }
 }
 
-COUNT_T retune_pre_fft_impl::process_tags_(COUNT_T in_nffts, COUNT_T in_count,
-                                           COUNT_T in_first,
+COUNT_T retune_pre_fft_impl::process_tags_(COUNT_T in_count, COUNT_T in_first,
                                            const block_type *in,
                                            const block_type *out) {
-  COUNT_T consumed = 0;
   COUNT_T produced = 0;
-
-  FIND_TAGS
-
-  if (rx_freq_tags.empty()) {
-    process_items_(in_nffts, in, out, consumed, produced);
-  } else {
-    // TODO: deprecate fft_batch_size, gr-wavelearner could use set_multiple
-    // abstraction like VkFFT
-    PROCESS_TAGS({
-      in_first += rel;
-      rel /= nfft_;
-
-      if (rel > 0) {
-        process_items_(rel, in, out, consumed, produced);
-      }
-
-      if (!reset_tags_) {
-        add_output_tags_(rx_time, rx_freq, produced);
-      }
-      if (pending_retune_) {
-        --pending_retune_;
-        fft_count_ = 0;
-        skip_fft_count_ = skip_tune_step_fft_;
-      }
-    })
-    if (consumed < in_nffts) {
-      process_items_(in_nffts - consumed, in, out, consumed, produced);
-    }
-  }
+  // TODO: deprecate fft_batch_size, gr-wavelearner could use set_multiple
+  // abstraction like VkFFT
+  PROCESS_TAGS(
+      {
+        if (!reset_tags_) {
+          add_output_tags_(rx_time, rx_freq, produced);
+        }
+        if (pending_retune_) {
+          --pending_retune_;
+          fft_count_ = 0;
+          skip_fft_count_ = skip_tune_step_fft_;
+        }
+      },
+      in, out, produced)
   return produced;
 }
 
@@ -369,7 +352,7 @@ int retune_pre_fft_impl::general_work(int noutput_items,
   }
   in_nffts = in_batches * fft_batch_size_;
   in_count = in_nffts * nfft_;
-  COUNT_T produced = process_tags_(in_nffts, in_count, in_first, in, out);
+  COUNT_T produced = process_tags_(in_count, in_first, in, out);
   consume_each(in_count);
   return produced / fft_batch_size_;
 }

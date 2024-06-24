@@ -248,8 +248,8 @@ private:
   boost::lockfree::spsc_queue<std::string> json_q_{MAX_INFERENCE};
   boost::scoped_ptr<std::thread> inference_thread_;
 
-  void process_items_(COUNT_T power_in_count, COUNT_T in_first,
-                      const float *&power_in, COUNT_T &consumed);
+  void process_items_(COUNT_T power_in_count, COUNT_T &consumed,
+                      COUNT_T in_first, const float *&power_in);
   void process_tags_(COUNT_T in_first, COUNT_T samples_in_first,
                      COUNT_T in_count, const gr_complex *samples_in,
                      const float *power_in);

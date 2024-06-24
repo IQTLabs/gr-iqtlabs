@@ -226,9 +226,8 @@ private:
   void reset_items_();
   void calc_peaks_();
   void add_output_tags_(TIME_T rx_time, FREQ_T rx_freq, COUNT_T produced);
-  void process_items_(COUNT_T c, const input_type *&in,
-                      const input_type *&fft_output, COUNT_T &consumed,
-                      COUNT_T &produced);
+  void process_items_(COUNT_T c, COUNT_T &consumed, const input_type *&in,
+                      const input_type *&fft_output, COUNT_T &produced);
   void output_buckets_(const std::string &name,
                        const std::list<std::pair<double, double>> &buckets,
                        std::stringstream &ss);

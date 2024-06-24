@@ -387,8 +387,8 @@ void write_freq_samples_impl::close_() {
   }
 }
 
-void write_freq_samples_impl::write_samples_(COUNT_T c, const char *&in,
-                                             COUNT_T &consumed) {
+void write_freq_samples_impl::process_items_(COUNT_T c, COUNT_T &consumed,
+                                             const char *&in) {
   for (COUNT_T i = 0; i < c;
        ++i, in += itemsize_ * vlen_, ++consumed, sample_clock_ += vlen_) {
     if (skip_tune_step_samples_count_) {
@@ -406,34 +406,19 @@ void write_freq_samples_impl::write_samples_(COUNT_T c, const char *&in,
 
 void write_freq_samples_impl::process_tags_(COUNT_T in_count, COUNT_T in_first,
                                             const char *in) {
-  COUNT_T consumed = 0;
-
-  FIND_TAGS
-
-  if (all_tags.empty()) {
-    write_samples_(in_count, in, consumed);
-  } else {
-    PROCESS_TAGS({
-      in_first += rel;
-
-      if (rel > 0) {
-        write_samples_(rel, in, consumed);
-      }
-
-      if (rotate_) {
-        open_(1);
-      }
-      if (sigmf_) {
-        capture_item_type capture_item;
-        capture_item.rx_freq = rx_freq;
-        capture_item.sample_clock = sample_clock_;
-        capture_q_.push(capture_item);
-      }
-    })
-    if (consumed < in_count) {
-      write_samples_(in_count - consumed, in, consumed);
-    }
-  }
+  PROCESS_TAGS(
+      {
+        if (rotate_) {
+          open_(1);
+        }
+        if (sigmf_) {
+          capture_item_type capture_item;
+          capture_item.rx_freq = rx_freq;
+          capture_item.sample_clock = sample_clock_;
+          capture_q_.push(capture_item);
+        }
+      },
+      in)
 }
 
 #pragma GCC diagnostic push

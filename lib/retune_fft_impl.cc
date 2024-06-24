@@ -357,9 +357,10 @@ void retune_fft_impl::add_output_tags_(TIME_T rx_time, FREQ_T rx_freq,
   OUTPUT_TAGS(apply_rx_time_slew_(rx_time), rx_freq, 0, rel);
 }
 
-void retune_fft_impl::process_items_(COUNT_T c, const input_type *&in,
+void retune_fft_impl::process_items_(COUNT_T c, COUNT_T &consumed,
+                                     const input_type *&in,
                                      const input_type *&fft_output,
-                                     COUNT_T &consumed, COUNT_T &produced) {
+                                     COUNT_T &produced) {
   for (COUNT_T i = 0; i < c; ++i, in += nfft_) {
     ++consumed;
     if (skip_fft_count_) {
@@ -483,34 +484,19 @@ void retune_fft_impl::process_buckets_(FREQ_T rx_freq, TIME_T rx_time) {
 COUNT_T retune_fft_impl::process_tags_(const input_type *in, COUNT_T in_count,
                                        COUNT_T in_first,
                                        const input_type *fft_output) {
-  COUNT_T consumed = 0;
   COUNT_T produced = 0;
+  PROCESS_TAGS(
+      {
+        if (!reset_tags_) {
+          add_output_tags_(rx_time, rx_freq, produced);
+        }
 
-  FIND_TAGS
-
-  if (rx_freq_tags.empty()) {
-    process_items_(in_count, in, fft_output, consumed, produced);
-  } else {
-    PROCESS_TAGS({
-      in_first += rel;
-
-      if (rel > 0) {
-        process_items_(rel, in, fft_output, consumed, produced);
-      }
-
-      if (!reset_tags_) {
-        add_output_tags_(rx_time, rx_freq, produced);
-      }
-
-      if (pending_retune_) {
-        --pending_retune_;
-      }
-      process_buckets_(rx_freq, rx_time);
-    })
-    if (consumed < in_count) {
-      process_items_(in_count - consumed, in, fft_output, consumed, produced);
-    }
-  }
+        if (pending_retune_) {
+          --pending_retune_;
+        }
+        process_buckets_(rx_freq, rx_time);
+      },
+      in, fft_output, produced)
 
   return produced;
 }

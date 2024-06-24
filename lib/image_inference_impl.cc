@@ -585,28 +585,13 @@ void image_inference_impl::run_inference_() {
 
 void image_inference_impl::process_tags_(COUNT_T in_count, COUNT_T in_first,
                                          const input_type *in) {
-  COUNT_T consumed = 0;
-
-  FIND_TAGS
-
-  if (rx_freq_tags.empty()) {
-    process_items_(in_count, consumed, in);
-  } else {
-    PROCESS_TAGS({
-      in_first += rel;
-
-      if (rel > 0) {
-        process_items_(rel, consumed, in);
-      }
-
-      if (rx_freq != last_rx_freq_) {
-        create_image_(true);
-      }
-    })
-    if (consumed < in_count) {
-      process_items_(in_count - consumed, consumed, in);
-    }
-  }
+  PROCESS_TAGS(
+      {
+        if (rx_freq != last_rx_freq_) {
+          create_image_(true);
+        }
+      },
+      in)
 }
 
 #pragma GCC diagnostic push
