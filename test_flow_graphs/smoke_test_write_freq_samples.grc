@@ -82,6 +82,7 @@ blocks:
     sigmf: '1'
     zstd: '1'
     rotate: '1'
+    description: '""'
   states:
     bus_sink: false
     bus_source: false

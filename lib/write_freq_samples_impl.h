@@ -245,7 +245,7 @@ private:
   COUNT_T itemsize_, vlen_, write_step_samples_, skip_tune_step_samples_,
       samp_rate_, sample_clock_, open_sample_clock_, rotate_secs_,
       write_step_samples_count_, skip_tune_step_samples_count_;
-  std::string sdir_, prefix_, datatype_;
+  std::string sdir_, prefix_, datatype_, description_;
   double gain_;
   bool sigmf_, zstd_, rotate_;
   FREQ_T last_rx_freq_;
@@ -265,7 +265,8 @@ public:
                           COUNT_T write_step_samples,
                           COUNT_T skip_tune_step_samples, COUNT_T samp_rate,
                           COUNT_T rotate_secs, double gain, bool sigmf,
-                          bool zstd, bool rotate);
+                          bool zstd, bool rotate,
+                          const std::string &description);
   ~write_freq_samples_impl();
   int general_work(int noutput_items, gr_vector_int &ninput_items,
                    gr_vector_const_void_star &input_items,

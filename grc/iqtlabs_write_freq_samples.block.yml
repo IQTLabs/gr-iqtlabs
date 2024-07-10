@@ -24,6 +24,7 @@ documentation: |-
     sigmf: if True, write a sigmf file.
     zstd: if True, use zstd comporession.
     rotate: If True, rotate file on tag.
+    description: If set, what text description to include in sigmf file.
 
 templates:
   imports: from gnuradio import iqtlabs
@@ -31,7 +32,7 @@ templates:
     iqtlabs.write_freq_samples(${tag}, ${type.size},
     "${type.datatype}", ${vlen}, ${sdir}, ${prefix}, ${write_step_samples},
     ${skip_tune_step_samples}, ${samp_rate}, ${rotate_secs}, ${gain},
-    ${sigmf}, ${zstd}, ${rotate})
+    ${sigmf}, ${zstd}, ${rotate}, ${description})
 
 cpp_templates:
   includes: ['#include <gnuradio/iqtlabs/write_freq_samples.h>']
@@ -40,7 +41,7 @@ cpp_templates:
     this->${id} = gr::iqtlabs::write_freq_samples::make(${tag}, ${type.size},
     "${type.datatype}", ${vlen}, ${sdir}, ${prefix}, ${write_step_samples},
     ${skip_tune_step_samples}, ${samp_rate}, ${rotate_secs}, ${gain},
-    ${sigmf}, ${zstd}, ${rotate});
+    ${sigmf}, ${zstd}, ${rotate}, ${description});
   link: ['libgnuradio-iqtlabs.so']
 
 parameters:
@@ -78,6 +79,8 @@ parameters:
     dtype: bool
   - id: rotate
     dtype: bool
+  - id: description
+    dtype: string
 
 inputs:
   - label: input
