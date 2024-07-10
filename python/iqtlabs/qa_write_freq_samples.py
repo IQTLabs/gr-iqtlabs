@@ -264,6 +264,7 @@ class qa_write_freq_samples(gr_unittest.TestCase):
             sigmf=True,
             zstd=True,
             rotate=rotate,
+            description="a description",
         )
         blocks_throttle_0 = blocks.throttle(gr.sizeof_gr_complex, samp_rate, True)
         blocks_stream_to_vector_0 = blocks.stream_to_vector(
@@ -317,6 +318,7 @@ class qa_write_freq_samples(gr_unittest.TestCase):
                     total_annotations += len(annotations)
                     self.assertEqual(samp_rate, sigmf_global["core:sample_rate"], sigmf)
                     self.assertEqual("1.0.0", sigmf_global["core:version"], sigmf)
+                    self.assertEqual("a description", sigmf_global["core:description"], sigmf)
                     self.assertTrue(sigmf_global["core:datatype"])
                     global_sigmf_capture = sigmf["captures"][0]
                     source_file = global_sigmf_capture["capture_details:source_file"]

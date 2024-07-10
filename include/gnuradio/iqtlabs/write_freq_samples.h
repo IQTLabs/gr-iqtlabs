@@ -220,7 +220,8 @@ public:
                    const std::string &sdir, const std::string &prefix,
                    uint64_t write_step_samples, uint64_t skip_tune_step_samples,
                    uint64_t samp_rate, uint64_t rotate_secs, double gain,
-                   bool sigmf, bool zstd, bool rotate);
+                   bool sigmf, bool zstd, bool rotate,
+                   const std::string &description);
 };
 
 } // namespace iqtlabs

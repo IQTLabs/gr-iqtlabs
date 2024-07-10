@@ -24,6 +24,7 @@ documentation: |-
     sigmf: if True, write a sigmf file.
     zstd: if True, use zstd comporession.
     rotate: If True, rotate file on tag.
+    description: If set, what text description to include in sigmf file.
 
 templates:
   imports: from gnuradio import iqtlabs
@@ -78,6 +79,8 @@ parameters:
     dtype: bool
   - id: rotate
     dtype: bool
+  - id: description
+    dtype: description
 
 inputs:
   - label: input

@@ -265,7 +265,8 @@ public:
                           COUNT_T write_step_samples,
                           COUNT_T skip_tune_step_samples, COUNT_T samp_rate,
                           COUNT_T rotate_secs, double gain, bool sigmf,
-                          bool zstd, bool rotate);
+                          bool zstd, bool rotate,
+                          const std::string &description);
   ~write_freq_samples_impl();
   int general_work(int noutput_items, gr_vector_int &ninput_items,
                    gr_vector_const_void_star &input_items,
