@@ -336,7 +336,8 @@ void write_freq_samples_impl::close_() {
     }
     if (sigmf_) {
       sigmf_record_t record = create_sigmf(final_samples_path, open_time_,
-                                           datatype_, samp_rate_, gain_);
+                                           datatype_, samp_rate_, gain_,
+                                           description_);
       boost::lock_guard<boost::mutex> guard(queue_lock_);
       COUNT_T annotations = 0;
       while (!inference_q_.empty()) {

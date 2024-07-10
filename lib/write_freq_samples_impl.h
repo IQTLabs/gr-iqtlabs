@@ -245,7 +245,7 @@ private:
   COUNT_T itemsize_, vlen_, write_step_samples_, skip_tune_step_samples_,
       samp_rate_, sample_clock_, open_sample_clock_, rotate_secs_,
       write_step_samples_count_, skip_tune_step_samples_count_;
-  std::string sdir_, prefix_, datatype_;
+  std::string sdir_, prefix_, datatype_, description_;
   double gain_;
   bool sigmf_, zstd_, rotate_;
   FREQ_T last_rx_freq_;

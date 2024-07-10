@@ -264,11 +264,15 @@ std::string base_impl::secs_dir(const std::string &dir, COUNT_T rotate_secs) {
 sigmf_record_t base_impl::create_sigmf(const std::string &source_file,
                                        double timestamp,
                                        const std::string &datatype,
-                                       double sample_rate, double gain) {
+                                       double sample_rate, double gain,
+                                       const std::string &description) {
   sigmf_record_t record;
   record.global.access<sigmf::core::GlobalT>().datatype = datatype;
   record.global.access<sigmf::core::GlobalT>().sample_rate = sample_rate;
   record.global.access<sigmf::core::GlobalT>().version = "1.0.0";
+  if (description.size()) {
+    record.global.access<sigmf::core::GlobalT>().description = description;
+  }
   auto capture =
       sigmf::Capture<sigmf::core::DescrT, sigmf::capture_details::DescrT>();
   capture.get<sigmf::core::DescrT>().sample_start = 0;
