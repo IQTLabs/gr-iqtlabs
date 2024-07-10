@@ -218,11 +218,11 @@ write_freq_samples::sptr write_freq_samples::make(
     COUNT_T vlen, const std::string &sdir, const std::string &prefix,
     COUNT_T write_step_samples, COUNT_T skip_tune_step_samples,
     COUNT_T samp_rate, COUNT_T rotate_secs, double gain, bool sigmf, bool zstd,
-    bool rotate) {
+    bool rotate, const std::string &description) {
   return gnuradio::make_block_sptr<write_freq_samples_impl>(
       tag, itemsize, datatype, vlen, sdir, prefix, write_step_samples,
-      skip_tune_step_samples, samp_rate, rotate_secs, gain, sigmf, zstd,
-      rotate);
+      skip_tune_step_samples, samp_rate, rotate_secs, gain, sigmf, zstd, rotate,
+      description);
 }
 
 write_freq_samples_impl::write_freq_samples_impl(
@@ -240,9 +240,9 @@ write_freq_samples_impl::write_freq_samples_impl(
       skip_tune_step_samples_(skip_tune_step_samples), samp_rate_(samp_rate),
       sample_clock_(0), open_sample_clock_(0), rotate_secs_(rotate_secs),
       write_step_samples_count_(0), skip_tune_step_samples_count_(0),
-      sdir_(sdir), prefix_(prefix), datatype_(datatype), gain_(gain),
-      sigmf_(sigmf), zstd_(zstd), rotate_(rotate), last_rx_freq_(0),
-      last_rx_time_(0), desription_(description) {
+      sdir_(sdir), prefix_(prefix), datatype_(datatype),
+      description_(description), gain_(gain), sigmf_(sigmf), zstd_(zstd),
+      rotate_(rotate), last_rx_freq_(0), last_rx_time_(0) {
   outbuf_p.reset(new boost::iostreams::filtering_ostream());
   open_(1);
   message_port_register_in(INFERENCE_KEY);
