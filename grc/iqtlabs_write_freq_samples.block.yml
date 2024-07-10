@@ -80,7 +80,7 @@ parameters:
   - id: rotate
     dtype: bool
   - id: description
-    dtype: description
+    dtype: string
 
 inputs:
   - label: input
