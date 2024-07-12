@@ -269,6 +269,7 @@ private:
   void delete_inference_();
   void background_run_inference_();
   void run_inference_();
+  void pub_json_();
   boost::scoped_ptr<torchserve_client> torchserve_client_;
 
 public:

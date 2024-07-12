@@ -287,6 +287,7 @@ bool iq_inference_impl::stop() {
   while (!inference_q_.empty()) {
     sleep(0.001);
   }
+  pub_json_();
   running_ = false;
   io_service_->stop();
   threadpool_.join_all();
@@ -464,6 +465,14 @@ void iq_inference_impl::process_tags_(COUNT_T in_first,
       in_first, power_in)
 }
 
+void iq_inference_impl::pub_json_() {
+  json_result_type json;
+  while (json_q_.pop(json)) {
+    ++predictions_;
+    message_port_pub(INFERENCE_KEY, string_to_pmt(std::string(json.data())));
+  }
+}
+
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wunused-parameter"
 int iq_inference_impl::general_work(int noutput_items,
@@ -481,13 +490,7 @@ int iq_inference_impl::general_work(int noutput_items,
 
   process_tags_(in_first, samples_in_first, in_count, samples_in, power_in);
   consume_each(in_count);
-
-  json_result_type json;
-  while (json_q_.pop(json)) {
-    ++predictions_;
-    message_port_pub(INFERENCE_KEY, string_to_pmt(std::string(json.data())));
-  }
-
+  pub_json_();
   return 0;
 }
 #pragma GCC diagnostic pop
