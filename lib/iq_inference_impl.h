@@ -207,12 +207,16 @@
 
 #include "base_impl.h"
 #include "torchserve_client.h"
-#include <boost/lockfree/spsc_queue.hpp>
+#include <boost/asio/io_service.hpp>
+#include <boost/bind.hpp>
+#include <boost/lockfree/policies.hpp>
+#include <boost/lockfree/queue.hpp>
 #include <boost/scoped_array.hpp>
 #include <boost/scoped_ptr.hpp>
+#include <boost/shared_ptr.hpp>
+#include <boost/thread/thread.hpp>
 #include <gnuradio/iqtlabs/iq_inference.h>
 #include <nlohmann/json.hpp>
-#include <thread>
 
 namespace gr {
 namespace iqtlabs {
@@ -230,6 +234,8 @@ typedef struct output_item {
   COUNT_T rx_freq_sample_clock;
 } output_item_type;
 
+typedef std::array<char, 8192> json_result_type;
+
 class iq_inference_impl : public iq_inference, base_impl {
 private:
   pmt::pmt_t tag_;
@@ -244,9 +250,15 @@ private:
   FREQ_T last_rx_freq_;
   boost::scoped_array<gr_complex> samples_lookback_;
   boost::scoped_ptr<float> samples_total_, power_total_;
-  boost::lockfree::spsc_queue<output_item_type> inference_q_{MAX_INFERENCE};
-  boost::lockfree::spsc_queue<std::string> json_q_{MAX_INFERENCE};
-  boost::scoped_ptr<std::thread> inference_thread_;
+  boost::lockfree::queue<output_item_type,
+                         boost::lockfree::capacity<MAX_INFERENCE>>
+      inference_q_;
+  boost::lockfree::queue<json_result_type,
+                         boost::lockfree::capacity<MAX_INFERENCE>>
+      json_q_;
+  boost::shared_ptr<boost::asio::io_service> io_service_;
+  boost::shared_ptr<boost::asio::io_service::work> work_;
+  boost::thread_group threadpool_;
 
   void process_items_(COUNT_T power_in_count, COUNT_T &consumed,
                       COUNT_T in_first, const float *&power_in);

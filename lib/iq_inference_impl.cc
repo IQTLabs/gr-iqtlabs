@@ -249,9 +249,15 @@ iq_inference_impl::iq_inference_impl(
   samples_total_.reset((float *)volk_malloc(sizeof(float), alignment));
   power_total_.reset((float *)volk_malloc(sizeof(float), alignment));
   parse_models(model_server, model_names);
-  if (background_) {
-    inference_thread_.reset(
-        new std::thread(&iq_inference_impl::background_run_inference_, this));
+  io_service_ = boost::make_shared<boost::asio::io_service>();
+  work_ = boost::make_shared<boost::asio::io_service::work>(*io_service_);
+  for (COUNT_T i = 0; i < MAX_INFERENCE; ++i) {
+    threadpool_.create_thread(
+        boost::bind(&boost::asio::io_service::run, io_service_));
+  }
+  for (COUNT_T i = 0; i < MAX_INFERENCE; ++i) {
+    io_service_->post(
+        boost::bind(&iq_inference_impl::background_run_inference_, this));
   }
   torchserve_client_.reset(new torchserve_client(host_, port_));
   message_port_register_out(INFERENCE_KEY);
@@ -279,9 +285,8 @@ void iq_inference_impl::background_run_inference_() {
 bool iq_inference_impl::stop() {
   d_logger->info("stopping");
   running_ = false;
-  if (inference_thread_) {
-    inference_thread_->join();
-  }
+  io_service_->stop();
+  threadpool_.join_all();
   run_inference_();
   d_logger->info("published {} predictions", predictions_);
   return true;
@@ -291,7 +296,9 @@ void iq_inference_impl::run_inference_() {
   boost::beast::error_code ec;
   while (!inference_q_.empty()) {
     output_item_type output_item;
-    inference_q_.pop(output_item);
+    if (!inference_q_.pop(output_item)) {
+      break;
+    }
     nlohmann::json metadata_json;
     metadata_json["ts"] = host_now_str_(output_item.rx_time);
     metadata_json["sample_clock"] = std::to_string(output_item.sample_clock);
@@ -360,8 +367,10 @@ void iq_inference_impl::run_inference_() {
     if (signal_predictions) {
       output_json["metadata"] = metadata_json;
       const std::string output_json_str = output_json.dump();
-      json_q_.push(output_json_str);
-      ++predictions_;
+      json_result_type output_json;
+      std::copy(output_json_str.begin(), output_json_str.end(),
+                output_json.data());
+      json_q_.push(output_json);
     }
     delete_output_item_(output_item);
   }
@@ -425,8 +434,9 @@ void iq_inference_impl::process_items_(COUNT_T power_in_count,
     } else {
       d_logger->info("inference attempt at sample_clock {}",
                      output_item.sample_clock);
-      inference_q_.push(output_item);
-      run_inference_();
+      while (!inference_q_.push(output_item)) {
+        sleep(0.001);
+      }
     }
   }
 }
@@ -474,9 +484,10 @@ int iq_inference_impl::general_work(int noutput_items,
   consume_each(in_count);
 
   while (!json_q_.empty()) {
-    std::string json;
+    json_result_type json;
     json_q_.pop(json);
-    message_port_pub(INFERENCE_KEY, string_to_pmt(json));
+    ++predictions_;
+    message_port_pub(INFERENCE_KEY, string_to_pmt(std::string(json.data())));
   }
 
   return 0;
