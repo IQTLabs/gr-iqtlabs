@@ -251,7 +251,7 @@ iq_inference_impl::iq_inference_impl(
   parse_models(model_server, model_names);
   io_service_ = boost::make_shared<boost::asio::io_service>();
   work_ = boost::make_shared<boost::asio::io_service::work>(*io_service_);
-  for (COUNT_T i = 0; i < min(batch_inference_, MAX_INFERENCE); ++i) {
+  for (COUNT_T i = 0; i < std::min(batch_inference_, MAX_INFERENCE); ++i) {
     threadpool_.create_thread(
         boost::bind(&boost::asio::io_service::run, io_service_));
     io_service_->post(
