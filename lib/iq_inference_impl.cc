@@ -284,21 +284,21 @@ void iq_inference_impl::background_run_inference_() {
 
 bool iq_inference_impl::stop() {
   d_logger->info("stopping");
+  while (!inference_q_.empty()) {
+    sleep(0.001);
+  }
+  pub_json_();
   running_ = false;
   io_service_->stop();
   threadpool_.join_all();
-  run_inference_();
   d_logger->info("published {} predictions", predictions_);
   return true;
 }
 
 void iq_inference_impl::run_inference_() {
   boost::beast::error_code ec;
-  while (!inference_q_.empty()) {
-    output_item_type output_item;
-    if (!inference_q_.pop(output_item)) {
-      break;
-    }
+  output_item_type output_item;
+  while (inference_q_.pop(output_item)) {
     nlohmann::json metadata_json;
     metadata_json["ts"] = host_now_str_(output_item.rx_time);
     metadata_json["sample_clock"] = std::to_string(output_item.sample_clock);
@@ -465,6 +465,14 @@ void iq_inference_impl::process_tags_(COUNT_T in_first,
       in_first, power_in)
 }
 
+void iq_inference_impl::pub_json_() {
+  json_result_type json;
+  while (json_q_.pop(json)) {
+    ++predictions_;
+    message_port_pub(INFERENCE_KEY, string_to_pmt(std::string(json.data())));
+  }
+}
+
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wunused-parameter"
 int iq_inference_impl::general_work(int noutput_items,
@@ -482,14 +490,7 @@ int iq_inference_impl::general_work(int noutput_items,
 
   process_tags_(in_first, samples_in_first, in_count, samples_in, power_in);
   consume_each(in_count);
-
-  while (!json_q_.empty()) {
-    json_result_type json;
-    json_q_.pop(json);
-    ++predictions_;
-    message_port_pub(INFERENCE_KEY, string_to_pmt(std::string(json.data())));
-  }
-
+  pub_json_();
   return 0;
 }
 #pragma GCC diagnostic pop
