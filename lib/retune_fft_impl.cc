@@ -248,7 +248,7 @@ retune_fft_impl::retune_fft_impl(
     : gr::block("retune_fft",
                 gr::io_signature::make(1 /* min inputs */, 1 /* max inputs */,
                                        nfft * sizeof(input_type)),
-                gr::io_signature::make(1 /* min outputs */, 1 /* max outputs */,
+                gr::io_signature::make(0 /* min outputs */, 1 /* max outputs */,
                                        nfft * sizeof(input_type))),
       retuner_impl(samp_rate, tune_jitter_hz, freq_start, freq_end,
                    tune_step_hz, tune_step_fft, skip_tune_step_fft,
@@ -381,7 +381,9 @@ void retune_fft_impl::process_items_(COUNT_T c, COUNT_T &consumed,
     if (in_max < fft_min_) {
       if (in_hold_down_) {
         in_hold_down_ = false;
-        add_output_tags_(last_rx_time_, last_rx_freq_, produced);
+        if (fft_output) {
+          add_output_tags_(last_rx_time_, last_rx_freq_, produced);
+        }
       }
       continue;
     }
@@ -389,13 +391,15 @@ void retune_fft_impl::process_items_(COUNT_T c, COUNT_T &consumed,
       slew_samples_ += nfft_;
       continue;
     }
-    std::memcpy((void *)fft_output, (const void *)in,
-                nfft_ * sizeof(input_type));
-    fft_output += nfft_;
+    if (fft_output) {
+      std::memcpy((void *)fft_output, (const void *)in,
+                  nfft_ * sizeof(input_type));
+      fft_output += nfft_;
+      ++produced;
+    }
     write_items_(in);
     sum_items_(in);
     ++fft_count_;
-    ++produced;
     if (need_retune_(1)) {
       if (!pre_fft_) {
         RETUNE_NOW();
@@ -488,7 +492,9 @@ COUNT_T retune_fft_impl::process_tags_(const input_type *in, COUNT_T in_count,
   PROCESS_TAGS(
       {
         if (!reset_tags_) {
-          add_output_tags_(rx_time, rx_freq, produced);
+          if (fft_output) {
+            add_output_tags_(rx_time, rx_freq, produced);
+          }
         }
 
         if (pending_retune_) {
@@ -507,11 +513,13 @@ int retune_fft_impl::general_work(int noutput_items,
                                   gr_vector_int &ninput_items,
                                   gr_vector_const_void_star &input_items,
                                   gr_vector_void_star &output_items) {
-  const input_type *fft_output =
-      static_cast<const input_type *>(output_items[0]);
   const input_type *in = static_cast<const input_type *>(input_items[0]);
   COUNT_T in_count = ninput_items[0];
   COUNT_T in_first = nitems_read(0);
+  const input_type *fft_output = NULL;
+  if (noutput_items && output_items.size() == 1) {
+    fft_output = static_cast<const input_type *>(output_items[0]);
+  }
   COUNT_T produced = process_tags_(in, in_count, in_first, fft_output);
   consume_each(in_count);
   return produced;
