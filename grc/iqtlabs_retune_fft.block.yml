@@ -19,9 +19,8 @@ documentation: |-
       cmd:
         connection from retune_pre_fft to control tuning (optional).
   output:
-    JSON scan summaries, one per line, containing "bucket" keys
-    (with frequency: mean values), and "config" keys
-    (representing block config).
+      fft_output:
+        fft points gated on minimum power.
       tune:
         connect to radio command port, generally "cmd".
       json:
@@ -153,14 +152,11 @@ inputs:
     domain: message
 
 outputs:
-  - label: output
-    domain: stream
-    dtype: byte
-    vlen: 1
   - label: fft_output
     domain: stream
     dtype: float
     vlen: ${ nfft }
+    optional: 1
   - label: tune
     domain: message
   - label: json
