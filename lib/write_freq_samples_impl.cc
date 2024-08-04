@@ -368,7 +368,7 @@ void write_freq_samples_impl::close_() {
       if (capture_q_.empty()) {
         capture_item_type capture_item;
         capture_item.rx_freq = last_rx_freq_;
-        capture_item.sample_clock = 0;
+        capture_item.sample_clock = open_sample_clock_;
         capture_q_.push(capture_item);
       }
       while (!capture_q_.empty()) {
