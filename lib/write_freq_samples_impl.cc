@@ -335,10 +335,19 @@ void write_freq_samples_impl::close_() {
       final_samples_path += ".zst";
     }
     if (sigmf_) {
+      boost::lock_guard<boost::mutex> guard(queue_lock_);
+      // placeholder capture if rotating and not on a tag boundary.
+      if (capture_q_.empty()) {
+        capture_item_type capture_item;
+        capture_item.rx_freq = last_rx_freq_;
+        capture_item.sample_clock = open_sample_clock_;
+        capture_q_.push(capture_item);
+      }
+      FREQ_T frequency = capture_q_.front().rx_freq;
       sigmf_record_t record =
           create_sigmf(final_samples_path, open_time_, datatype_, samp_rate_,
-                       gain_, description_);
-      boost::lock_guard<boost::mutex> guard(queue_lock_);
+                       gain_, description_, frequency);
+      capture_q_.pop();
       COUNT_T annotations = 0;
       while (!inference_q_.empty()) {
         inference_item_type inference_item = inference_q_.front();
@@ -364,13 +373,6 @@ void write_freq_samples_impl::close_() {
       }
       d_logger->info("wrote {} annotations", annotations);
       COUNT_T captures = 0;
-      // placeholder capture if rotating and not on a tag boundary.
-      if (capture_q_.empty()) {
-        capture_item_type capture_item;
-        capture_item.rx_freq = last_rx_freq_;
-        capture_item.sample_clock = open_sample_clock_;
-        capture_q_.push(capture_item);
-      }
       while (!capture_q_.empty()) {
         capture_item_type capture_item = capture_q_.front();
         capture_q_.pop();

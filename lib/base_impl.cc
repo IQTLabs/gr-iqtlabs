@@ -265,7 +265,8 @@ sigmf_record_t base_impl::create_sigmf(const std::string &source_file,
                                        double timestamp,
                                        const std::string &datatype,
                                        double sample_rate, double gain,
-                                       const std::string &description) {
+                                       const std::string &description,
+                                       double frequency) {
   sigmf_record_t record;
   record.global.access<sigmf::core::GlobalT>().datatype = datatype;
   record.global.access<sigmf::core::GlobalT>().sample_rate = sample_rate;
@@ -284,6 +285,9 @@ sigmf_record_t base_impl::create_sigmf(const std::string &source_file,
   capture.get<sigmf::capture_details::DescrT>().source_file =
       basename(source_file.c_str());
   capture.get<sigmf::capture_details::DescrT>().gain = gain;
+  if (frequency) {
+    capture.get<sigmf::capture_details::DescrT>().frequency = frequency;
+  }
   record.captures.emplace_back(capture);
   return record;
 }
