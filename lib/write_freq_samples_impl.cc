@@ -364,6 +364,13 @@ void write_freq_samples_impl::close_() {
       }
       d_logger->info("wrote {} annotations", annotations);
       COUNT_T captures = 0;
+      // placeholder capture if rotating and not on a tag boundary.
+      if (capture_q_.empty()) {
+        capture_item_type capture_item;
+        capture_item.rx_freq = last_rx_freq_;
+        capture_item.sample_clock = 0;
+        capture_q_.push(capture_item);
+      }
       while (!capture_q_.empty()) {
         capture_item_type capture_item = capture_q_.front();
         capture_q_.pop();
@@ -412,7 +419,7 @@ void write_freq_samples_impl::process_tags_(COUNT_T in_count, COUNT_T in_first,
         if (rotate_) {
           open_(1);
         }
-        if (sigmf_) {
+        if (sigmf_ && ((rx_freq != last_rx_freq_) || capture_q_.empty())) {
           capture_item_type capture_item;
           capture_item.rx_freq = rx_freq;
           capture_item.sample_clock = sample_clock_;
