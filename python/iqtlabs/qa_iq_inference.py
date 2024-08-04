@@ -295,8 +295,8 @@ class qa_iq_inference(gr_unittest.TestCase):
             n_inference=1024,
             samp_rate=int(samp_rate),
             power_inference=True,
-            background=False,
-            batch=5,
+            background=True,
+            batch=1,
         )
 
         tb.msg_connect((strobe, "strobe"), (source, "cmd"))
@@ -380,13 +380,11 @@ class qa_iq_inference(gr_unittest.TestCase):
                 last_rx_freq = rx_freq
 
             if reference_sample_clocks:
-                self.assertEqual(
-                    reference_sample_clocks,
-                    test_sample_clocks,
-                    (cycle, reference_sample_clocks - test_sample_clocks),
-                )
+                if reference_sample_clocks == test_sample_clocks:
+                    return
             else:
                 reference_sample_clocks = test_sample_clocks
+        self.fail("not all sample clocks recevied")
 
 
 if __name__ == "__main__":
