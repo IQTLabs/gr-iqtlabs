@@ -295,8 +295,8 @@ class qa_iq_inference(gr_unittest.TestCase):
             n_inference=1024,
             samp_rate=int(samp_rate),
             power_inference=True,
-            background=False,
-            batch=5,
+            background=True,
+            batch=1,
         )
 
         tb.msg_connect((strobe, "strobe"), (source, "cmd"))
