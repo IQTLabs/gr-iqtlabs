@@ -333,7 +333,7 @@ class qa_write_freq_samples(gr_unittest.TestCase):
                         25, global_sigmf_capture["capture_details:gain"], sigmf
                     )
                     if i or not rotate:
-                        freq_sigmf_capture = sigmf["captures"][1]
+                        freq_sigmf_capture = sigmf["captures"][0]
                         self.assertEqual(
                             expected_tune_freq,
                             freq_sigmf_capture["core:frequency"],
