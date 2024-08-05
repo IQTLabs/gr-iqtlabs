@@ -286,7 +286,7 @@ sigmf_record_t base_impl::create_sigmf(const std::string &source_file,
       basename(source_file.c_str());
   capture.get<sigmf::capture_details::DescrT>().gain = gain;
   if (frequency) {
-    capture.get<sigmf::core::DescrT>().frequency = 0;
+    capture.get<sigmf::core::DescrT>().frequency = frequency;
   }
   record.captures.emplace_back(capture);
   return record;
