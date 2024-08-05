@@ -311,7 +311,8 @@ class qa_write_freq_samples(gr_unittest.TestCase):
                 if rotate and zst_file == zst_files[0]:
                     expected_tune_freq = 0
                 self.assertIn(str(int(expected_tune_freq)), zst_file)
-                subprocess.check_call(["sigmf_validate", "--skip-checksum", sigmf_file])
+                validator = os.getenv("SIGMF", sigmf_validate)
+                subprocess.check_call([validator, "--skip-checksum", sigmf_file])
                 with open(sigmf_file, "r", encoding="utf8") as f:
                     sigmf = json.loads(f.read())
                     sigmf_global = sigmf["global"]
