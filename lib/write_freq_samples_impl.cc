@@ -371,7 +371,6 @@ void write_freq_samples_impl::close_() {
         record.annotations.emplace_back(anno);
         ++annotations;
       }
-      d_logger->info("wrote {} annotations", annotations);
       COUNT_T captures = 0;
       while (!capture_q_.empty()) {
         capture_item_type capture_item = capture_q_.front();
@@ -384,7 +383,6 @@ void write_freq_samples_impl::close_() {
         record.captures.emplace_back(cap);
         ++captures;
       }
-      d_logger->info("wrote {} captures", captures);
       std::string sigmf_filename = final_samples_path_base + ".sigmf-meta";
       std::string dotfilename = get_dotfile_(sigmf_filename);
       std::ofstream jsonfile(dotfilename);
@@ -392,6 +390,8 @@ void write_freq_samples_impl::close_() {
       jsonfile << std::setw(4) << meta_json;
       jsonfile.close();
       rename(dotfilename.c_str(), sigmf_filename.c_str());
+      d_logger->info("completed {} with {} captures and {} annotations",
+                     sigmf_filename, captures + 1, annotations);
     }
     rename(outfile_.c_str(), final_samples_path.c_str());
   }
