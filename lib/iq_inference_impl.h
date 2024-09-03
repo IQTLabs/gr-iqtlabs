@@ -268,9 +268,8 @@ private:
   void delete_output_item_(output_item_type &output_item);
   void delete_inference_();
   void background_run_inference_();
-  void run_inference_();
+  void run_inference_(torchserve_client *client);
   void pub_json_();
-  boost::scoped_ptr<torchserve_client> torchserve_client_;
 
 public:
   iq_inference_impl(const std::string &tag, COUNT_T vlen, COUNT_T vlen_,
