@@ -257,7 +257,6 @@ iq_inference_impl::iq_inference_impl(
     io_service_->post(
         boost::bind(&iq_inference_impl::background_run_inference_, this));
   }
-  torchserve_client_.reset(new torchserve_client(host_, port_));
   message_port_register_out(INFERENCE_KEY);
   set_output_multiple(n_vlen_);
 }
@@ -274,8 +273,10 @@ void iq_inference_impl::delete_inference_() {
 }
 
 void iq_inference_impl::background_run_inference_() {
+  boost::scoped_ptr<torchserve_client> client(
+      new torchserve_client(host_, port_));
   while (running_) {
-    run_inference_();
+    run_inference_(client.get());
     sleep(0.001);
   }
 }
@@ -293,7 +294,7 @@ bool iq_inference_impl::stop() {
   return true;
 }
 
-void iq_inference_impl::run_inference_() {
+void iq_inference_impl::run_inference_(torchserve_client *client) {
   boost::beast::error_code ec;
   output_item_type output_item;
   while (inference_q_.pop(output_item)) {
@@ -319,16 +320,15 @@ void iq_inference_impl::run_inference_() {
       if (power_inference_) {
         const std::string samples_power_body =
             std::string(body) + std::string(power_body);
-        torchserve_client_->make_inference_request(
-            model_name, samples_power_body, "application/octet-stream");
+        client->make_inference_request(model_name, samples_power_body,
+                                       "application/octet-stream");
       } else {
-        torchserve_client_->make_inference_request(model_name, body,
-                                                   "application/octet-stream");
+        client->make_inference_request(model_name, body,
+                                       "application/octet-stream");
       }
       nlohmann::json original_results_json;
       // TODO: troubleshoot test flask server hang after one request.
-      if (torchserve_client_->send_inference_request(original_results_json,
-                                                     error)) {
+      if (client->send_inference_request(original_results_json, error)) {
         try {
           for (auto &prediction_class : original_results_json.items()) {
             if (!results_json.contains(prediction_class.key())) {
