@@ -233,6 +233,7 @@ typedef struct output_item {
   double points_mean;
   double points_max;
   COUNT_T start_item;
+  COUNT_T serial;
 } output_item_type;
 
 class image_inference_impl : public image_inference, base_impl {
@@ -241,7 +242,7 @@ private:
   std::string image_dir_;
   int x_, y_, norm_type_, colormap_, interpolation_, flip_, max_rows_;
   COUNT_T vlen_, rotate_secs_, n_image_, n_inference_, image_count_,
-      inference_count_, samp_rate_, last_image_start_item_;
+      inference_count_, samp_rate_, last_image_start_item_, serial_;
   double convert_alpha_, norm_alpha_, norm_beta_, min_peak_points_, confidence_;
   bool running_;
   FREQ_T last_rx_freq_;

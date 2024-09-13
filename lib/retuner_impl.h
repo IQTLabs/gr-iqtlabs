@@ -235,6 +235,7 @@ public:
   bool need_retune_(COUNT_T n);
   void parse_tuning_ranges_(const std::string &tuning_ranges);
   void next_retune_(TIME_T host_now);
+
   std::string describe_ranges_();
   TIME_T apply_rx_time_slew_(TIME_T rx_time);
   COUNT_T samp_rate_, tune_jitter_hz_, freq_start_, freq_end_, tune_step_hz_,
