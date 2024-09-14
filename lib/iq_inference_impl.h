@@ -222,7 +222,6 @@ namespace gr {
 namespace iqtlabs {
 
 const COUNT_T MAX_INFERENCE = 5;
-const COUNT_T MAX_JSON_SIZE = 8192;
 
 typedef struct output_item {
   FREQ_T rx_freq;
@@ -235,8 +234,6 @@ typedef struct output_item {
   COUNT_T rx_freq_sample_clock;
   COUNT_T serial;
 } output_item_type;
-
-typedef std::array<char, MAX_JSON_SIZE> json_result_type;
 
 class iq_inference_impl : public iq_inference, base_impl {
 private:
@@ -255,7 +252,7 @@ private:
   boost::lockfree::queue<output_item_type,
                          boost::lockfree::capacity<MAX_INFERENCE>>
       inference_q_;
-  boost::lockfree::queue<json_result_type,
+  boost::lockfree::queue<std::string*,
                          boost::lockfree::capacity<MAX_INFERENCE>>
       json_q_;
   boost::shared_ptr<boost::asio::io_service> io_service_;

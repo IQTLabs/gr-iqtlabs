@@ -363,15 +363,8 @@ void iq_inference_impl::run_inference_(torchserve_client *client) {
 
     output_json["predictions"] = results_json;
     output_json["metadata"] = metadata_json;
-    const std::string output_json_str = output_json.dump();
-    if (output_json_str.size() < MAX_JSON_SIZE) {
-      json_result_type output_json_chars;
-      std::copy(output_json_str.begin(), output_json_str.end(),
-                output_json_chars.data());
-      json_q_.push(output_json_chars);
-    } else {
-      d_logger->error("output json size too large");
-    }
+    std::string *output_json_str = new std::string(output_json.dump());
+    json_q_.push(output_json_str);
     delete_output_item_(output_item);
   }
 }
@@ -466,10 +459,11 @@ void iq_inference_impl::process_tags_(COUNT_T in_first,
 }
 
 void iq_inference_impl::pub_json_() {
-  json_result_type json;
-  while (json_q_.pop(json)) {
+  std::string *output_json_str;
+  while (json_q_.pop(output_json_str)) {
     ++predictions_;
-    message_port_pub(INFERENCE_KEY, string_to_pmt(std::string(json.data())));
+    message_port_pub(INFERENCE_KEY, string_to_pmt(*output_json_str));
+    delete output_json_str;
   }
 }
 
