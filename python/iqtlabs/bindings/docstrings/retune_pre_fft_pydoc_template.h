@@ -19,9 +19,24 @@
  static const char *__doc_gr_iqtlabs_retune_pre_fft = R"doc()doc";
 
 
- static const char *__doc_gr_iqtlabs_retune_pre_fft_retune_pre_fft = R"doc()doc";
+ static const char *__doc_gr_iqtlabs_retune_pre_fft_retune_pre_fft_0 = R"doc()doc";
+
+
+ static const char *__doc_gr_iqtlabs_retune_pre_fft_retune_pre_fft_1 = R"doc()doc";
 
 
  static const char *__doc_gr_iqtlabs_retune_pre_fft_make = R"doc()doc";
+
+
+ static const char *__doc_gr_iqtlabs_retune_pre_fft_get_freq_start = R"doc()doc";
+
+
+ static const char *__doc_gr_iqtlabs_retune_pre_fft_get_freq_end = R"doc()doc";
+
+
+ static const char *__doc_gr_iqtlabs_retune_pre_fft_get_tune_freq = R"doc()doc";
+
+
+ static const char *__doc_gr_iqtlabs_retune_pre_fft_get_stare_mode = R"doc()doc";
 
   

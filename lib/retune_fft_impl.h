@@ -267,6 +267,10 @@ public:
                    gr_vector_const_void_star &input_items,
                    gr_vector_void_star &output_items);
   bool stop();
+  double get_freq_start(void) override { return freq_start_; };
+  double get_freq_end(void) override { return freq_end_; };
+  double get_tune_freq(void) override { return tune_freq_; };
+  bool get_stare_mode(void) override { return stare_mode_; };
 };
 
 } // namespace iqtlabs

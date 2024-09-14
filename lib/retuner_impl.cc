@@ -237,11 +237,16 @@ retuner_impl::retuner_impl(COUNT_T samp_rate, COUNT_T tune_jitter_hz,
 void retuner_impl::add_range_(COUNT_T freq_start, COUNT_T freq_end) {
   // TODO: this could be a vector of steps that could be retuned to
   // in random order each time, to implement a frequency hopping scanner.
-  COUNT_T steps = (freq_end - freq_start) / tune_step_hz_ + 1;
-  if (steps > 1) {
-    ++steps;
+  if (freq_end == 0) {
+    freq_end = freq_start + tune_step_hz_;
+    tuning_ranges_.push_back({freq_start, freq_end, 1});
+  } else {
+    COUNT_T steps = (freq_end - freq_start) / tune_step_hz_ + 1;
+    if (steps > 1) {
+      ++steps;
+    }
+    tuning_ranges_.push_back({freq_start, freq_end, steps});
   }
-  tuning_ranges_.push_back({freq_start, freq_end, steps});
 }
 
 std::string retuner_impl::describe_ranges_() {
@@ -267,7 +272,7 @@ bool retuner_impl::need_retune_(COUNT_T n) {
 
 void retuner_impl::parse_tuning_ranges_(const std::string &tuning_ranges) {
   if (tuning_ranges.length() == 0) {
-    if (freq_end_ <= freq_start_) {
+    if (freq_end_ && freq_end_ <= freq_start_) {
       throw std::invalid_argument(
           "invalid freq_start/freq_end (end must be greater than start)");
     }

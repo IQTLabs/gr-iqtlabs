@@ -14,7 +14,7 @@
 /* BINDTOOL_GEN_AUTOMATIC(0)                                                       */
 /* BINDTOOL_USE_PYGCCXML(0)                                                        */
 /* BINDTOOL_HEADER_FILE(retune_pre_fft.h)                                        */
-/* BINDTOOL_HEADER_FILE_HASH(d9cffb6f149f14f3c3f25e4ffbc910db)                     */
+/* BINDTOOL_HEADER_FILE_HASH(265b0d93aae52b3c826e485fd6b36c16)                     */
 /***********************************************************************************/
 
 #include <pybind11/complex.h>
@@ -56,6 +56,30 @@ void bind_retune_pre_fft(py::module& m)
         
 
 
+
+
+        
+        .def("get_freq_start",&retune_pre_fft::get_freq_start,       
+            D(retune_pre_fft,get_freq_start)
+        )
+
+
+        
+        .def("get_freq_end",&retune_pre_fft::get_freq_end,       
+            D(retune_pre_fft,get_freq_end)
+        )
+
+
+        
+        .def("get_tune_freq",&retune_pre_fft::get_tune_freq,       
+            D(retune_pre_fft,get_tune_freq)
+        )
+
+
+        
+        .def("get_stare_mode",&retune_pre_fft::get_stare_mode,       
+            D(retune_pre_fft,get_stare_mode)
+        )
 
         ;
 
