@@ -355,7 +355,7 @@ class qa_iq_inference(gr_unittest.TestCase):
             last_sc = 0
             last_ts = 0
             last_rx_freq = 0
-            for json_raw in json_raw_all:
+            for i, json_raw in enumerate(json_raw_all, start=1):
                 result = json.loads(json_raw)
                 print(result)
                 sample_value = float(
@@ -368,6 +368,7 @@ class qa_iq_inference(gr_unittest.TestCase):
                 rx_freq = float(result["metadata"]["rx_freq"])
                 ts = float(result["metadata"]["ts"])
                 sc = float(result["metadata"]["sample_clock"])
+                self.assertEqual(int(result["metadata"]["serial"]), i)
                 test_sample_clocks.add(sc)
                 count = float(result["metadata"]["sample_count"])
                 self.assertEqual(count, fft_size * n_vlen)

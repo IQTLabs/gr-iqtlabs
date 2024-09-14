@@ -222,6 +222,7 @@ namespace gr {
 namespace iqtlabs {
 
 const COUNT_T MAX_INFERENCE = 5;
+const COUNT_T MAX_JSON_SIZE = 8192;
 
 typedef struct output_item {
   FREQ_T rx_freq;
@@ -232,16 +233,17 @@ typedef struct output_item {
   gr_complex *samples;
   float *power;
   COUNT_T rx_freq_sample_clock;
+  COUNT_T serial;
 } output_item_type;
 
-typedef std::array<char, 8192> json_result_type;
+typedef std::array<char, MAX_JSON_SIZE> json_result_type;
 
 class iq_inference_impl : public iq_inference, base_impl {
 private:
   pmt::pmt_t tag_;
   COUNT_T vlen_, n_vlen_, batch_, sample_buffer_, sample_clock_,
       last_rx_freq_sample_clock_, n_inference_, inference_count_,
-      samples_since_tag_, predictions_, batch_inference_;
+      samples_since_tag_, predictions_, batch_inference_, serial_;
   int samp_rate_;
   TIME_T last_full_time_;
   double min_peak_points_, confidence_;

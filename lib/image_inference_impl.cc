@@ -251,7 +251,7 @@ image_inference_impl::image_inference_impl(
       flip_(flip), max_rows_(max_rows), vlen_(vlen), rotate_secs_(rotate_secs),
       n_image_(n_image), n_inference_(n_inference), image_count_(0),
       inference_count_(0), samp_rate_(samp_rate), last_image_start_item_(0),
-      convert_alpha_(convert_alpha), norm_alpha_(norm_alpha),
+      serial_(0), convert_alpha_(convert_alpha), norm_alpha_(norm_alpha),
       norm_beta_(norm_beta), min_peak_points_(min_peak_points),
       confidence_(confidence), running_(true), last_rx_freq_(0),
       last_rx_time_(0) {
@@ -371,6 +371,7 @@ void image_inference_impl::create_image_(bool discard) {
         output_item.points_buffer = points_buffer_;
         output_item.points_mean = points_mean;
         output_item.image_buffer = NULL;
+        output_item.serial = ++serial_;
         if (!inference_q_.push(output_item)) {
           d_logger->error("inference request queue full, size {}",
                           MAX_INFERENCE);
@@ -527,6 +528,7 @@ void image_inference_impl::run_inference_() {
         std::to_string(output_item.start_item * vlen_);
     metadata_json["orig_rows"] = output_item.points_buffer->rows;
     metadata_json["sample_rate"] = std::to_string(samp_rate_);
+    metadata_json["serial"] = std::to_string(output_item.serial);
 
     const std::string secs_image_dir = secs_dir(image_dir_, rotate_secs_);
     ++image_count_;

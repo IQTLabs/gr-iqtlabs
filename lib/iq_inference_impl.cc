@@ -240,10 +240,11 @@ iq_inference_impl::iq_inference_impl(
       batch_(vlen_ * n_vlen_), sample_buffer_(sample_buffer), sample_clock_(0),
       last_rx_freq_sample_clock_(0), n_inference_(n_inference),
       inference_count_(n_inference), samples_since_tag_(0), predictions_(0),
-      batch_inference_(batch), samp_rate_(samp_rate), last_full_time_(0),
-      min_peak_points_(min_peak_points), confidence_(confidence),
-      power_inference_(power_inference), background_(background),
-      running_(true), last_rx_time_(0), last_rx_freq_(0) {
+      batch_inference_(batch), serial_(0), samp_rate_(samp_rate),
+      last_full_time_(0), min_peak_points_(min_peak_points),
+      confidence_(confidence), power_inference_(power_inference),
+      background_(background), running_(true), last_rx_time_(0),
+      last_rx_freq_(0) {
   samples_lookback_.reset(new gr_complex[batch_ * sample_buffer]);
   unsigned int alignment = volk_get_alignment();
   samples_total_.reset((float *)volk_malloc(sizeof(float), alignment));
@@ -290,7 +291,7 @@ bool iq_inference_impl::stop() {
   running_ = false;
   io_service_->stop();
   threadpool_.join_all();
-  d_logger->info("published {} predictions", predictions_);
+  d_logger->info("iq_inference sent {} predictions", predictions_);
   return true;
 }
 
@@ -306,6 +307,7 @@ void iq_inference_impl::run_inference_(torchserve_client *client) {
     metadata_json["sample_rate"] = std::to_string(samp_rate_);
     metadata_json["rx_freq_sample_clock"] =
         std::to_string(output_item.rx_freq_sample_clock);
+    metadata_json["serial"] = std::to_string(output_item.serial);
     nlohmann::json output_json, results_json;
     COUNT_T signal_predictions = 0;
     std::string error;
@@ -360,15 +362,15 @@ void iq_inference_impl::run_inference_(torchserve_client *client) {
     }
 
     output_json["predictions"] = results_json;
-    // double new line to facilitate json parsing, since prediction may
-    // contain new lines.
-    if (signal_predictions) {
-      output_json["metadata"] = metadata_json;
-      const std::string output_json_str = output_json.dump();
-      json_result_type output_json;
+    output_json["metadata"] = metadata_json;
+    const std::string output_json_str = output_json.dump();
+    if (output_json_str.size() < MAX_JSON_SIZE) {
+      json_result_type output_json_chars;
       std::copy(output_json_str.begin(), output_json_str.end(),
-                output_json.data());
-      json_q_.push(output_json);
+                output_json_chars.data());
+      json_q_.push(output_json_chars);
+    } else {
+      d_logger->error("output json size too large");
     }
     delete_output_item_(output_item);
   }
@@ -396,6 +398,9 @@ void iq_inference_impl::process_items_(COUNT_T power_in_count,
     if (n_inference_ > 0 && --inference_count_) {
       continue;
     }
+    if (!last_rx_freq_) {
+      continue;
+    }
     inference_count_ = n_inference_;
     if (!model_names_.size()) {
       continue;
@@ -410,16 +415,13 @@ void iq_inference_impl::process_items_(COUNT_T power_in_count,
     output_item.rx_freq = last_rx_freq_;
     output_item.rx_freq_sample_clock = last_rx_freq_sample_clock_;
     output_item.sample_count = batch_;
+    output_item.serial = ++serial_;
     output_item.samples = new gr_complex[output_item.sample_count];
     output_item.power = new float[output_item.sample_count];
     memcpy(output_item.samples, (void *)&samples_lookback_[j * batch_],
            batch_ * sizeof(gr_complex));
     memcpy(output_item.power, (void *)power_in, batch_ * sizeof(float));
     if (background_) {
-      if (!last_rx_freq_) {
-
-        continue;
-      }
       if (!inference_q_.push(output_item)) {
         delete_output_item_(output_item);
         if (host_now_() - last_full_time_ > 5) {
@@ -477,6 +479,10 @@ int iq_inference_impl::general_work(int noutput_items,
                                     gr_vector_int &ninput_items,
                                     gr_vector_const_void_star &input_items,
                                     gr_vector_void_star &output_items) {
+  if (!background_ && !inference_q_.empty()) {
+    return 0;
+  }
+
   const gr_complex *samples_in =
       static_cast<const gr_complex *>(input_items[0]);
   const float *power_in = static_cast<const float *>(input_items[1]);

@@ -336,7 +336,7 @@ class qa_image_inference(gr_unittest.TestCase):
                 self.assertTrue(stat.st_size)
                 self.assertEqual(imghdr.what(image_file), "png")
             self.assertTrue(json_raw_all)
-            for json_raw in json_raw_all:
+            for i, json_raw in enumerate(json_raw_all, start=1):
                 result = json.loads(json_raw)
                 print(result)
                 metadata_result = result["metadata"]
@@ -350,6 +350,7 @@ class qa_image_inference(gr_unittest.TestCase):
                         "sample_rate",
                     )
                 ]
+                self.assertEqual(int(metadata_result["serial"]), i)
                 self.assertGreaterEqual(rssi_mean, rssi_min, metadata_result)
                 self.assertGreaterEqual(rssi_max, rssi_mean, metadata_result)
                 self.assertEqual(samp_rate, meta_samp_rate, metadata_result)
