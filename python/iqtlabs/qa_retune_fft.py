@@ -538,6 +538,57 @@ class qa_retune_fft_roll(gr_unittest.TestCase, qa_retune_fft_base):
         self.retune_fft(fft_roll=True, stare=True)
 
 
+class qa_getters(gr_unittest.TestCase):
+    def test_pre_getter(self):
+        iqtlabs_retune_pre_fft_0 = retune_pre_fft(
+            nfft=1024,
+            samp_rate=int(1e6),
+            tune_jitter_hz=0,
+            fft_batch_size=1,
+            tag="rx_freq",
+            freq_start=int(1e6),
+            freq_end=0,
+            tune_step_hz=int(1e6),
+            tune_step_fft=256,
+            skip_tune_step_fft=0,
+            tuning_ranges="",
+            tag_now=False,
+            low_power_hold_down=False,
+            slew_rx_time=False,
+        )
+        self.assertTrue(iqtlabs_retune_pre_fft_0.get_stare_mode())
+        self.assertEqual(1.5e6, iqtlabs_retune_pre_fft_0.get_tune_freq())
+
+    def test_getter(self):
+        iqtlabs_retune_fft_0 = retune_fft(
+            tag="rx_freq",
+            nfft=1024,
+            samp_rate=int(1e6),
+            tune_jitter_hz=0,
+            freq_start=int(1e6),
+            freq_end=0,
+            tune_step_hz=int(1e6),
+            tune_step_fft=256,
+            skip_tune_step_fft=0,
+            fft_min=0,
+            fft_max=1e9,
+            sdir="",
+            write_step_fft=0,
+            bucket_range=1,
+            tuning_ranges="",
+            description="a text description",
+            rotate_secs=3600,
+            pre_fft=True,
+            tag_now=False,
+            low_power_hold_down=False,
+            slew_rx_time=False,
+            peak_fft_range=0,
+        )
+        self.assertTrue(iqtlabs_retune_fft_0.get_stare_mode())
+        self.assertEqual(1.5e6, iqtlabs_retune_fft_0.get_tune_freq())
+
+
 if __name__ == "__main__":
     gr_unittest.run(qa_retune_fft_no_roll)
     gr_unittest.run(qa_retune_fft_roll)
+    gr_unittest.run(qa_getters)

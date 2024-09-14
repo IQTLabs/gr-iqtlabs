@@ -238,6 +238,10 @@ public:
                    const std::string &description, uint64_t rotate_secs,
                    bool pre_fft, bool tag_now, bool low_power_hold_down,
                    bool slew_rx_time, uint64_t peak_fft_range);
+  virtual double get_freq_start(void) = 0;
+  virtual double get_freq_end(void) = 0;
+  virtual double get_tune_freq(void) = 0;
+  virtual bool get_stare_mode(void) = 0;
 };
 
 } // namespace iqtlabs
