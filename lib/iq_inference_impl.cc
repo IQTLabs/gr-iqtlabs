@@ -417,6 +417,7 @@ void iq_inference_impl::process_items_(COUNT_T power_in_count,
     if (background_) {
       if (!inference_q_.push(output_item)) {
         delete_output_item_(output_item);
+        --serial_;
         if (host_now_() - last_full_time_ > 5) {
           d_logger->error(
               "inference queue full (increase inference dB threshold "
