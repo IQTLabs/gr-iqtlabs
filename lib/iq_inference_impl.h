@@ -253,7 +253,7 @@ private:
                          boost::lockfree::capacity<MAX_INFERENCE>>
       inference_q_;
   boost::lockfree::queue<std::string *,
-                         boost::lockfree::capacity<MAX_INFERENCE>>
+                         boost::lockfree::capacity<MAX_INFERENCE*2>>
       json_q_;
   boost::shared_ptr<boost::asio::io_service> io_service_;
   boost::shared_ptr<boost::asio::io_service::work> work_;
