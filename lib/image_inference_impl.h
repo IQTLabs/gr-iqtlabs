@@ -252,7 +252,7 @@ private:
   boost::scoped_ptr<std::thread> inference_thread_;
   boost::scoped_ptr<torchserve_client> torchserve_client_;
   boost::lockfree::spsc_queue<output_item_type> inference_q_{MAX_INFERENCE};
-  boost::lockfree::spsc_queue<std::string> json_q_{MAX_INFERENCE};
+  boost::lockfree::spsc_queue<std::string> json_q_{MAX_INFERENCE * 2};
   boost::scoped_ptr<cv::Mat> cmapped_buffer_, resized_buffer_,
       normalized_buffer_;
 
