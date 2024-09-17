@@ -239,6 +239,7 @@ void retuner_impl::add_range_(COUNT_T freq_start, COUNT_T freq_end) {
   // in random order each time, to implement a frequency hopping scanner.
   if (freq_end == 0) {
     freq_end = freq_start + tune_step_hz_;
+    freq_end_ = freq_end;
     tuning_ranges_.push_back({freq_start, freq_end, 1});
   } else {
     COUNT_T steps = (freq_end - freq_start) / tune_step_hz_ + 1;

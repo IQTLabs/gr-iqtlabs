@@ -208,7 +208,7 @@
 #include "base_impl.h"
 #include "torchserve_client.h"
 #include <boost/asio/io_service.hpp>
-#include <boost/bind.hpp>
+#include <boost/bind/bind.hpp>
 #include <boost/lockfree/policies.hpp>
 #include <boost/lockfree/queue.hpp>
 #include <boost/scoped_array.hpp>
