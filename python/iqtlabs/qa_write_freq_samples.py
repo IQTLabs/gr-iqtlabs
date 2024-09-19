@@ -312,7 +312,7 @@ class qa_write_freq_samples(gr_unittest.TestCase):
                     expected_tune_freq = 0
                 self.assertIn(str(int(expected_tune_freq)), zst_file)
                 sigmf_validate = os.getenv("SIGMF_VALIDATE", None)
-                if sigmf_validate is not None:
+                if sigmf_validate:
                     subprocess.check_call(
                         [sigmf_validate, "--skip-checksum", "--verbose", zst_file]
                     )
