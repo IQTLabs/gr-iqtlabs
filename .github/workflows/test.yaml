@@ -29,7 +29,7 @@ jobs:
         fetch-depth: 0
     - name: build_test 
       run: |
-        bin/apt_get.sh && TEST_VKFFT=1 bin/build_test.sh && bin/test_grc310.sh
+        bin/apt_get.sh && bin/codecheck.sh && SIGMF_VALIDATE=/root/.local/bin/sigmf_validate TEST_VKFFT=1 bin/build_test.sh && bin/test_grc310.sh
   test-2004-gnuradio39:
     runs-on: ubuntu-20.04
     steps:
