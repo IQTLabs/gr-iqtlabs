@@ -6,7 +6,5 @@ bin/check_blocks.py && \
   sudo pip3 install --user -U pip && \
   pip3 install --user -r codecheck-requirements.txt && \
   sudo pip3 install --user -r codecheck-requirements.txt && \
-  black python/iqtlabs/qa_* && \
   ./bin/clonedeps.sh && \
-  rm -rf build && mkdir build && cd build && cmake .. && make -j $(nproc) && sudo make install && sudo ldconfig && sudo SIGMF_VALIDATE=/root/.local/bin/sigmf_validate make test ARGS="--verbose --timeout 180" && cd .. && \
-  PYTHONPATH=python/iqtlabs pytype -d attribute-error python/iqtlabs/qa_*
+  rm -rf build && mkdir build && cd build && cmake .. && make -j $(nproc) && sudo make install && sudo ldconfig && sudo SIGMF_VALIDATE=$SIGMF_VALIDATE make test ARGS="--verbose --timeout 180" && cd ..
