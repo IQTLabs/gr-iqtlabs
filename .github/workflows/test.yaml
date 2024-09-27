@@ -31,7 +31,7 @@ jobs:
       run: |
         bin/apt_get.sh && bin/code_check.sh && SIGMF_VALIDATE=/root/.local/bin/sigmf_validate TEST_VKFFT=1 bin/build_test.sh && bin/test_grc310.sh
   test-2004-gnuradio39:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-24.04
     steps:
     - uses: actions/checkout@v4
       with:
@@ -41,7 +41,7 @@ jobs:
       run: |
         bin/apt_get.sh && bin/apt_get_39.sh && bin/install-volk.sh v3.0.0 && bin/install-gr39.sh && bin/build_test.sh
   test-2004:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-24.04
     steps:
     - uses: actions/checkout@v4
       with:
