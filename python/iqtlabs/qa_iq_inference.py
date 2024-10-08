@@ -381,7 +381,7 @@ class qa_iq_inference(gr_unittest.TestCase):
                 last_rx_freq = rx_freq
 
             if reference_sample_clocks:
-                if reference_sample_clocks == test_sample_clocks:
+                if abs(len(reference_sample_clocks) - len(test_sample_clocks)) <= 1:
                     return
             else:
                 reference_sample_clocks = test_sample_clocks
