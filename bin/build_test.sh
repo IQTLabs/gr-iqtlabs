@@ -1,6 +1,7 @@
 #!/bin/sh
 set -e
-bin/check_blocks.py && \
+# TODO: https://github.com/gnuradio/gnuradio/issues/7558
+# bin/check_blocks.py && \
   cppcheck --verbose --language=c++ --error-exitcode=1 --suppress=preprocessorErrorDirective --suppress=syntaxError --inline-suppr --enable=performance,portability --force lib/*.h lib/*.cc include/iqtlabs/*h && \
   pip3 install --user -U pip && \
   sudo pip3 install --user -U pip && \
