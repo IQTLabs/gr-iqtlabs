@@ -312,7 +312,7 @@ void iq_inference_impl::run_inference_(torchserve_client *client) {
     COUNT_T signal_predictions = 0;
     std::string error;
 
-    for (const auto model_name : model_names_) {
+    for (const std::string &model_name : model_names_) {
       const std::string_view body(
           reinterpret_cast<char const *>(output_item.samples),
           output_item.sample_count * sizeof(gr_complex));
